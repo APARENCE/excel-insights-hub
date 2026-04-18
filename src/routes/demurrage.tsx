@@ -40,7 +40,7 @@ function DemurragePage() {
   const noPatio = rows.length;
   const vencidos = rows.filter((r) => (r.diasRestantes ?? 0) < 0).length;
   const alerta = rows.filter((r) => (r.diasRestantes ?? 99) >= 0 && (r.diasRestantes ?? 99) <= 3).length;
-  const devolvidos = ds.cheios.filter((c) => c.status === "FINALIZADO" || c.status === "DEVOLVIDO").length;
+  const devolvidos = ds.cheios.filter((c) => c.status === "FINALIZADO").length;
 
   const resumo = [
     { label: "Vencido", count: vencidos, color: "bg-destructive" },

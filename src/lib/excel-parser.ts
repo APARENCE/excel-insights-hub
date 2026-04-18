@@ -37,17 +37,16 @@ function str(v: unknown): string | undefined {
 
 function normalizeStatus(s?: string): ContainerStatus {
   if (!s) return "OUTRO";
-  const u = s.toUpperCase().trim();
+  const u = s
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (u.includes("FINALIZ")) return "FINALIZADO";
-  if (u.includes("DEVOLV")) return "DEVOLVIDO";
-  if (u.includes("ENVIO HORSE") || u.includes("HORSE")) return "ENVIO HORSE";
-  if (u.includes("DÊ PARA REALIZ") || u.includes("DE PARA REALIZ") || u.includes("DEPARA REALIZ"))
-    return "DÊ PARA REALIZADO";
-  if (u.includes("EM PROCESSO") || u.includes("PROCESSO DE DE")) return "EM PROCESSO DE DEPARA";
-  if (u.includes("ENVIADO PARA FABRICA") || u.includes("ENVIADO PARA FÁBRICA"))
-    return "ENVIADO PARA FABRICA";
-  if (u.includes("DEPARA EM PATIO") || u.includes("DÊ PARA EM PATIO")) return "DEPARA EM PATIO TLOG-SJP";
-  if (u.includes("EM PATIO") || u.includes("EM PÁTIO")) return "EM PATIO TLOG-SJP";
+  if (u.includes("DEPARA") && u.includes("PATIO")) return "DEPARA EM PATIO TLOG-SJP";
+  if (u.includes("ENVIADO PARA FABRICA")) return "ENVIADO PARA FABRICA";
+  if (u.startsWith("EM PATIO")) return "EM PATIO TLOG-SJP";
   return "OUTRO";
 }
 

@@ -30,8 +30,8 @@ function Dashboard() {
   const s = summary(ds.cheios, ds.vaziosLocados);
   const dist = statusDistribution(ds.cheios);
   const movement = dailyMovement(ds.cheios);
-  const ocupacaoPct = Math.round((s.emPatio / s.capacidadeTotal) * 1000) / 10;
-  const livres = s.capacidadeTotal - s.emPatio;
+  const ocupacaoPct = Math.round((s.ocupacao / s.capacidadeTotal) * 1000) / 10;
+  const livres = s.capacidadeTotal - s.ocupacao;
 
   return (
     <AppShell>
@@ -50,11 +50,11 @@ function Dashboard() {
         }
       />
       <div className="px-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        <StatCard label="Ocupação Atual" value={s.emPatio} hint={`de ${s.capacidadeTotal} vagas`} icon={Car} tone="success" />
-        <StatCard label="Depara em pátio TLOG-SJP" value={s.dePara} hint="Dê para realizados" icon={Repeat} tone="warning" />
+        <StatCard label="Ocupação Atual" value={s.ocupacao} hint={`de ${s.capacidadeTotal} vagas`} icon={Car} tone="success" />
+        <StatCard label="Depara em pátio TLOG-SJP" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="warning" />
         <StatCard label="Em Pátio TLOG-SJP" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="info" />
-        <StatCard label="Entradas Programadas" value={0} hint="Chegadas esperadas" icon={CalendarClock} />
-        <StatCard label="Devoluções" value={s.finalizados} hint="Últimos 30 dias" icon={LogOut} />
+        <StatCard label="Enviado para Fábrica" value={s.enviadoFabrica} hint="Em trânsito p/ fábrica" icon={CalendarClock} tone="primary" />
+        <StatCard label="Finalizados" value={s.finalizados} hint="Concluídos" icon={LogOut} />
       </div>
 
       <section className="px-6 mt-4">
@@ -72,7 +72,7 @@ function Dashboard() {
             </div>
             <div>
               <div className="text-[11px] uppercase text-muted-foreground">Ocupadas</div>
-              <div className="text-3xl font-bold text-warning-foreground">{s.emPatio}</div>
+              <div className="text-3xl font-bold text-warning-foreground">{s.ocupacao}</div>
               <div className="text-xs text-muted-foreground">de {s.capacidadeTotal}</div>
             </div>
             <div>
@@ -100,7 +100,7 @@ function Dashboard() {
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div className="rounded-md bg-info/5 border border-info/20 p-2 text-center">
               <div className="text-[10px] uppercase text-muted-foreground">Ocupação Atual</div>
-              <div className="text-xl font-bold text-info">{s.emPatio}</div>
+              <div className="text-xl font-bold text-info">{s.ocupacao}</div>
             </div>
             <div className="rounded-md bg-success/5 border border-success/20 p-2 text-center">
               <div className="text-[10px] uppercase text-muted-foreground">Devoluções</div>
