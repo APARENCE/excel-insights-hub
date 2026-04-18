@@ -63,32 +63,30 @@ No editor do Lovable, clique em **Publish**. O projeto é hospedado
 automaticamente em um subdomínio `*.lovable.app` e você pode conectar
 um domínio próprio em **Project Settings → Domains**.
 
-### Opção 2 — Deploy na Vercel
+### Opção 2 — Deploy na Vercel (estático)
 
-A Vercel suporta TanStack Start. Após conectar o repositório:
+Como este app é 100% client-side (todos os dados ficam no `localStorage` do
+navegador), publicamos somente a saída do **cliente** como site estático.
+O arquivo `vercel.json` na raiz já está configurado para isso.
 
-1. **Import Project** na Vercel apontando para o repositório do GitHub.
-2. Em **Build & Output Settings**, deixe o framework como **Other** e
-   configure:
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-3. Em **Settings → Functions**, garanta runtime Node 20+.
-4. Clique em **Deploy**.
+Passo a passo:
 
-Se a Vercel não detectar automaticamente o handler SSR, instale o adapter
-oficial:
+1. Na Vercel, clique em **Add New → Project** e importe o repositório do
+   GitHub.
+2. Na tela de configuração, deixe **tudo no padrão** — a Vercel vai ler o
+   `vercel.json` automaticamente:
+   - **Build Command**: `npm run build` (já definido)
+   - **Output Directory**: `dist/client` (já definido)
+   - **Framework Preset**: Other (já definido)
+3. Clique em **Deploy**.
 
-```bash
-npm install @tanstack/react-start
-```
+O `vercel.json` também configura o rewrite `/* → /index.html`, garantindo
+que rotas como `/estoque`, `/demurrage` e `/vazios` funcionem ao recarregar
+a página ou abrir o link diretamente.
 
-E adicione a variável de ambiente `TARGET=vercel` no painel da Vercel
-antes do build.
-
-> **Alternativa estática**: se você não precisa de SSR (este app é 100%
-> client-side), também é possível convertê-lo em SPA pura. Avise se quiser
-> esse caminho — exige reestruturar `__root.tsx`, criar `index.html` raiz
-> e remover o preset TanStack Start.
+> **Importante**: não é necessário instalar adapter SSR nem configurar
+> runtime Node — servimos apenas os arquivos estáticos gerados em
+> `dist/client/`.
 
 Não há variáveis de ambiente obrigatórias.
 
