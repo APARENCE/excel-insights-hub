@@ -1,1 +1,18 @@
-"use strict";\n\nimport { defineConfig } from "vite";\nimport react from "@tanstack/vite-plugin-react";\nimport { resolve } from "path";\n\nexport default defineConfig({\n  plugins: [react()],\n  base: \"\",\n  build: {\n    outDir: \"dist\",\n    emptyOutDir: true,\n    assetsDir: \"assets\",\n    rollupOptions: {\n      input: {\n        main: resolve(__dirname, \"src/main.tsx\"),\n      },\n    },\n  },\n});\n"
+import { defineConfig } from "vite";
+import react from "@tanstack/vite-plugin-react";
+import { resolve } from "path";
+
+export default defineConfig({
+  plugins: [react()],
+  base: "",
+  build: {
+    outDir: "dist",
+    emptyOutDir: true,
+    assetsDir: "assets",
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, "src/main.tsx"),
+      },
+    },
+  },
+});
