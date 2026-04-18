@@ -25,9 +25,24 @@ export interface DemurrageBucket {
 }
 
 export function buildDemurrageBuckets(cheios: CheioRow[]): DemurrageBucket[] {
+/** Compute integer days until vencimento for a row, prioritizing the actual date column. */
+function rowDiasRestantes(c: CheioRow): number | undefined {
+  // Prefer the demurrage date — it's a real date column.
+  // The "DIAS PARA VENCIMENTO" column on the spreadsheet is a fractional formula
+  // and gets stale, so we recompute from today.
+  if (c.demurrageVencimento) {
+    const d = daysUntil(c.demurrageVencimento);
+    if (d != null) return d;
+  }
+  if (c.diasParaVencimento != null) return Math.round(c.diasParaVencimento);
+  return undefined;
+}
+
+export function buildDemurrageBuckets(cheios: CheioRow[]): DemurrageBucket[] {
   const map = new Map<number, number>();
   for (const c of cheios) {
-    const d = c.diasParaVencimento ?? daysUntil(c.demurrageVencimento);
+    if (c.status === "FINALIZADO") continue;
+    const d = rowDiasRestantes(c);
     if (d == null) continue;
     map.set(d, (map.get(d) ?? 0) + 1);
   }
@@ -65,7 +80,7 @@ export function buildDemurrageRows(cheios: CheioRow[]): DemurrageRow[] {
   return cheios
     .filter((c) => c.status !== "FINALIZADO")
     .map((c) => {
-      const d = c.diasParaVencimento ?? daysUntil(c.demurrageVencimento);
+      const d = rowDiasRestantes(c);
       const statusLabel: DemurrageRow["statusLabel"] =
         d == null
           ? "DENTRO DO PRAZO"
@@ -88,7 +103,7 @@ export function buildDemurrageRows(cheios: CheioRow[]): DemurrageRow[] {
         statusLabel,
       };
     })
-    .sort((a, b) => (a.diasRestantes ?? 999) - (b.diasRestantes ?? 999));
+    .sort((a, b) => (a.diasRestantes ?? 9999) - (b.diasRestantes ?? 9999));
 }
 
 export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[]) {
