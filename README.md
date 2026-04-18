@@ -53,40 +53,38 @@ Pelo painel do Lovable:
 
 ## Deploy
 
-Este projeto é uma aplicação **TanStack Start** que roda em runtime
-serverless (Cloudflare Workers por padrão). Há duas formas recomendadas
-de publicá-lo:
+Este projeto usa **TanStack Start**, um framework SSR cuja saída de build
+é um Worker (Cloudflare). **A Vercel não suporta esse formato nativamente**
+e por isso retorna `404: NOT_FOUND` quando o repositório é importado sem
+ajustes.
 
-### Opção 1 — Publicar pelo Lovable (mais simples)
+### ✅ Opção recomendada — Publicar pelo Lovable
 
-No editor do Lovable, clique em **Publish**. O projeto é hospedado
-automaticamente em um subdomínio `*.lovable.app` e você pode conectar
-um domínio próprio em **Project Settings → Domains**.
+No editor do Lovable, clique em **Publish** (canto superior direito).
+O projeto vai ao ar em segundos em um subdomínio `*.lovable.app`, com
+SSR funcionando, SPA fallback automático e suporte a domínio próprio em
+**Project Settings → Domains**. Zero configuração.
 
-### Opção 2 — Deploy na Vercel (estático)
+### ⚠️ Opção avançada — Cloudflare Pages
 
-Como este app é 100% client-side (todos os dados ficam no `localStorage` do
-navegador), publicamos somente a saída do **cliente** como site estático.
-O arquivo `vercel.json` na raiz já está configurado para isso.
+Se você precisa hospedar fora do Lovable, o destino natural é a
+**Cloudflare** (mesmo runtime do build). Em **Cloudflare Pages**:
 
-Passo a passo:
+1. Conecte o repositório do GitHub.
+2. Build command: `npm run build`
+3. Build output directory: `dist/client`
+4. Em **Functions → Compatibility flags** adicione `nodejs_compat`.
+5. Faça upload do worker em `dist/server/index.js` como Pages Function
+   (ou use `wrangler deploy`).
 
-1. Na Vercel, clique em **Add New → Project** e importe o repositório do
-   GitHub.
-2. Na tela de configuração, deixe **tudo no padrão** — a Vercel vai ler o
-   `vercel.json` automaticamente:
-   - **Build Command**: `npm run build` (já definido)
-   - **Output Directory**: `dist/client` (já definido)
-   - **Framework Preset**: Other (já definido)
-3. Clique em **Deploy**.
+### ❌ Vercel (não suportado neste template)
 
-O `vercel.json` também configura o rewrite `/* → /index.html`, garantindo
-que rotas como `/estoque`, `/demurrage` e `/vazios` funcionem ao recarregar
-a página ou abrir o link diretamente.
-
-> **Importante**: não é necessário instalar adapter SSR nem configurar
-> runtime Node — servimos apenas os arquivos estáticos gerados em
-> `dist/client/`.
+A Vercel exige um adapter SSR específico que o template TanStack Start
+do Lovable não inclui. Tentar importar o repositório direto resulta em
+404. Se você precisa muito de Vercel, é necessário refatorar o projeto
+para SPA pura (remover SSR, criar `index.html` raiz). Como o app é 100%
+client-side (tudo em `localStorage`), nada seria perdido funcionalmente —
+peça essa conversão se for realmente necessário.
 
 Não há variáveis de ambiente obrigatórias.
 
