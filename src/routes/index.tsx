@@ -100,7 +100,7 @@ function Dashboard() {
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div className="rounded-md bg-info/5 border border-info/20 p-2 text-center">
               <div className="text-[10px] uppercase text-muted-foreground">Ocupação Atual</div>
-              <div className="text-xl font-bold text-info">{s.emPatio}</div>
+              <div className="text-xl font-bold text-info">{s.ocupacao}</div>
             </div>
             <div className="rounded-md bg-success/5 border border-success/20 p-2 text-center">
               <div className="text-[10px] uppercase text-muted-foreground">Devoluções</div>
