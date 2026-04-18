@@ -30,8 +30,8 @@ function Dashboard() {
   const s = summary(ds.cheios, ds.vaziosLocados);
   const dist = statusDistribution(ds.cheios);
   const movement = dailyMovement(ds.cheios);
-  const ocupacaoPct = Math.round((s.emPatio / s.capacidadeTotal) * 1000) / 10;
-  const livres = s.capacidadeTotal - s.emPatio;
+  const ocupacaoPct = Math.round((s.ocupacao / s.capacidadeTotal) * 1000) / 10;
+  const livres = s.capacidadeTotal - s.ocupacao;
 
   return (
     <AppShell>
@@ -72,7 +72,7 @@ function Dashboard() {
             </div>
             <div>
               <div className="text-[11px] uppercase text-muted-foreground">Ocupadas</div>
-              <div className="text-3xl font-bold text-warning-foreground">{s.emPatio}</div>
+              <div className="text-3xl font-bold text-warning-foreground">{s.ocupacao}</div>
               <div className="text-xs text-muted-foreground">de {s.capacidadeTotal}</div>
             </div>
             <div>
