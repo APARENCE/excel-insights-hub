@@ -24,7 +24,6 @@ export interface DemurrageBucket {
   daysRemaining: number;
 }
 
-export function buildDemurrageBuckets(cheios: CheioRow[]): DemurrageBucket[] {
 /** Compute integer days until vencimento for a row, prioritizing the actual date column. */
 function rowDiasRestantes(c: CheioRow): number | undefined {
   // Prefer the demurrage date — it's a real date column.
