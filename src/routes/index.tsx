@@ -50,11 +50,11 @@ function Dashboard() {
         }
       />
       <div className="px-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        <StatCard label="Ocupação Atual" value={s.emPatio} hint={`de ${s.capacidadeTotal} vagas`} icon={Car} tone="success" />
-        <StatCard label="Depara em pátio TLOG-SJP" value={s.dePara} hint="Dê para realizados" icon={Repeat} tone="warning" />
+        <StatCard label="Ocupação Atual" value={s.ocupacao} hint={`de ${s.capacidadeTotal} vagas`} icon={Car} tone="success" />
+        <StatCard label="Depara em pátio TLOG-SJP" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="warning" />
         <StatCard label="Em Pátio TLOG-SJP" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="info" />
-        <StatCard label="Entradas Programadas" value={0} hint="Chegadas esperadas" icon={CalendarClock} />
-        <StatCard label="Devoluções" value={s.finalizados} hint="Últimos 30 dias" icon={LogOut} />
+        <StatCard label="Enviado para Fábrica" value={s.enviadoFabrica} hint="Em trânsito p/ fábrica" icon={CalendarClock} tone="primary" />
+        <StatCard label="Finalizados" value={s.finalizados} hint="Concluídos" icon={LogOut} />
       </div>
 
       <section className="px-6 mt-4">
