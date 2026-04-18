@@ -63,7 +63,7 @@ export interface DemurrageRow {
 
 export function buildDemurrageRows(cheios: CheioRow[]): DemurrageRow[] {
   return cheios
-    .filter((c) => c.status !== "FINALIZADO" && c.status !== "DEVOLVIDO")
+    .filter((c) => c.status !== "FINALIZADO")
     .map((c) => {
       const d = c.diasParaVencimento ?? daysUntil(c.demurrageVencimento);
       const statusLabel: DemurrageRow["statusLabel"] =
@@ -129,7 +129,7 @@ export function dailyMovement(cheios: CheioRow[]) {
       const k = c.dataChegada.slice(0, 10);
       entries.set(k, (entries.get(k) ?? 0) + 1);
     }
-    if (c.status === "FINALIZADO" || c.status === "DEVOLVIDO") {
+    if (c.status === "FINALIZADO") {
       const k = (c.dataDevolucaoVazio || c.dataEnvioFabrica || c.dataChegada || "").slice(0, 10);
       if (k) devolucoes.set(k, (devolucoes.get(k) ?? 0) + 1);
     }
