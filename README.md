@@ -53,42 +53,38 @@ Pelo painel do Lovable:
 
 ## Deploy
 
-Este projeto é uma aplicação **TanStack Start** que roda em runtime
-serverless (Cloudflare Workers por padrão). Há duas formas recomendadas
-de publicá-lo:
+Este projeto usa **TanStack Start**, um framework SSR cuja saída de build
+é um Worker (Cloudflare). **A Vercel não suporta esse formato nativamente**
+e por isso retorna `404: NOT_FOUND` quando o repositório é importado sem
+ajustes.
 
-### Opção 1 — Publicar pelo Lovable (mais simples)
+### ✅ Opção recomendada — Publicar pelo Lovable
 
-No editor do Lovable, clique em **Publish**. O projeto é hospedado
-automaticamente em um subdomínio `*.lovable.app` e você pode conectar
-um domínio próprio em **Project Settings → Domains**.
+No editor do Lovable, clique em **Publish** (canto superior direito).
+O projeto vai ao ar em segundos em um subdomínio `*.lovable.app`, com
+SSR funcionando, SPA fallback automático e suporte a domínio próprio em
+**Project Settings → Domains**. Zero configuração.
 
-### Opção 2 — Deploy na Vercel
+### ⚠️ Opção avançada — Cloudflare Pages
 
-A Vercel suporta TanStack Start. Após conectar o repositório:
+Se você precisa hospedar fora do Lovable, o destino natural é a
+**Cloudflare** (mesmo runtime do build). Em **Cloudflare Pages**:
 
-1. **Import Project** na Vercel apontando para o repositório do GitHub.
-2. Em **Build & Output Settings**, deixe o framework como **Other** e
-   configure:
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-3. Em **Settings → Functions**, garanta runtime Node 20+.
-4. Clique em **Deploy**.
+1. Conecte o repositório do GitHub.
+2. Build command: `npm run build`
+3. Build output directory: `dist/client`
+4. Em **Functions → Compatibility flags** adicione `nodejs_compat`.
+5. Faça upload do worker em `dist/server/index.js` como Pages Function
+   (ou use `wrangler deploy`).
 
-Se a Vercel não detectar automaticamente o handler SSR, instale o adapter
-oficial:
+### ❌ Vercel (não suportado neste template)
 
-```bash
-npm install @tanstack/react-start
-```
-
-E adicione a variável de ambiente `TARGET=vercel` no painel da Vercel
-antes do build.
-
-> **Alternativa estática**: se você não precisa de SSR (este app é 100%
-> client-side), também é possível convertê-lo em SPA pura. Avise se quiser
-> esse caminho — exige reestruturar `__root.tsx`, criar `index.html` raiz
-> e remover o preset TanStack Start.
+A Vercel exige um adapter SSR específico que o template TanStack Start
+do Lovable não inclui. Tentar importar o repositório direto resulta em
+404. Se você precisa muito de Vercel, é necessário refatorar o projeto
+para SPA pura (remover SSR, criar `index.html` raiz). Como o app é 100%
+client-side (tudo em `localStorage`), nada seria perdido funcionalmente —
+peça essa conversão se for realmente necessário.
 
 Não há variáveis de ambiente obrigatórias.
 
