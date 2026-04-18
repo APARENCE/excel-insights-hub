@@ -9,8 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VaziosRouteImport } from './routes/vazios'
+import { Route as ImportarRouteImport } from './routes/importar'
+import { Route as EstoqueRouteImport } from './routes/estoque'
+import { Route as DemurrageRouteImport } from './routes/demurrage'
 import { Route as IndexRouteImport } from './routes/index'
 
+const VaziosRoute = VaziosRouteImport.update({
+  id: '/vazios',
+  path: '/vazios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImportarRoute = ImportarRouteImport.update({
+  id: '/importar',
+  path: '/importar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EstoqueRoute = EstoqueRouteImport.update({
+  id: '/estoque',
+  path: '/estoque',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemurrageRoute = DemurrageRouteImport.update({
+  id: '/demurrage',
+  path: '/demurrage',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +43,72 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/demurrage': typeof DemurrageRoute
+  '/estoque': typeof EstoqueRoute
+  '/importar': typeof ImportarRoute
+  '/vazios': typeof VaziosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/demurrage': typeof DemurrageRoute
+  '/estoque': typeof EstoqueRoute
+  '/importar': typeof ImportarRoute
+  '/vazios': typeof VaziosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/demurrage': typeof DemurrageRoute
+  '/estoque': typeof EstoqueRoute
+  '/importar': typeof ImportarRoute
+  '/vazios': typeof VaziosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/demurrage' | '/estoque' | '/importar' | '/vazios'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/demurrage' | '/estoque' | '/importar' | '/vazios'
+  id: '__root__' | '/' | '/demurrage' | '/estoque' | '/importar' | '/vazios'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DemurrageRoute: typeof DemurrageRoute
+  EstoqueRoute: typeof EstoqueRoute
+  ImportarRoute: typeof ImportarRoute
+  VaziosRoute: typeof VaziosRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/vazios': {
+      id: '/vazios'
+      path: '/vazios'
+      fullPath: '/vazios'
+      preLoaderRoute: typeof VaziosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/importar': {
+      id: '/importar'
+      path: '/importar'
+      fullPath: '/importar'
+      preLoaderRoute: typeof ImportarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/estoque': {
+      id: '/estoque'
+      path: '/estoque'
+      fullPath: '/estoque'
+      preLoaderRoute: typeof EstoqueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demurrage': {
+      id: '/demurrage'
+      path: '/demurrage'
+      fullPath: '/demurrage'
+      preLoaderRoute: typeof DemurrageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,16 +121,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DemurrageRoute: DemurrageRoute,
+  EstoqueRoute: EstoqueRoute,
+  ImportarRoute: ImportarRoute,
+  VaziosRoute: VaziosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
