@@ -1,6 +1,4 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
-
-import appCss from "../styles.css?url";
+import { Outlet, Link, createRootRoute } from "@tanstack/react-router";
 
 function NotFoundComponent() {
   return (
@@ -25,44 +23,9 @@ function NotFoundComponent() {
 }
 
 export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Operação Spot Renault — Terminal Tlog" },
-      { name: "description", content: "Sistema de gestão da operação Spot Renault no Terminal Tlog: estoque do pátio, controle de demurrage e vazios locados." },
-      { name: "author", content: "Tlog" },
-      { property: "og:title", content: "Operação Spot Renault — Terminal Tlog" },
-      { property: "og:description", content: "Gestão de estoque, demurrage e vazios locados — análise automática a partir de planilha Excel." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-    ],
-  }),
-  shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
 });
-
-function RootShell({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  );
-}
 
 function RootComponent() {
   return <Outlet />;
