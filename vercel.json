@@ -1,1 +1,1 @@
-{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }], "buildCommand": "npm run build", "outputDirectory": "dist/client", "headers": [ { "source": "/(.*)", "headers": [ { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" } ] } ] }
+{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }], "buildCommand": "npm run build", "outputDirectory": "dist/client", "functions": { "dist/server/**": { "runtime": "nodejs18.x" } } }
