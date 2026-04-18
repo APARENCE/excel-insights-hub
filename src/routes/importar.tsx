@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { CloudUpload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -12,7 +12,6 @@ export const Route = createFileRoute("/importar")({
 
 function ImportarPage() {
   const ds = useDataset();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [drag, setDrag] = useState(false);
@@ -48,10 +47,10 @@ function ImportarPage() {
         }));
       }
     } catch (e) {
+      console.error("Import error:", e);
       setError(e instanceof Error ? e.message : "Erro ao processar o arquivo.");
     } finally {
       setBusy(false);
-      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
@@ -60,7 +59,8 @@ function ImportarPage() {
       <PageHeader title="Importar" subtitle="Envie arquivo Excel" />
 
       <div className="px-6">
-        <div
+        <label
+          htmlFor="excel-file-input"
           onDragOver={(e) => {
             e.preventDefault();
             setDrag(true);
@@ -71,9 +71,9 @@ function ImportarPage() {
             setDrag(false);
             handleFiles(e.dataTransfer.files);
           }}
-          className={`rounded-xl border-2 border-dashed p-10 text-center bg-card transition-colors ${
-            drag ? "border-primary bg-primary/5" : "border-border"
-          }`}
+          className={`block cursor-pointer rounded-xl border-2 border-dashed p-10 text-center bg-card transition-colors ${
+            drag ? "border-primary bg-primary/5" : "border-border hover:border-primary/60 hover:bg-accent/40"
+          } ${busy ? "pointer-events-none opacity-70" : ""}`}
         >
           <div className="mx-auto h-14 w-14 rounded-full bg-info/10 flex items-center justify-center mb-3">
             {busy ? (
@@ -84,29 +84,34 @@ function ImportarPage() {
           </div>
           <h3 className="text-lg font-semibold">Envie ou arraste um arquivo</h3>
           <p className="text-xs text-muted-foreground mt-1">Excel: .xlsx, .xls (máx 10MB)</p>
+
           <input
-            ref={fileRef}
+            id="excel-file-input"
             type="file"
-            accept=".xlsx,.xls"
+            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             multiple
-            onChange={(e) => e.target.files && handleFiles(e.target.files)}
-            className="hidden"
-          />
-          <button
             disabled={busy}
-            onClick={() => fileRef.current?.click()}
-            className="mt-4 inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
-          >
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length) {
+                handleFiles(e.target.files);
+              }
+              e.target.value = "";
+            }}
+            className="sr-only"
+          />
+
+          <span className="mt-4 inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90">
             <CloudUpload className="h-4 w-4" />
-            Selecionar arquivo
-          </button>
+            {busy ? "Processando..." : "Selecionar arquivo"}
+          </span>
+
           {error && (
             <div className="mt-3 inline-flex items-center gap-2 text-sm text-destructive">
               <AlertCircle className="h-4 w-4" />
               {error}
             </div>
           )}
-        </div>
+        </label>
       </div>
 
       <div className="px-6 mt-6 pb-8">
