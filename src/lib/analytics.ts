@@ -24,11 +24,8 @@ export interface DemurrageBucket {
   daysRemaining: number;
 }
 
-/** Compute integer days until vencimento for a row, prioritizing the actual date column. */
+// Compute integer days until vencimento for a row, prioritizing the actual date column.
 function rowDiasRestantes(c: CheioRow): number | undefined {
-  // Prefer the demurrage date — it's a real date column.
-  // The "DIAS PARA VENCIMENTO" column on the spreadsheet is a fractional formula
-  // and gets stale, so we recompute from today.
   if (c.demurrageVencimento) {
     const d = daysUntil(c.demurrageVencimento);
     if (d != null) return d;
@@ -110,10 +107,9 @@ export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[]) {
   const dePara = cheios.filter((c) => c.status === "DEPARA EM PATIO TLOG-SJP").length;
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
   const finalizados = cheios.filter((c) => c.status === "FINALIZADO").length;
-  // "Ocupação atual" = tudo que ainda está fisicamente no pátio TLOG (em pátio + dê-para em pátio)
   const ocupacao = emPatio + dePara;
   const vaziosEmPatio = vazios.filter(
-    (v) => !v.statusPatio || !/(devolv|finaliz|sa[ií]da)/i.test(v.statusPatio),
+    (v) => !v.statusPatio || !/(devolv|finaliz|saida|saída)/i.test(v.statusPatio),
   ).length;
 
   return {
