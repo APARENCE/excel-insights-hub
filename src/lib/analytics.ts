@@ -92,12 +92,12 @@ export function buildDemurrageRows(cheios: CheioRow[]): DemurrageRow[] {
 }
 
 export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[]) {
-  const emPatio = cheios.filter(
-    (c) => c.status === "EM PATIO TLOG-SJP" || c.status === "DEPARA EM PATIO TLOG-SJP" || c.status === "EM PROCESSO DE DEPARA",
-  ).length;
-  const enviadoFabrica = cheios.filter((c) => c.status === "ENVIO HORSE" || c.status === "ENVIADO PARA FABRICA").length;
-  const finalizados = cheios.filter((c) => c.status === "FINALIZADO" || c.status === "DEVOLVIDO").length;
-  const dePara = cheios.filter((c) => c.status === "DEPARA EM PATIO TLOG-SJP" || c.status === "DÊ PARA REALIZADO").length;
+  const emPatio = cheios.filter((c) => c.status === "EM PATIO TLOG-SJP").length;
+  const dePara = cheios.filter((c) => c.status === "DEPARA EM PATIO TLOG-SJP").length;
+  const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
+  const finalizados = cheios.filter((c) => c.status === "FINALIZADO").length;
+  // "Ocupação atual" = tudo que ainda está fisicamente no pátio TLOG (em pátio + dê-para em pátio)
+  const ocupacao = emPatio + dePara;
   const vaziosEmPatio = vazios.filter(
     (v) => !v.statusPatio || !/(devolv|finaliz|sa[ií]da)/i.test(v.statusPatio),
   ).length;
@@ -105,9 +105,10 @@ export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[]) {
   return {
     totalCheios: cheios.length,
     emPatio,
+    dePara,
     enviadoFabrica,
     finalizados,
-    dePara,
+    ocupacao,
     totalVaziosLocados: vazios.length,
     vaziosEmPatio,
     capacidadeTotal: 600,
