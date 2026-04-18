@@ -178,8 +178,8 @@ function DemurragePage() {
                   </td>
                 </tr>
               )}
-              {filteredRows.slice(0, 200).map((r) => (
-                <tr key={r.conteiner} className="border-t border-border hover:bg-muted/20">
+              {filteredRows.slice(0, 200).map((r, i) => (
+                <tr key={`${r.conteiner}-${i}`} className="border-t border-border hover:bg-muted/20">
                   <td className="px-4 py-2.5 font-medium">{r.conteiner}</td>
                   <td className="px-4 py-2.5 text-muted-foreground">{r.navio || "—"}</td>
                   <td className="px-4 py-2.5 text-muted-foreground">{r.armador || "—"}</td>
