@@ -7,10 +7,9 @@ no terminal TLOG-SJP, com importação direta de planilhas Excel (.xlsx).
 
 - **Importar Dados**: faça upload da planilha mensal e o sistema parseia
   automaticamente as abas `CHEIOS TLOG ATENDIMENTO RENAULT` e `VAZIO LOCADO`.
-- **Dashboard**: KPIs em tempo real (Em Pátio, Dê-Para, Enviado para Fábrica,
-  Finalizados), capacidade do pátio e gráficos de movimentação.
+- **Dashboard**: KPIs em tempo real, capacidade do pátio e gráficos.
 - **Estoque**: lista filtrável de todos os containers cheios.
-- **Controle de Demurrage**: ranking de containers por dias até o vencimento.
+- **Controle de Demurrage**: ranking por dias até o vencimento.
 - **Vazios Locados**: visão dos containers vazios em locação no pátio.
 
 Todos os dados ficam armazenados no `localStorage` do navegador — não há
@@ -18,12 +17,11 @@ backend nem envio de informações para servidores externos.
 
 ## Stack
 
-- React 19 + TypeScript
-- TanStack Router + TanStack Start (SSR)
+- React 19 + TypeScript + Vite 7
 - Tailwind CSS v4 + shadcn/ui
 - Recharts (gráficos)
 - SheetJS / xlsx (parser de Excel)
-- Vite 7
+- TanStack Router (preview Lovable) / React Router DOM (build Vercel)
 
 ## Desenvolvimento local
 
@@ -32,71 +30,49 @@ npm install
 npm run dev
 ```
 
-Abra http://localhost:8080.
-
-## Build de produção
-
-```bash
-npm run build
-```
-
-A saída fica em `dist/` (cliente em `dist/client/`, servidor em `dist/server/`).
-
 ## Subindo para o GitHub
 
-Pelo painel do Lovable:
+No editor do Lovable: **Connectors → GitHub → Connect project →
+Create Repository**. Sincronização bidirecional automática.
 
-1. Abra **Connectors → GitHub → Connect project**.
-2. Autorize o app do Lovable na sua conta GitHub.
-3. Clique em **Create Repository**. O projeto é enviado automaticamente
-   e qualquer alteração feita no Lovable é sincronizada em tempo real.
+## Deploy na Vercel ✅
 
-## Deploy
+O projeto está **pré-configurado** para Vercel. O `vercel.json` já contém
+o build command e o SPA fallback necessários.
 
-Este projeto usa **TanStack Start**, um framework SSR cuja saída de build
-é um Worker (Cloudflare). **A Vercel não suporta esse formato nativamente**
-e por isso retorna `404: NOT_FOUND` quando o repositório é importado sem
-ajustes.
+### Passos
 
-### ✅ Opção recomendada — Publicar pelo Lovable
+1. Suba o código para o GitHub (ver acima).
+2. Em [vercel.com/new](https://vercel.com/new), importe o repositório.
+3. **Não altere nenhuma configuração** — a Vercel detecta o `vercel.json`
+   automaticamente:
+   - Build Command: `npx vite build --config vite.config.vercel.ts`
+   - Output Directory: `dist`
+   - Rewrites: todas as rotas → `/index.html` (SPA fallback)
+4. Clique em **Deploy**.
 
-No editor do Lovable, clique em **Publish** (canto superior direito).
-O projeto vai ao ar em segundos em um subdomínio `*.lovable.app`, com
-SSR funcionando, SPA fallback automático e suporte a domínio próprio em
-**Project Settings → Domains**. Zero configuração.
+Não há variáveis de ambiente necessárias.
 
-### ⚠️ Opção avançada — Cloudflare Pages
+## Arquitetura dual de build
 
-Se você precisa hospedar fora do Lovable, o destino natural é a
-**Cloudflare** (mesmo runtime do build). Em **Cloudflare Pages**:
+Para permitir edição no Lovable **e** deploy na Vercel sem refatoração:
 
-1. Conecte o repositório do GitHub.
-2. Build command: `npm run build`
-3. Build output directory: `dist/client`
-4. Em **Functions → Compatibility flags** adicione `nodejs_compat`.
-5. Faça upload do worker em `dist/server/index.js` como Pages Function
-   (ou use `wrangler deploy`).
-
-### ❌ Vercel (não suportado neste template)
-
-A Vercel exige um adapter SSR específico que o template TanStack Start
-do Lovable não inclui. Tentar importar o repositório direto resulta em
-404. Se você precisa muito de Vercel, é necessário refatorar o projeto
-para SPA pura (remover SSR, criar `index.html` raiz). Como o app é 100%
-client-side (tudo em `localStorage`), nada seria perdido funcionalmente —
-peça essa conversão se for realmente necessário.
-
-Não há variáveis de ambiente obrigatórias.
+- **Editor Lovable**: usa TanStack Start (rotas em `src/routes/`).
+- **Build Vercel**: usa SPA puro com `index.html` na raiz, entrada
+  `src/main.tsx` e React Router DOM. Configurado em `vite.config.vercel.ts`.
+- Ambos renderizam os **mesmos componentes** localizados em `src/pages/`.
 
 ## Estrutura
 
 ```
 src/
-├── components/        # AppShell, StatCard, StatusBadge, ui/* (shadcn)
+├── components/        # AppShell, NavLink, StatCard, StatusBadge, ui/*
 ├── lib/
-│   ├── analytics.ts   # Cálculos de KPIs, demurrage, distribuição
+│   ├── analytics.ts   # KPIs, demurrage, distribuição
 │   ├── excel-parser.ts# Parser .xlsx (lê coluna AA = STATUS)
 │   ├── store.ts       # Estado global (localStorage)
-│   └── types.ts       # Tipos do domínio
-└── routes/            # /, /estoque, /demurrage, /vazios, /importar
+│   └── types.ts
+├── pages/             # Dashboard, Estoque, Demurrage, Vazios, Importar
+├── routes/            # Rotas TanStack (re-exportam src/pages/)
+└── main.tsx           # Entrada SPA da Vercel
 ```
