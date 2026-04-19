@@ -1,4 +1,3 @@
-import { Link, useLocation } from "@tanstack/react-router";
 import {
   LayoutGrid,
   Boxes,
@@ -10,6 +9,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { NavLink, usePathname } from "@/components/NavLink";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutGrid },
@@ -20,7 +20,7 @@ const nav = [
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { pathname } = useLocation();
+  const pathname = usePathname();
   return (
     <div className="min-h-screen flex bg-background text-foreground">
       <aside className="hidden md:flex flex-col w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
@@ -38,7 +38,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             const active = pathname === item.to;
             const Icon = item.icon;
             return (
-              <Link
+              <NavLink
                 key={item.to}
                 to={item.to}
                 className={cn(
@@ -50,7 +50,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               >
                 <Icon className="h-4 w-4" />
                 {item.label}
-              </Link>
+              </NavLink>
             );
           })}
         </nav>
