@@ -24,13 +24,17 @@ export interface DemurrageBucket {
   daysRemaining: number;
 }
 
-// Compute integer days until vencimento for a row, prioritizing the actual date column.
+// Dias restantes até o vencimento do demurrage.
+// Prioriza o valor da COLUNA N (DIAS PARA VENCIMENTO) que vem direto da planilha.
+// Só recorre à data de vencimento (coluna M) como fallback.
 function rowDiasRestantes(c: CheioRow): number | undefined {
+  if (c.diasParaVencimento != null && !isNaN(c.diasParaVencimento)) {
+    return Math.round(c.diasParaVencimento);
+  }
   if (c.demurrageVencimento) {
     const d = daysUntil(c.demurrageVencimento);
     if (d != null) return d;
   }
-  if (c.diasParaVencimento != null) return Math.round(c.diasParaVencimento);
   return undefined;
 }
 
