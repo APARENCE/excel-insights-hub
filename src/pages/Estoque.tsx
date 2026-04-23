@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { Search, FileText, Settings, CheckCircle2, Clock, ArrowDownToLine } from "lucide-react";
+import { Search, FileText, CheckCircle2, Clock, ArrowDownToLine } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import { useDataset } from "@/lib/store";
 import { summary } from "@/lib/analytics";
 
@@ -16,7 +17,7 @@ function statusTone(s: string): "success" | "info" | "warning" | "default" | "pr
 
 export default function EstoquePage() {
   const ds = useDataset();
-  const s = summary(ds.cheios, ds.vaziosLocados);
+  const s = summary(ds.cheios, ds.vaziosLocados, ds.settings.capacidadePatio);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
 
@@ -39,9 +40,7 @@ export default function EstoquePage() {
             <button className="inline-flex items-center gap-2 text-sm border border-border rounded-md px-3 py-1.5 bg-card hover:bg-accent">
               <FileText className="h-4 w-4" /> PDF
             </button>
-            <button className="inline-flex items-center gap-2 text-sm border border-border rounded-md px-3 py-1.5 bg-card hover:bg-accent">
-              <Settings className="h-4 w-4" /> Configurações
-            </button>
+            <SettingsDialog />
           </>
         }
       />

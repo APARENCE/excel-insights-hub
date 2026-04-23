@@ -7,6 +7,9 @@ const initial: AppDataset = {
   cheios: [],
   vaziosLocados: [],
   imports: [],
+  settings: {
+    capacidadePatio: 600,
+  },
 };
 
 let state: AppDataset = load();
@@ -18,7 +21,11 @@ function load(): AppDataset {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return initial;
     const parsed = JSON.parse(raw) as AppDataset;
-    return { ...initial, ...parsed };
+    return { 
+      ...initial, 
+      ...parsed,
+      settings: parsed.settings || initial.settings,
+    };
   } catch {
     return initial;
   }
@@ -45,6 +52,13 @@ export function setDataset(updater: (prev: AppDataset) => AppDataset) {
   state = updater(state);
   persist();
   emit();
+}
+
+export function updateSettings(settings: Partial<AppDataset["settings"]>) {
+  setDataset((prev) => ({
+    ...prev,
+    settings: { ...prev.settings, ...settings },
+  }));
 }
 
 export function clearDataset() {

@@ -12,9 +12,10 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-import { RefreshCw, Settings, Car, Repeat, MapPin, CalendarClock, LogOut, ClipboardList } from "lucide-react";
+import { RefreshCw, Car, Repeat, MapPin, CalendarClock, LogOut, ClipboardList } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import { useDataset } from "@/lib/store";
 import { dailyMovement, statusDistribution, summary } from "@/lib/analytics";
 
@@ -22,7 +23,7 @@ const STATUS_COLORS = ["#16a34a", "#94a3b8", "#64748b", "#a855f7", "#0ea5e9", "#
 
 export default function Dashboard() {
   const ds = useDataset();
-  const s = summary(ds.cheios, ds.vaziosLocados);
+  const s = summary(ds.cheios, ds.vaziosLocados, ds.settings.capacidadePatio);
   const dist = statusDistribution(ds.cheios);
   const movement = dailyMovement(ds.cheios);
   const ocupacaoPct = Math.round((s.ocupacao / s.capacidadeTotal) * 1000) / 10;
@@ -35,10 +36,11 @@ export default function Dashboard() {
         subtitle="Visão geral em tempo real"
         actions={
           <>
-            <button className="inline-flex items-center gap-2 text-sm border border-border rounded-md px-3 py-1.5 bg-card hover:bg-accent">
-              <Settings className="h-4 w-4" /> Configurações
-            </button>
-            <button className="inline-flex items-center gap-2 text-sm border border-border rounded-md px-2.5 py-1.5 bg-card hover:bg-accent">
+            <SettingsDialog />
+            <button 
+              className="inline-flex items-center gap-2 text-sm border border-border rounded-md px-2.5 py-1.5 bg-card hover:bg-accent"
+              onClick={() => window.location.reload()}
+            >
               <RefreshCw className="h-4 w-4" />
             </button>
           </>

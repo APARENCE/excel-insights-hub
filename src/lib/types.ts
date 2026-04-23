@@ -46,9 +46,14 @@ export interface ImportRecord {
   status: "success" | "error";
 }
 
+export interface AppSettings {
+  capacidadePatio: number;
+}
+
 export interface AppDataset {
   cheios: CheioRow[];
   vaziosLocados: VazioLocadoRow[];
   imports: ImportRecord[];
   lastImportAt?: string;
+  settings: AppSettings;
 }

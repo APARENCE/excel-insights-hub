@@ -103,7 +103,7 @@ export function buildDemurrageRows(cheios: CheioRow[]): DemurrageRow[] {
     .sort((a, b) => (a.diasRestantes ?? 9999) - (b.diasRestantes ?? 9999));
 }
 
-export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[]) {
+export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[], capacity: number = 600) {
   const emPatio = cheios.filter((c) => c.status === "EM PATIO TLOG-SJP").length;
   const dePara = cheios.filter((c) => c.status === "DEPARA EM PATIO TLOG-SJP").length;
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
@@ -125,7 +125,7 @@ export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[]) {
     ocupacao,
     totalVaziosLocados: vazios.length,
     vaziosEmPatio,
-    capacidadeTotal: 600,
+    capacidadeTotal: capacity,
   };
 }
 
