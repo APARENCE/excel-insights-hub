@@ -59,12 +59,16 @@ import { cn } from "@/lib/utils";
 
 export default function PrioridadesPage() {
   const ds = useDataset();
+  const { userRole } = ds;
   const [isAddOpen, setIsAddOpen] = useState(false);
   
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedContainer, setSelectedContainer] = useState("");
   const [fabricaSelect, setFabricaSelect] = useState<string>("CVU");
   const [customFabrica, setCustomFabrica] = useState("");
+
+  const isCliente = userRole === "CLIENTE";
+  const isTransportadora = userRole === "TRANSPORTADORA";
 
   const availableContainers = useMemo(() => {
     const existingIds = new Set(ds.priorityRequests.filter(r => r.status !== 'DESPACHADO').map(r => r.conteiner));
@@ -210,7 +214,8 @@ export default function PrioridadesPage() {
       </div>
 
       <div className="flex items-center gap-2 self-end md:self-center">
-        {req.status === 'PENDENTE' && (
+        {/* Ações exclusivas para TRANSPORTADORA */}
+        {isTransportadora && req.status === 'PENDENTE' && (
           <Button 
             size="sm"
             onClick={() => updatePriorityStatus(req.id, 'CARREGANDO')}
@@ -219,7 +224,7 @@ export default function PrioridadesPage() {
             <Truck className="h-3.5 w-3.5 mr-1.5" /> CARREGAR
           </Button>
         )}
-        {req.status === 'CARREGANDO' && (
+        {isTransportadora && req.status === 'CARREGANDO' && (
           <Button 
             size="sm"
             onClick={() => updatePriorityStatus(req.id, 'DESPACHADO')}
@@ -228,6 +233,8 @@ export default function PrioridadesPage() {
             <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> DESPACHAR
           </Button>
         )}
+        
+        {/* Cliente e Transportadora podem apagar? No fluxo real talvez só cliente, mas mantendo delete para ambos por enquanto para testes */}
         <Button 
           variant="ghost" 
           size="icon" 
@@ -247,124 +254,128 @@ export default function PrioridadesPage() {
     <AppShell>
       <PageHeader 
         title="Painel de Prioridades" 
-        subtitle="Gestão diária de expedição Renault"
+        subtitle={isCliente ? "Solicite prioridade para fábrica" : "Operação de despacho Renault"}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={clearFinished} className="hidden sm:flex gap-2 text-xs">
               <Eraser className="h-3.5 w-3.5" /> Limpar Concluídos
             </Button>
-            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2 bg-primary hover:bg-primary/90 shadow-md">
-                  <Plus className="h-4 w-4" /> Solicitar
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <form onSubmit={handleCreateRequest}>
-                  <DialogHeader>
-                    <DialogTitle>Nova Solicitação Renault</DialogTitle>
-                    <DialogDescription>Selecione um container em pátio para priorizar.</DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-5 py-5">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-bold text-primary">Localizar Container</Label>
-                      <Popover open={searchOpen} onOpenChange={setSearchOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className="w-full justify-between h-10 text-left font-normal border-2"
-                          >
-                            {selectedContainer
-                              ? availableContainers.find((c) => c.conteiner === selectedContainer)?.conteiner
-                              : "Buscar por número ou dê-para..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[450px] p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Ex: CMAU, MSC, Dê-para..." />
-                            <CommandList>
-                              <CommandEmpty>Nenhum container disponível.</CommandEmpty>
-                              <CommandGroup>
-                                {availableContainers.map((c) => (
-                                  <CommandItem
-                                    key={c.conteiner}
-                                    value={`${c.conteiner} ${c.armador} ${c.conteinerDePara}`}
-                                    onSelect={() => {
-                                      setSelectedContainer(c.conteiner);
-                                      setSearchOpen(false);
-                                    }}
-                                    className="flex flex-col items-start py-2 px-4"
-                                  >
-                                    <div className="font-bold text-primary">{c.conteiner}</div>
-                                    <div className="flex gap-2 mt-1">
-                                      <span className="text-[10px] font-bold text-muted-foreground uppercase">{c.armador}</span>
-                                      {c.conteinerDePara && (
-                                        <span className="text-[10px] font-bold text-primary">Dê-para: {c.conteinerDePara}</span>
-                                      )}
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
+            
+            {/* Somente o CLIENTE pode solicitar novas prioridades */}
+            {isCliente && (
+              <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2 bg-primary hover:bg-primary/90 shadow-md">
+                    <Plus className="h-4 w-4" /> Solicitar
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <form onSubmit={handleCreateRequest}>
+                    <DialogHeader>
+                      <DialogTitle>Nova Solicitação Renault</DialogTitle>
+                      <DialogDescription>Selecione um container em pátio para priorizar.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-5 py-5">
                       <div className="space-y-2">
-                        <Label className="text-sm font-bold">Fábrica de Destino</Label>
-                        <Select value={fabricaSelect} onValueChange={setFabricaSelect}>
-                          <SelectTrigger className="h-10 border-2">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="CVU">🏭 CVU</SelectItem>
-                            <SelectItem value="CVP">🏭 CVP</SelectItem>
-                            <SelectItem value="OUTROS">✏️ Outra Fábrica...</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Label className="text-sm font-bold text-primary">Localizar Container</Label>
+                        <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className="w-full justify-between h-10 text-left font-normal border-2"
+                            >
+                              {selectedContainer
+                                ? availableContainers.find((c) => c.conteiner === selectedContainer)?.conteiner
+                                : "Buscar por número ou dê-para..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[450px] p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Ex: CMAU, MSC, Dê-para..." />
+                              <CommandList>
+                                <CommandEmpty>Nenhum container disponível.</CommandEmpty>
+                                <CommandGroup>
+                                  {availableContainers.map((c) => (
+                                    <CommandItem
+                                      key={c.conteiner}
+                                      value={`${c.conteiner} ${c.armador} ${c.conteinerDePara}`}
+                                      onSelect={() => {
+                                        setSelectedContainer(c.conteiner);
+                                        setSearchOpen(false);
+                                      }}
+                                      className="flex flex-col items-start py-2 px-4"
+                                    >
+                                      <div className="font-bold text-primary">{c.conteiner}</div>
+                                      <div className="flex gap-2 mt-1">
+                                        <span className="text-[10px] font-bold text-muted-foreground uppercase">{c.armador}</span>
+                                        {c.conteinerDePara && (
+                                          <span className="text-[10px] font-bold text-primary">Dê-para: {c.conteinerDePara}</span>
+                                        )}
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                       </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-bold">Fábrica de Destino</Label>
+                          <Select value={fabricaSelect} onValueChange={setFabricaSelect}>
+                            <SelectTrigger className="h-10 border-2">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="CVU">🏭 CVU</SelectItem>
+                              <SelectItem value="CVP">🏭 CVP</SelectItem>
+                              <SelectItem value="OUTROS">✏️ Outra Fábrica...</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-bold">Urgência</Label>
+                          <Select name="nivel" defaultValue="NORMAL">
+                            <SelectTrigger className="h-10 border-2">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="NORMAL">🟢 Normal</SelectItem>
+                              <SelectItem value="ALTA">🟠 Alta</SelectItem>
+                              <SelectItem value="CRITICA">🔴 Crítica</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {fabricaSelect === 'OUTROS' && (
+                        <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                          <Label className="text-sm font-bold">Nome da Fábrica</Label>
+                          <Input 
+                            placeholder="Digite o destino..." 
+                            value={customFabrica} 
+                            onChange={(e) => setCustomFabrica(e.target.value)} 
+                            className="h-10 border-2"
+                          />
+                        </div>
+                      )}
+
                       <div className="space-y-2">
-                        <Label className="text-sm font-bold">Urgência</Label>
-                        <Select name="nivel" defaultValue="NORMAL">
-                          <SelectTrigger className="h-10 border-2">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="NORMAL">🟢 Normal</SelectItem>
-                            <SelectItem value="ALTA">🟠 Alta</SelectItem>
-                            <SelectItem value="CRITICA">🔴 Crítica</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Label className="text-sm font-bold">Observação</Label>
+                        <Input name="observacao" placeholder="Opcional" className="h-10 border-2" />
                       </div>
                     </div>
-
-                    {fabricaSelect === 'OUTROS' && (
-                      <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-                        <Label className="text-sm font-bold">Nome da Fábrica</Label>
-                        <Input 
-                          placeholder="Digite o destino..." 
-                          value={customFabrica} 
-                          onChange={(e) => setCustomFabrica(e.target.value)} 
-                          className="h-10 border-2"
-                        />
-                      </div>
-                    )}
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-bold">Observação</Label>
-                      <Input name="observacao" placeholder="Opcional" className="h-10 border-2" />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit" className="w-full h-11 font-bold">Adicionar à Fila</Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+                    <DialogFooter>
+                      <Button type="submit" className="w-full h-11 font-bold">Adicionar à Fila</Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         }
       />

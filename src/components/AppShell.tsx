@@ -7,10 +7,13 @@ import {
   Zap,
   X,
   Container,
+  UserCircle,
+  Truck,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { NavLink, usePathname } from "@/components/NavLink";
+import { useDataset, setUserRole } from "@/lib/store";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutGrid },
@@ -23,6 +26,8 @@ const nav = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { userRole } = useDataset();
+
   return (
     <div className="min-h-screen flex bg-background text-foreground">
       <aside className="hidden md:flex flex-col w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
@@ -31,10 +36,33 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Container className="h-5 w-5 text-primary" />
             <div className="text-sm font-semibold truncate">Operação Spot Renault</div>
           </div>
-          <button className="text-sidebar-foreground/60 hover:text-sidebar-foreground">
-            <X className="h-4 w-4" />
-          </button>
         </div>
+
+        {/* Perfil Switcher */}
+        <div className="px-3 py-4 border-b border-sidebar-border bg-sidebar-accent/30">
+          <label className="text-[10px] font-bold text-sidebar-foreground/40 uppercase tracking-widest block mb-2 px-1">Perfil Ativo</label>
+          <div className="flex flex-col gap-1">
+            <button 
+              onClick={() => setUserRole("CLIENTE")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-all",
+                userRole === "CLIENTE" ? "bg-primary text-white font-bold" : "hover:bg-sidebar-accent text-sidebar-foreground/60"
+              )}
+            >
+              <UserCircle className="h-3.5 w-3.5" /> Cliente (Renault)
+            </button>
+            <button 
+              onClick={() => setUserRole("TRANSPORTADORA")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-all",
+                userRole === "TRANSPORTADORA" ? "bg-info text-white font-bold" : "hover:bg-sidebar-accent text-sidebar-foreground/60"
+              )}
+            >
+              <Truck className="h-3.5 w-3.5" /> Transportadora
+            </button>
+          </div>
+        </div>
+
         <nav className="flex-1 px-2 py-3 space-y-1">
           {nav.map((item) => {
             const active = pathname === item.to;
@@ -56,6 +84,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
+        
         <div className="px-4 py-4 border-t border-sidebar-border text-xs">
           <div className="text-sidebar-foreground/50 uppercase tracking-wider mb-1">Status do Sistema</div>
           <div className="flex items-center gap-2">

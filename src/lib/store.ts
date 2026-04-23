@@ -3,28 +3,32 @@ import type { AppDataset, PriorityRequest } from "./types";
 
 const STORAGE_KEY = "tlog-renault-spot-v1";
 
-const initial: AppDataset = {
+export type UserRole = "CLIENTE" | "TRANSPORTADORA";
+
+const initial: AppDataset & { userRole: UserRole } = {
   cheios: [],
   vaziosLocados: [],
   imports: [],
   priorityRequests: [],
+  userRole: "CLIENTE",
   settings: {
     capacidadePatio: 600,
   },
 };
 
-let state: AppDataset = load();
+let state: AppDataset & { userRole: UserRole } = load();
 const listeners = new Set<() => void>();
 
-function load(): AppDataset {
+function load(): AppDataset & { userRole: UserRole } {
   if (typeof window === "undefined") return initial;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return initial;
-    const parsed = JSON.parse(raw) as AppDataset;
+    const parsed = JSON.parse(raw) as AppDataset & { userRole: UserRole };
     return { 
       ...initial, 
       ...parsed,
+      userRole: parsed.userRole || "CLIENTE",
       settings: parsed.settings || initial.settings,
       priorityRequests: parsed.priorityRequests || [],
     };
@@ -46,11 +50,17 @@ function emit() {
   for (const l of listeners) l();
 }
 
-export function getDataset(): AppDataset {
+export function setUserRole(role: UserRole) {
+  state = { ...state, userRole: role };
+  persist();
+  emit();
+}
+
+export function getDataset() {
   return state;
 }
 
-export function setDataset(updater: (prev: AppDataset) => AppDataset) {
+export function setDataset(updater: (prev: AppDataset & { userRole: UserRole }) => AppDataset & { userRole: UserRole }) {
   state = updater(state);
   persist();
   emit();
@@ -72,15 +82,14 @@ export function updatePriorityStatus(id: string, status: PriorityRequest["status
       r.id === id ? { ...r, status } : r
     );
 
-    // Se o status for DESPACHADO, atualizamos o container no estoque (Colunas AA e AD)
     let newCheios = prev.cheios;
     if (status === 'DESPACHADO') {
       newCheios = prev.cheios.map(c => {
         if (c.conteiner === request.conteiner) {
           return {
             ...c,
-            status: "ENVIADO PARA FABRICA" as const, // Coluna AA
-            dataEnvioFabrica: new Date().toISOString() // Coluna AD
+            status: "ENVIADO PARA FABRICA" as const,
+            dataEnvioFabrica: new Date().toISOString()
           };
         }
         return c;
@@ -109,7 +118,7 @@ export function updateSettings(settings: Partial<AppDataset["settings"]>) {
   }));
 }
 
-export function useDataset(): AppDataset {
+export function useDataset() {
   return useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
