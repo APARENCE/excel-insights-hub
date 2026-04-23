@@ -4,6 +4,7 @@ import {
   Clock,
   PackageOpen,
   CloudUpload,
+  Zap,
   X,
   Container,
 } from "lucide-react";
@@ -14,6 +15,7 @@ import { NavLink, usePathname } from "@/components/NavLink";
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutGrid },
   { to: "/estoque", label: "Estoque do Pátio", icon: Boxes },
+  { to: "/prioridades", label: "Prioridades Fábrica", icon: Zap },
   { to: "/demurrage", label: "Controle Demurrage", icon: Clock },
   { to: "/vazios", label: "Vazios Locados", icon: PackageOpen },
   { to: "/importar", label: "Importar Dados", icon: CloudUpload },
@@ -27,7 +29,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex items-center justify-between px-4 py-4 border-b border-sidebar-border">
           <div className="flex items-center gap-2">
             <Container className="h-5 w-5 text-primary" />
-            <div className="text-sm font-semibold truncate">Operação Spot Renault-Terminal …</div>
+            <div className="text-sm font-semibold truncate">Operação Spot Renault</div>
           </div>
           <button className="text-sidebar-foreground/60 hover:text-sidebar-foreground">
             <X className="h-4 w-4" />

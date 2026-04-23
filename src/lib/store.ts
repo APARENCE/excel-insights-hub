@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { AppDataset } from "./types";
+import type { AppDataset, PriorityRequest } from "./types";
 
 const STORAGE_KEY = "tlog-renault-spot-v1";
 
@@ -7,6 +7,7 @@ const initial: AppDataset = {
   cheios: [],
   vaziosLocados: [],
   imports: [],
+  priorityRequests: [],
   settings: {
     capacidadePatio: 600,
   },
@@ -25,6 +26,7 @@ function load(): AppDataset {
       ...initial, 
       ...parsed,
       settings: parsed.settings || initial.settings,
+      priorityRequests: parsed.priorityRequests || [],
     };
   } catch {
     return initial;
@@ -54,17 +56,32 @@ export function setDataset(updater: (prev: AppDataset) => AppDataset) {
   emit();
 }
 
+export function addPriorityRequest(req: PriorityRequest) {
+  setDataset(prev => ({
+    ...prev,
+    priorityRequests: [req, ...prev.priorityRequests]
+  }));
+}
+
+export function updatePriorityStatus(id: string, status: PriorityRequest["status"]) {
+  setDataset(prev => ({
+    ...prev,
+    priorityRequests: prev.priorityRequests.map(r => r.id === id ? { ...r, status } : r)
+  }));
+}
+
+export function deletePriorityRequest(id: string) {
+  setDataset(prev => ({
+    ...prev,
+    priorityRequests: prev.priorityRequests.filter(r => r.id !== id)
+  }));
+}
+
 export function updateSettings(settings: Partial<AppDataset["settings"]>) {
   setDataset((prev) => ({
     ...prev,
     settings: { ...prev.settings, ...settings },
   }));
-}
-
-export function clearDataset() {
-  state = initial;
-  persist();
-  emit();
 }
 
 export function useDataset(): AppDataset {

@@ -6,16 +6,29 @@ export type ContainerStatus =
   | "PROGRAMADA ENTRADA NO PATIO"
   | "OUTRO";
 
+export type PriorityLevel = "CRITICA" | "ALTA" | "NORMAL";
+export type RequestStatus = "PENDENTE" | "CARREGANDO" | "DESPACHADO";
+
+export interface PriorityRequest {
+  id: string;
+  conteiner: string;
+  nivel: PriorityLevel;
+  status: RequestStatus;
+  solicitadoEm: string;
+  previsaoFabrica?: string;
+  observacao?: string;
+}
+
 export interface CheioRow {
   conteiner: string;
   lacre?: string;
   tipo?: string;
   armador?: string;
   navio?: string;
-  dataChegada?: string; // ISO
+  dataChegada?: string;
   diasNoPatio?: number;
   freeTime?: number;
-  demurrageVencimento?: string; // ISO
+  demurrageVencimento?: string;
   diasParaVencimento?: number;
   status: ContainerStatus;
   fabrica?: string;
@@ -54,6 +67,7 @@ export interface AppDataset {
   cheios: CheioRow[];
   vaziosLocados: VazioLocadoRow[];
   imports: ImportRecord[];
+  priorityRequests: PriorityRequest[];
   lastImportAt?: string;
   settings: AppSettings;
 }
