@@ -9,8 +9,9 @@ import {
   CheckCircle2, 
   AlertTriangle, 
   Trash2,
-  ChevronRight,
-  Filter
+  Filter,
+  ArrowRightLeft,
+  Ship
 } from 'lucide-react';
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
@@ -42,7 +43,7 @@ export default function PrioridadesPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [filter, setFilter] = useState<RequestStatus | 'TODOS'>('TODOS');
 
-  // Filtra apenas containers que estão no pátio e não estão na lista de prioridades
+  // Filtra apenas containers que estão no pátio conforme as regras da Coluna N
   const availableContainers = useMemo(() => {
     const existingIds = new Set(ds.priorityRequests.map(r => r.conteiner));
     return ds.cheios.filter(c => 
@@ -59,10 +60,16 @@ export default function PrioridadesPage() {
   };
 
   const filteredRequests = useMemo(() => {
-    return filter === 'TODOS' 
+    const list = filter === 'TODOS' 
       ? ds.priorityRequests 
       : ds.priorityRequests.filter(r => r.status === filter);
-  }, [ds.priorityRequests, filter]);
+    
+    // Mapeia os dados extras do estoque para exibição
+    return list.map(req => {
+      const details = ds.cheios.find(c => c.conteiner === req.conteiner);
+      return { ...req, details };
+    });
+  }, [ds.priorityRequests, ds.cheios, filter]);
 
   const handleCreateRequest = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -94,7 +101,7 @@ export default function PrioridadesPage() {
     <AppShell>
       <PageHeader 
         title="Prioridades Fábrica" 
-        subtitle="Gestão de containers urgentes para envio"
+        subtitle="Expedição de containers em pátio para envio Renault"
         actions={
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
@@ -109,18 +116,23 @@ export default function PrioridadesPage() {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="space-y-2">
-                    <Label>Container no Pátio</Label>
+                    <Label>Selecionar Container (Col A)</Label>
                     <Select name="conteiner" required>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione um container..." />
+                        <SelectValue placeholder="Busque por container no pátio..." />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-[300px]">
                         {availableContainers.length === 0 ? (
-                          <div className="p-2 text-xs text-muted-foreground">Nenhum container disponível no pátio.</div>
+                          <div className="p-2 text-xs text-muted-foreground text-center">Nenhum container disponível no pátio.</div>
                         ) : (
                           availableContainers.map(c => (
                             <SelectItem key={c.conteiner} value={c.conteiner}>
-                              {c.conteiner} ({c.tipo})
+                              <div className="flex flex-col text-left py-0.5">
+                                <span className="font-bold">{c.conteiner}</span>
+                                <span className="text-[10px] text-muted-foreground uppercase">
+                                  {c.armador || 'N/A'} • Dê-para: {c.conteinerDePara || '—'}
+                                </span>
+                              </div>
                             </SelectItem>
                           ))
                         )}
@@ -141,12 +153,12 @@ export default function PrioridadesPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Observação / Destino</Label>
+                    <Label>Observação / Destino Renault</Label>
                     <Input name="observacao" placeholder="Ex: Linha de montagem X" />
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Confirmar Solicitação</Button>
+                  <Button type="submit">Confirmar Agendamento</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -164,7 +176,7 @@ export default function PrioridadesPage() {
       <div className="px-6 mt-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Filtrar por:</span>
+          <span className="text-sm font-medium">Filtro de Status:</span>
           <div className="flex gap-1 ml-2">
             {(['TODOS', 'PENDENTE', 'CARREGANDO', 'DESPACHADO'] as const).map(s => (
               <button
@@ -183,53 +195,70 @@ export default function PrioridadesPage() {
         </div>
       </div>
 
-      <div className="px-6 mt-4 pb-10 space-y-4">
+      <div className="px-6 mt-4 pb-10 space-y-3">
         {filteredRequests.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center">
             <Zap className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
             <h3 className="text-sm font-medium text-muted-foreground">Nenhuma solicitação encontrada</h3>
-            <p className="text-xs text-muted-foreground mt-1">Crie uma nova solicitação para iniciar o despacho prioritário.</p>
+            <p className="text-xs text-muted-foreground mt-1">Selecione um container no pátio para agendar a prioridade.</p>
           </div>
         ) : (
           filteredRequests.map(req => (
             <div key={req.id} className="rounded-xl border border-border bg-card p-4 flex flex-col md:flex-row md:items-center gap-4 hover:shadow-sm transition-shadow">
-              <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${
+              <div className={`h-12 w-12 rounded-lg flex items-center justify-center shrink-0 ${
                 req.nivel === 'CRITICA' ? 'bg-destructive/10 text-destructive' :
                 req.nivel === 'ALTA' ? 'bg-warning/10 text-warning-foreground' :
                 'bg-primary/10 text-primary'
               }`}>
-                <Zap className="h-5 w-5" />
+                <Zap className="h-6 w-6" />
               </div>
               
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-bold">{req.conteiner}</span>
-                  <StatusBadge tone={
-                    req.nivel === 'CRITICA' ? 'destructive' :
-                    req.nivel === 'ALTA' ? 'warning' : 'primary'
-                  }>
-                    {req.nivel}
-                  </StatusBadge>
+              <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold tracking-tight">{req.conteiner}</span>
+                    <StatusBadge tone={
+                      req.nivel === 'CRITICA' ? 'destructive' :
+                      req.nivel === 'ALTA' ? 'warning' : 'primary'
+                    }>
+                      {req.nivel}
+                    </StatusBadge>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-3">
+                    <span className="flex items-center gap-1 font-medium text-primary">
+                      <Clock className="h-3 w-3" /> {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    {req.observacao && <span className="truncate max-w-[200px]">Destino: {req.observacao}</span>}
+                  </div>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-3">
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" /> {new Date(req.solicitadoEm).toLocaleString('pt-BR')}
-                  </span>
-                  {req.observacao && <span>• {req.observacao}</span>}
+
+                <div className="flex flex-col justify-center border-l border-border/50 pl-4">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Ship className="h-3 w-3" /> 
+                    <span className="uppercase font-semibold text-foreground/80">Armador: {req.details?.armador || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                    <ArrowRightLeft className="h-3 w-3" />
+                    <span className="uppercase font-semibold text-foreground/80">Dê-para (Col X): {req.details?.conteinerDePara || '—'}</span>
+                  </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 self-end md:self-center">
-                <div className="flex items-center gap-1">
-                  <span className={`h-2 w-2 rounded-full ${
-                    req.status === 'PENDENTE' ? 'bg-warning' :
-                    req.status === 'CARREGANDO' ? 'bg-info' :
-                    'bg-success'
-                  }`} />
-                  <span className="text-xs font-semibold">{req.status}</span>
+                <div className="flex flex-col items-end mr-2">
+                  <span className={`text-[10px] font-bold uppercase ${
+                    req.status === 'PENDENTE' ? 'text-warning' :
+                    req.status === 'CARREGANDO' ? 'text-info' :
+                    'text-success'
+                  }`}>
+                    {req.status}
+                  </span>
+                  <div className="flex gap-0.5 mt-0.5">
+                    <div className={`h-1.5 w-4 rounded-full ${req.status === 'PENDENTE' || req.status === 'CARREGANDO' || req.status === 'DESPACHADO' ? 'bg-primary' : 'bg-muted'}`} />
+                    <div className={`h-1.5 w-4 rounded-full ${req.status === 'CARREGANDO' || req.status === 'DESPACHADO' ? 'bg-primary' : 'bg-muted'}`} />
+                    <div className={`h-1.5 w-4 rounded-full ${req.status === 'DESPACHADO' ? 'bg-primary' : 'bg-muted'}`} />
+                  </div>
                 </div>
-                
-                <div className="h-8 w-[1px] bg-border hidden md:block mx-2" />
                 
                 <div className="flex items-center gap-2">
                   {req.status === 'PENDENTE' && (
@@ -237,9 +266,9 @@ export default function PrioridadesPage() {
                       variant="outline" 
                       size="sm" 
                       onClick={() => updatePriorityStatus(req.id, 'CARREGANDO')}
-                      className="h-8 gap-1 border-info text-info hover:bg-info/10"
+                      className="h-9 gap-1.5 border-info text-info hover:bg-info/10 font-bold"
                     >
-                      <Truck className="h-3.5 w-3.5" /> Iniciar Carga
+                      <Truck className="h-4 w-4" /> Iniciar Carga
                     </Button>
                   )}
                   {req.status === 'CARREGANDO' && (
@@ -247,24 +276,24 @@ export default function PrioridadesPage() {
                       variant="outline" 
                       size="sm" 
                       onClick={() => updatePriorityStatus(req.id, 'DESPACHADO')}
-                      className="h-8 gap-1 border-success text-success hover:bg-success/10"
+                      className="h-9 gap-1.5 border-success text-success hover:bg-success/10 font-bold"
                     >
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Despachar
+                      <CheckCircle2 className="h-4 w-4" /> Despachar
                     </Button>
                   )}
                   {req.status === 'DESPACHADO' && (
-                    <div className="text-success text-xs font-medium flex items-center gap-1 px-3">
-                      <CheckCircle2 className="h-4 w-4" /> Enviado
+                    <div className="bg-success/10 text-success text-xs font-bold flex items-center gap-1.5 px-3 py-2 rounded-md">
+                      <CheckCircle2 className="h-4 w-4" /> ENVIADO
                     </div>
                   )}
                   
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/5"
                     onClick={() => {
                       deletePriorityRequest(req.id);
-                      toast.info("Solicitação removida.");
+                      toast.info("Agendamento removido.");
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
