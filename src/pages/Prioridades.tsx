@@ -14,9 +14,9 @@ import {
   Ship,
   Check,
   ChevronsUpDown,
-  Search,
   Calendar,
-  Eraser
+  Eraser,
+  Timer
 } from 'lucide-react';
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
@@ -91,7 +91,6 @@ export default function PrioridadesPage() {
       const details = ds.cheios.find(c => c.conteiner === req.conteiner);
       return { ...req, details };
     }).sort((a, b) => {
-      // Prioriza por nível de urgência e depois por data de solicitação
       const weight = { 'CRITICA': 3, 'ALTA': 2, 'NORMAL': 1 };
       if (a.status === 'DESPACHADO' && b.status !== 'DESPACHADO') return 1;
       if (a.status !== 'DESPACHADO' && b.status === 'DESPACHADO') return -1;
@@ -132,6 +131,16 @@ export default function PrioridadesPage() {
     toast.info("Lista de despachados limpa.");
   };
 
+  // Helper para verificar se a demurrage está crítica
+  const getDemurrageColor = (dateStr?: string) => {
+    if (!dateStr) return "text-muted-foreground";
+    const date = new Date(dateStr);
+    const diff = (date.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    if (diff < 0) return "text-destructive font-black";
+    if (diff <= 3) return "text-warning font-black";
+    return "text-success font-bold";
+  };
+
   return (
     <AppShell>
       <PageHeader 
@@ -152,11 +161,11 @@ export default function PrioridadesPage() {
                 <form onSubmit={handleCreateRequest}>
                   <DialogHeader>
                     <DialogTitle>Agendar Envio Renault</DialogTitle>
-                    <DialogDescription>Selecione um container que está no pátio para priorizar a carga.</DialogDescription>
+                    <DialogDescription>Selecione um container para priorizar o despacho.</DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-6 py-6">
                     <div className="space-y-3">
-                      <Label className="text-sm font-bold">Localizar Container (Coluna A / X)</Label>
+                      <Label className="text-sm font-bold">Localizar Container (Número ou Dê-para)</Label>
                       <Popover open={searchOpen} onOpenChange={setSearchOpen}>
                         <PopoverTrigger asChild>
                           <Button
@@ -172,10 +181,10 @@ export default function PrioridadesPage() {
                         </PopoverTrigger>
                         <PopoverContent className="w-[450px] p-0 shadow-2xl" align="start">
                           <Command>
-                            <CommandInput placeholder="Ex: CMAU1234567, MSC, ou Dê-para..." />
+                            <CommandInput placeholder="Buscar por container, armador ou dê-para..." />
                             <CommandList className="max-h-[350px]">
                               <CommandEmpty className="py-6 text-center text-muted-foreground">Nenhum container disponível encontrado.</CommandEmpty>
-                              <CommandGroup heading="Containers em Pátio TLOG">
+                              <CommandGroup heading="Containers Disponíveis no Pátio">
                                 {availableContainers.map((c) => (
                                   <CommandItem
                                     key={c.conteiner}
@@ -199,8 +208,14 @@ export default function PrioridadesPage() {
                                           <ArrowRightLeft className="h-3 w-3" /> Dê-para: {c.conteinerDePara}
                                         </span>
                                       )}
-                                      <span className="text-[10px] bg-success/10 px-2 py-1 rounded font-bold text-success border border-success/20">
-                                        {c.diasNoPatio || 0} dias no pátio
+                                      <span className={cn(
+                                        "text-[10px] px-2 py-1 rounded font-bold border flex items-center gap-1",
+                                        getDemurrageColor(c.demurrageVencimento).includes("destructive") ? "bg-destructive/10 border-destructive/20 text-destructive" :
+                                        getDemurrageColor(c.demurrageVencimento).includes("warning") ? "bg-warning/10 border-warning/20 text-warning-foreground" :
+                                        "bg-success/10 border-success/20 text-success"
+                                      )}>
+                                        <Timer className="h-3 w-3" /> 
+                                        Expira: {c.demurrageVencimento ? new Date(c.demurrageVencimento).toLocaleDateString('pt-BR') : 'Sem Data'}
                                       </span>
                                     </div>
                                   </CommandItem>
@@ -227,13 +242,13 @@ export default function PrioridadesPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm font-bold">Destino / Obs</Label>
-                        <Input name="observacao" placeholder="Ex: Linha X, Pátio Y" className="h-11 border-2" />
+                        <Label className="text-sm font-bold">Observação</Label>
+                        <Input name="observacao" placeholder="Ex: Urgente p/ Linha" className="h-11 border-2" />
                       </div>
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button type="submit" className="w-full h-12 text-base font-bold shadow-lg">Confirmar Solicitação</Button>
+                    <Button type="submit" className="w-full h-12 text-base font-bold shadow-lg">Confirmar Prioridade</Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
@@ -255,7 +270,7 @@ export default function PrioridadesPage() {
             <Filter className="h-4 w-4 text-muted-foreground" />
           </div>
           <div>
-            <span className="text-sm font-bold">Visualização</span>
+            <span className="text-sm font-bold">Filtro de Status</span>
             <div className="flex gap-1.5 mt-1">
               {(['TODOS', 'PENDENTE', 'CARREGANDO', 'DESPACHADO'] as const).map(s => (
                 <button
@@ -280,8 +295,8 @@ export default function PrioridadesPage() {
         {filteredRequests.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-border bg-card/50 p-16 text-center">
             <Zap className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-muted-foreground">Nenhuma prioridade na fila</h3>
-            <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">Use o botão "Nova Prioridade" para adicionar containers que precisam ser enviados à Renault.</p>
+            <h3 className="text-lg font-bold text-muted-foreground">Fila de prioridades vazia</h3>
+            <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">Adicione novos containers para agilizar a saída do pátio.</p>
           </div>
         ) : (
           filteredRequests.map(req => (
@@ -293,7 +308,6 @@ export default function PrioridadesPage() {
                 req.nivel === 'CRITICA' && req.status !== 'DESPACHADO' ? 'border-l-8 border-l-destructive shadow-destructive/5' : ''
               )}
             >
-              {/* Barra de progresso visual no fundo */}
               <div className="absolute bottom-0 left-0 h-1.5 bg-muted w-full">
                 <div 
                   className={cn(
@@ -352,7 +366,9 @@ export default function PrioridadesPage() {
                     <Calendar className="h-3.5 w-3.5 text-primary/60" /> Chegada: <span className="text-foreground">{req.details?.dataChegada ? new Date(req.details.dataChegada).toLocaleDateString('pt-BR') : '—'}</span>
                   </div>
                   <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-bold uppercase tracking-wider">
-                    <Clock className="h-3.5 w-3.5 text-primary/60" /> Tempo Pátio: <span className={cn("font-black", (req.details?.diasNoPatio || 0) > 10 ? "text-destructive" : "text-foreground")}>{req.details?.diasNoPatio || 0} Dias</span>
+                    <Timer className="h-3.5 w-3.5 text-primary/60" /> Vencimento (M): <span className={cn("font-black", getDemurrageColor(req.details?.demurrageVencimento))}>
+                      {req.details?.demurrageVencimento ? new Date(req.details.demurrageVencimento).toLocaleDateString('pt-BR') : 'SEM DATA'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -392,7 +408,7 @@ export default function PrioridadesPage() {
                   )}
                   {req.status === 'DESPACHADO' && (
                     <div className="bg-success/10 text-success text-xs font-black flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-success/20">
-                      <CheckCircle2 className="h-4 w-4" /> ENVIADO À RENAULT
+                      <CheckCircle2 className="h-4 w-4" /> DESPACHADO
                     </div>
                   )}
                   
