@@ -99,12 +99,13 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       navio: col("J"),
       freeTime: col("L"),
       demurrage: col("M"),
-      diasVenc: col("N"), // Coluna N
+      diasVenc: col("N"), 
       fabrica: col("S"),
       conteinerDePara: col("X"),
       status: col("AA"),
       dataEnvioFabrica: col("AD"),
       dataRetornoLocado: col("AH"),
+      infoAS: col("AS"), // Mapeando coluna AS
     };
     for (let i = 1; i < aoa.length; i++) {
       const r = aoa[i];
@@ -115,7 +116,6 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       const rawStatusAA = str(r[C.status]);
       const rawContentN = str(r[C.diasVenc]);
       
-      // Se a coluna N tiver o texto de entrada programada, priorizamos esse status
       let finalStatus: ContainerStatus = normalizeStatus(rawStatusAA);
       if (rawContentN && (rawContentN.toUpperCase().includes("PROGRAMADA") || rawContentN.toUpperCase().includes("ENTRADA"))) {
         finalStatus = "PROGRAMADA ENTRADA NO PATIO";
@@ -137,6 +137,7 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
         dataEnvioFabrica: excelDateToISO(r[C.dataEnvioFabrica]),
         conteinerDePara: str(r[C.conteinerDePara]),
         dataDevolucaoVazio: excelDateToISO(r[C.dataRetornoLocado]),
+        colunaAS: str(r[C.infoAS]),
         raw: {},
       });
     }

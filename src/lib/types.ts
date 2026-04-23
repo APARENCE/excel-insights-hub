@@ -35,6 +35,7 @@ export interface CheioRow {
   dataEnvioFabrica?: string;
   conteinerDePara?: string;
   dataDevolucaoVazio?: string;
+  colunaAS?: string; // Coluna AS da planilha
   raw?: Record<string, unknown>;
 }
 

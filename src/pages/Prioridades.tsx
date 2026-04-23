@@ -208,15 +208,17 @@ export default function PrioridadesPage() {
                                           <ArrowRightLeft className="h-3 w-3" /> Dê-para: {c.conteinerDePara}
                                         </span>
                                       )}
-                                      <span className={cn(
-                                        "text-[10px] px-2 py-1 rounded font-bold border flex items-center gap-1",
-                                        getDemurrageColor(c.demurrageVencimento).includes("destructive") ? "bg-destructive/10 border-destructive/20 text-destructive" :
-                                        getDemurrageColor(c.demurrageVencimento).includes("warning") ? "bg-warning/10 border-warning/20 text-warning-foreground" :
-                                        "bg-success/10 border-success/20 text-success"
-                                      )}>
-                                        <Timer className="h-3 w-3" /> 
-                                        Expira: {c.demurrageVencimento ? new Date(c.demurrageVencimento).toLocaleDateString('pt-BR') : 'Sem Data'}
-                                      </span>
+                                      {!c.colunaAS && (
+                                        <span className={cn(
+                                          "text-[10px] px-2 py-1 rounded font-bold border flex items-center gap-1",
+                                          getDemurrageColor(c.demurrageVencimento).includes("destructive") ? "bg-destructive/10 border-destructive/20 text-destructive" :
+                                          getDemurrageColor(c.demurrageVencimento).includes("warning") ? "bg-warning/10 border-warning/20 text-warning-foreground" :
+                                          "bg-success/10 border-success/20 text-success"
+                                        )}>
+                                          <Timer className="h-3 w-3" /> 
+                                          Expira: {c.demurrageVencimento ? new Date(c.demurrageVencimento).toLocaleDateString('pt-BR') : 'Sem Data'}
+                                        </span>
+                                      )}
                                     </div>
                                   </CommandItem>
                                 ))}
@@ -365,11 +367,13 @@ export default function PrioridadesPage() {
                   <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-bold uppercase tracking-wider">
                     <Calendar className="h-3.5 w-3.5 text-primary/60" /> Chegada: <span className="text-foreground">{req.details?.dataChegada ? new Date(req.details.dataChegada).toLocaleDateString('pt-BR') : '—'}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-bold uppercase tracking-wider">
-                    <Timer className="h-3.5 w-3.5 text-primary/60" /> Vencimento (M): <span className={cn("font-black", getDemurrageColor(req.details?.demurrageVencimento))}>
-                      {req.details?.demurrageVencimento ? new Date(req.details.demurrageVencimento).toLocaleDateString('pt-BR') : 'SEM DATA'}
-                    </span>
-                  </div>
+                  {!req.details?.colunaAS && (
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-bold uppercase tracking-wider">
+                      <Timer className="h-3.5 w-3.5 text-primary/60" /> Vencimento (M): <span className={cn("font-black", getDemurrageColor(req.details?.demurrageVencimento))}>
+                        {req.details?.demurrageVencimento ? new Date(req.details.demurrageVencimento).toLocaleDateString('pt-BR') : 'SEM DATA'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
