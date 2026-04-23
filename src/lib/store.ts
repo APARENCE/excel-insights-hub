@@ -64,10 +64,35 @@ export function addPriorityRequest(req: PriorityRequest) {
 }
 
 export function updatePriorityStatus(id: string, status: PriorityRequest["status"]) {
-  setDataset(prev => ({
-    ...prev,
-    priorityRequests: prev.priorityRequests.map(r => r.id === id ? { ...r, status } : r)
-  }));
+  setDataset(prev => {
+    const request = prev.priorityRequests.find(r => r.id === id);
+    if (!request) return prev;
+
+    const newPriorityRequests = prev.priorityRequests.map(r => 
+      r.id === id ? { ...r, status } : r
+    );
+
+    // Se o status for DESPACHADO, atualizamos o container no estoque (Colunas AA e AD)
+    let newCheios = prev.cheios;
+    if (status === 'DESPACHADO') {
+      newCheios = prev.cheios.map(c => {
+        if (c.conteiner === request.conteiner) {
+          return {
+            ...c,
+            status: "ENVIADO PARA FABRICA" as const, // Coluna AA
+            dataEnvioFabrica: new Date().toISOString() // Coluna AD
+          };
+        }
+        return c;
+      });
+    }
+
+    return {
+      ...prev,
+      priorityRequests: newPriorityRequests,
+      cheios: newCheios
+    };
+  });
 }
 
 export function deletePriorityRequest(id: string) {
