@@ -11,7 +11,10 @@ import {
   Trash2,
   Filter,
   ArrowRightLeft,
-  Ship
+  Ship,
+  Check,
+  ChevronsUpDown,
+  Search
 } from 'lucide-react';
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
@@ -32,18 +35,35 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useDataset, addPriorityRequest, updatePriorityStatus, deletePriorityRequest } from "@/lib/store";
 import { toast } from "sonner";
 import { PriorityLevel, RequestStatus } from '@/lib/types';
+import { cn } from "@/lib/utils";
 
 export default function PrioridadesPage() {
   const ds = useDataset();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [filter, setFilter] = useState<RequestStatus | 'TODOS'>('TODOS');
+  
+  // Estados para a busca inteligente
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [selectedContainer, setSelectedContainer] = useState("");
 
-  // Filtra apenas containers que estão no pátio conforme as regras da Coluna N
   const availableContainers = useMemo(() => {
     const existingIds = new Set(ds.priorityRequests.map(r => r.conteiner));
     return ds.cheios.filter(c => 
@@ -64,7 +84,6 @@ export default function PrioridadesPage() {
       ? ds.priorityRequests 
       : ds.priorityRequests.filter(r => r.status === filter);
     
-    // Mapeia os dados extras do estoque para exibição
     return list.map(req => {
       const details = ds.cheios.find(c => c.conteiner === req.conteiner);
       return { ...req, details };
@@ -73,28 +92,27 @@ export default function PrioridadesPage() {
 
   const handleCreateRequest = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
-    const conteiner = formData.get('conteiner') as string;
-    const nivel = formData.get('nivel') as PriorityLevel;
-    const observacao = formData.get('observacao') as string;
-
-    if (!conteiner) {
-      toast.error("Selecione um container.");
+    if (!selectedContainer) {
+      toast.error("Por favor, selecione um container.");
       return;
     }
 
+    const formData = new FormData(e.currentTarget);
+    const nivel = formData.get('nivel') as PriorityLevel;
+    const observacao = formData.get('observacao') as string;
+
     addPriorityRequest({
       id: crypto.randomUUID(),
-      conteiner,
+      conteiner: selectedContainer,
       nivel,
       status: 'PENDENTE',
       solicitadoEm: new Date().toISOString(),
       observacao
     });
 
-    toast.success(`Prioridade solicitada para ${conteiner}`);
+    toast.success(`Prioridade agendada: ${selectedContainer}`);
     setIsAddOpen(false);
+    setSelectedContainer("");
   };
 
   return (
@@ -109,56 +127,91 @@ export default function PrioridadesPage() {
                 <Plus className="h-4 w-4" /> Nova Solicitação
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[450px]">
               <form onSubmit={handleCreateRequest}>
                 <DialogHeader>
                   <DialogTitle>Solicitar Prioridade</DialogTitle>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-5 py-6">
                   <div className="space-y-2">
-                    <Label>Selecionar Container (Col A)</Label>
-                    <Select name="conteiner" required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Busque por container no pátio..." />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[300px]">
-                        {availableContainers.length === 0 ? (
-                          <div className="p-2 text-xs text-muted-foreground text-center">Nenhum container disponível no pátio.</div>
-                        ) : (
-                          availableContainers.map(c => (
-                            <SelectItem key={c.conteiner} value={c.conteiner}>
-                              <div className="flex flex-col text-left py-0.5">
-                                <span className="font-bold">{c.conteiner}</span>
-                                <span className="text-[10px] text-muted-foreground uppercase">
-                                  {c.armador || 'N/A'} • Dê-para: {c.conteinerDePara || '—'}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <Label>Pesquisar Container (Número, Armador ou Dê-para)</Label>
+                    <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={searchOpen}
+                          className="w-full justify-between font-normal"
+                        >
+                          {selectedContainer
+                            ? availableContainers.find((c) => c.conteiner === selectedContainer)?.conteiner
+                            : "Digite para buscar..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Ex: CMAU1234567, MSC..." />
+                          <CommandList>
+                            <CommandEmpty>Nenhum container encontrado no pátio.</CommandEmpty>
+                            <CommandGroup>
+                              {availableContainers.map((c) => (
+                                <CommandItem
+                                  key={c.conteiner}
+                                  value={`${c.conteiner} ${c.armador} ${c.conteinerDePara}`}
+                                  onSelect={() => {
+                                    setSelectedContainer(c.conteiner);
+                                    setSearchOpen(false);
+                                  }}
+                                  className="flex flex-col items-start py-3 cursor-pointer"
+                                >
+                                  <div className="flex items-center justify-between w-full">
+                                    <span className="font-bold text-sm">{c.conteiner}</span>
+                                    {selectedContainer === c.conteiner && (
+                                      <Check className="h-4 w-4 text-primary" />
+                                    )}
+                                  </div>
+                                  <div className="flex gap-2 mt-1">
+                                    <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground uppercase font-medium">
+                                      {c.armador || "Sem Armador"}
+                                    </span>
+                                    {c.conteinerDePara && (
+                                      <span className="text-[10px] bg-primary/10 px-1.5 py-0.5 rounded text-primary uppercase font-bold">
+                                        Dê-para: {c.conteinerDePara}
+                                      </span>
+                                    )}
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Nível de Urgência</Label>
-                    <Select name="nivel" defaultValue="NORMAL">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="NORMAL">Normal</SelectItem>
-                        <SelectItem value="ALTA">Alta Urgência</SelectItem>
-                        <SelectItem value="CRITICA">Crítica (Imediato)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Observação / Destino Renault</Label>
-                    <Input name="observacao" placeholder="Ex: Linha de montagem X" />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Nível de Urgência</Label>
+                      <Select name="nivel" defaultValue="NORMAL">
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="NORMAL">Normal</SelectItem>
+                          <SelectItem value="ALTA">Alta Urgência</SelectItem>
+                          <SelectItem value="CRITICA">Crítica (Imediato)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Destino / Obs</Label>
+                      <Input name="observacao" placeholder="Ex: Linha X" />
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Confirmar Agendamento</Button>
+                  <Button type="submit" className="w-full">Confirmar Agendamento</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
