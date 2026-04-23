@@ -15,6 +15,7 @@ export interface PriorityRequest {
   nivel: PriorityLevel;
   status: RequestStatus;
   solicitadoEm: string;
+  fabricaDestino?: string; // Novo campo
   previsaoFabrica?: string;
   observacao?: string;
 }
@@ -35,7 +36,7 @@ export interface CheioRow {
   dataEnvioFabrica?: string;
   conteinerDePara?: string;
   dataDevolucaoVazio?: string;
-  colunaAS?: string; // Coluna AS da planilha
+  colunaAS?: string;
   raw?: Record<string, unknown>;
 }
 

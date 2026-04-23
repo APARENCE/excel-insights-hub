@@ -9,17 +9,13 @@ import {
   CheckCircle2, 
   AlertTriangle, 
   Trash2,
-  Filter,
   ArrowRightLeft,
   Ship,
   Check,
   ChevronsUpDown,
-  Calendar,
   Eraser,
   Timer,
-  LayoutList,
-  ChevronDown,
-  ChevronRight
+  Factory
 } from 'lucide-react';
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
@@ -64,10 +60,11 @@ import { cn } from "@/lib/utils";
 export default function PrioridadesPage() {
   const ds = useDataset();
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [filter, setFilter] = useState<RequestStatus | 'TODOS'>('TODOS');
   
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedContainer, setSelectedContainer] = useState("");
+  const [fabricaSelect, setFabricaSelect] = useState<string>("CVU");
+  const [customFabrica, setCustomFabrica] = useState("");
 
   const availableContainers = useMemo(() => {
     const existingIds = new Set(ds.priorityRequests.filter(r => r.status !== 'DESPACHADO').map(r => r.conteiner));
@@ -116,6 +113,13 @@ export default function PrioridadesPage() {
     const formData = new FormData(e.currentTarget);
     const nivel = formData.get('nivel') as PriorityLevel;
     const observacao = formData.get('observacao') as string;
+    
+    const fabricaDestino = fabricaSelect === 'OUTROS' ? customFabrica : fabricaSelect;
+
+    if (!fabricaDestino) {
+      toast.error("Informe a fábrica de destino.");
+      return;
+    }
 
     addPriorityRequest({
       id: crypto.randomUUID(),
@@ -123,12 +127,15 @@ export default function PrioridadesPage() {
       nivel,
       status: 'PENDENTE',
       solicitadoEm: new Date().toISOString(),
+      fabricaDestino,
       observacao
     });
 
-    toast.success(`Prioridade agendada com sucesso!`);
+    toast.success(`Prioridade agendada para ${fabricaDestino}!`);
     setIsAddOpen(false);
     setSelectedContainer("");
+    setCustomFabrica("");
+    setFabricaSelect("CVU");
   };
 
   const clearFinished = () => {
@@ -174,9 +181,9 @@ export default function PrioridadesPage() {
           }>
             {req.nivel}
           </StatusBadge>
-          {req.details?.conteinerDePara && (
-            <span className="text-[10px] bg-primary/10 px-1.5 py-0.5 rounded font-bold text-primary flex items-center gap-1">
-              <ArrowRightLeft className="h-3 w-3" /> {req.details.conteinerDePara}
+          {req.fabricaDestino && (
+            <span className="text-[10px] bg-sidebar text-sidebar-foreground px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+              <Factory className="h-3 w-3" /> {req.fabricaDestino}
             </span>
           )}
         </div>
@@ -184,16 +191,18 @@ export default function PrioridadesPage() {
           <div className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
             <Clock className="h-3 w-3" /> {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
           </div>
-          <div className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
-            <Ship className="h-3 w-3" /> {req.details?.armador || 'N/A'}
-          </div>
+          {req.details?.conteinerDePara && (
+            <div className="text-[11px] font-bold text-primary flex items-center gap-1">
+              <ArrowRightLeft className="h-3 w-3" /> Dê-para: {req.details.conteinerDePara}
+            </div>
+          )}
           {!req.details?.colunaAS && req.details?.demurrageVencimento && (
             <div className={cn("text-[11px] flex items-center gap-1", getDemurrageColor(req.details.demurrageVencimento))}>
               <Timer className="h-3 w-3" /> Expira: {new Date(req.details.demurrageVencimento).toLocaleDateString('pt-BR')}
             </div>
           )}
           {req.observacao && (
-            <div className="text-[11px] text-primary italic truncate max-w-[200px]">
+            <div className="text-[11px] text-muted-foreground italic truncate max-w-[200px]">
               "{req.observacao}"
             </div>
           )}
@@ -256,15 +265,15 @@ export default function PrioridadesPage() {
                     <DialogTitle>Nova Solicitação Renault</DialogTitle>
                     <DialogDescription>Selecione um container em pátio para priorizar.</DialogDescription>
                   </DialogHeader>
-                  <div className="grid gap-6 py-6">
-                    <div className="space-y-3">
+                  <div className="grid gap-5 py-5">
+                    <div className="space-y-2">
                       <Label className="text-sm font-bold text-primary">Localizar Container</Label>
                       <Popover open={searchOpen} onOpenChange={setSearchOpen}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             role="combobox"
-                            className="w-full justify-between h-12 text-left font-normal border-2"
+                            className="w-full justify-between h-10 text-left font-normal border-2"
                           >
                             {selectedContainer
                               ? availableContainers.find((c) => c.conteiner === selectedContainer)?.conteiner
@@ -306,9 +315,22 @@ export default function PrioridadesPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
+                        <Label className="text-sm font-bold">Fábrica de Destino</Label>
+                        <Select value={fabricaSelect} onValueChange={setFabricaSelect}>
+                          <SelectTrigger className="h-10 border-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="CVU">🏭 CVU</SelectItem>
+                            <SelectItem value="CVP">🏭 CVP</SelectItem>
+                            <SelectItem value="OUTROS">✏️ Outra Fábrica...</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
                         <Label className="text-sm font-bold">Urgência</Label>
                         <Select name="nivel" defaultValue="NORMAL">
-                          <SelectTrigger className="h-11 border-2">
+                          <SelectTrigger className="h-10 border-2">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -318,14 +340,27 @@ export default function PrioridadesPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-bold">Observação</Label>
-                        <Input name="observacao" placeholder="Opcional" className="h-11 border-2" />
+                    </div>
+
+                    {fabricaSelect === 'OUTROS' && (
+                      <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                        <Label className="text-sm font-bold">Nome da Fábrica</Label>
+                        <Input 
+                          placeholder="Digite o destino..." 
+                          value={customFabrica} 
+                          onChange={(e) => setCustomFabrica(e.target.value)} 
+                          className="h-10 border-2"
+                        />
                       </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-bold">Observação</Label>
+                      <Input name="observacao" placeholder="Opcional" className="h-10 border-2" />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button type="submit" className="w-full h-12 font-bold">Adicionar à Fila</Button>
+                    <Button type="submit" className="w-full h-11 font-bold">Adicionar à Fila</Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
