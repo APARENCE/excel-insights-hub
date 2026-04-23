@@ -24,9 +24,6 @@ export interface DemurrageBucket {
   daysRemaining: number;
 }
 
-// Dias restantes até o vencimento do demurrage.
-// Prioriza o valor da COLUNA N (DIAS PARA VENCIMENTO) que vem direto da planilha.
-// Só recorre à data de vencimento (coluna M) como fallback.
 function rowDiasRestantes(c: CheioRow): number | undefined {
   if (c.diasParaVencimento != null && !isNaN(c.diasParaVencimento)) {
     return Math.round(c.diasParaVencimento);
@@ -78,7 +75,7 @@ export interface DemurrageRow {
 
 export function buildDemurrageRows(cheios: CheioRow[]): DemurrageRow[] {
   return cheios
-    .filter((c) => c.status !== "FINALIZADO")
+    .filter((c) => c.status !== "FINALIZADO" && c.status !== "PROGRAMADA ENTRADA NO PATIO")
     .map((c) => {
       const d = rowDiasRestantes(c);
       const statusLabel: DemurrageRow["statusLabel"] =
@@ -111,6 +108,8 @@ export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[]) {
   const dePara = cheios.filter((c) => c.status === "DEPARA EM PATIO TLOG-SJP").length;
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
   const finalizados = cheios.filter((c) => c.status === "FINALIZADO").length;
+  const programadas = cheios.filter((c) => c.status === "PROGRAMADA ENTRADA NO PATIO").length;
+  
   const ocupacao = emPatio + dePara;
   const vaziosEmPatio = vazios.filter(
     (v) => !v.statusPatio || !/(devolv|finaliz|saida|saída)/i.test(v.statusPatio),
@@ -122,6 +121,7 @@ export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[]) {
     dePara,
     enviadoFabrica,
     finalizados,
+    programadas,
     ocupacao,
     totalVaziosLocados: vazios.length,
     vaziosEmPatio,

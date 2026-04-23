@@ -12,13 +12,13 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-import { RefreshCw, Settings, Car, Repeat, MapPin, CalendarClock, LogOut } from "lucide-react";
+import { RefreshCw, Settings, Car, Repeat, MapPin, CalendarClock, LogOut, ClipboardList } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { useDataset } from "@/lib/store";
 import { dailyMovement, statusDistribution, summary } from "@/lib/analytics";
 
-const STATUS_COLORS = ["#16a34a", "#94a3b8", "#64748b", "#a855f7", "#0ea5e9", "#f59e0b", "#ef4444"];
+const STATUS_COLORS = ["#16a34a", "#94a3b8", "#64748b", "#a855f7", "#0ea5e9", "#f59e0b", "#ef4444", "#8b5cf6"];
 
 export default function Dashboard() {
   const ds = useDataset();
@@ -44,11 +44,12 @@ export default function Dashboard() {
           </>
         }
       />
-      <div className="px-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="px-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatCard label="Ocupação Atual" value={s.ocupacao} hint={`de ${s.capacidadeTotal} vagas`} icon={Car} tone="success" />
-        <StatCard label="Depara em pátio TLOG-SJP" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="warning" />
-        <StatCard label="Em Pátio TLOG-SJP" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="info" />
-        <StatCard label="Enviado para Fábrica" value={s.enviadoFabrica} hint="Em trânsito p/ fábrica" icon={CalendarClock} tone="primary" />
+        <StatCard label="Programada Entrada" value={s.programadas} hint="Aguardando chegada" icon={ClipboardList} tone="warning" />
+        <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
+        <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
+        <StatCard label="Enviado Fábrica" value={s.enviadoFabrica} hint="Em trânsito p/ fábrica" icon={CalendarClock} />
         <StatCard label="Finalizados" value={s.finalizados} hint="Concluídos" icon={LogOut} />
       </div>
 
@@ -56,8 +57,8 @@ export default function Dashboard() {
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <div className="text-primary font-semibold">Capacidade</div>
-              <div className="text-xs text-muted-foreground">Métricas</div>
+              <div className="text-primary font-semibold">Capacidade Operacional</div>
+              <div className="text-xs text-muted-foreground">Ocupação real do pátio</div>
             </div>
             <span className="inline-flex items-center px-3 py-1 rounded-full bg-success text-success-foreground text-xs font-bold">NORMAL</span>
           </div>
@@ -130,12 +131,12 @@ export default function Dashboard() {
               <div className="text-xl font-bold text-primary">{s.emPatio}</div>
             </div>
             <div>
-              <div className="text-[10px] uppercase text-muted-foreground">Maior</div>
-              <div className="text-sm font-bold">FINALIZADO {s.finalizados}</div>
+              <div className="text-[10px] uppercase text-muted-foreground">Agendados</div>
+              <div className="text-xl font-bold text-warning-foreground">{s.programadas}</div>
             </div>
             <div>
-              <div className="text-[10px] uppercase text-muted-foreground">Menor</div>
-              <div className="text-sm font-bold">EM PROCESSO</div>
+              <div className="text-[10px] uppercase text-muted-foreground">Dê-para</div>
+              <div className="text-xl font-bold text-info">{s.dePara}</div>
             </div>
           </div>
           <div className="h-64">

@@ -3,6 +3,7 @@ export type ContainerStatus =
   | "DEPARA EM PATIO TLOG-SJP"
   | "ENVIADO PARA FABRICA"
   | "FINALIZADO"
+  | "PROGRAMADA ENTRADA NO PATIO"
   | "OUTRO";
 
 export interface CheioRow {
