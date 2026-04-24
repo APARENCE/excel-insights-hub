@@ -113,6 +113,9 @@ export default function PrioridadesPage() {
   const [fabricaSelect, setFabricaSelect] = useState<string>("CVU");
   const [customFabrica, setCustomFabrica] = useState("");
 
+  // Nova variável de estado para o diálogo de confirmação
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false); // <--- Adicionado
+
   const isCliente = userRole === "CLIENTE";
   const isTransportadora = userRole === "TRANSPORTADORA";
 
@@ -233,7 +236,7 @@ export default function PrioridadesPage() {
       <StatusStepper currentStatus={req.status} />
       
       {req.observacao && (
-        <div className="mt-2 p-2 bg-muted/50 rounded text-[11px] text-muted-foreground italic border-l border-primary/20">
+        <div className="mt-2 text-[9px] text-muted-foreground italic truncate pl-2 border-l border-primary/20">
           "{req.observacao}"
         </div>
       )}
@@ -270,7 +273,7 @@ export default function PrioridadesPage() {
       </Dialog>
     );
 
-    setIsConfirmOpen(true);
+    setIsConfirmOpen(true); // <--- Agora funciona
   };
 
   return (
