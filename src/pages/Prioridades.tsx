@@ -332,19 +332,19 @@ export default function PrioridadesPage() {
 
       <div className="px-6 grid grid-cols-4 gap-2 mb-4">
         <div className="bg-destructive/5 border border-destructive/20 px-3 py-1.5 rounded flex items-center justify-between">
-          <span className="text-[9px] font-bold text-destructive uppercase">Fila</span>
+          <span className="text-[9px] font-bold text-destructive uppercase tracking-wider">Fila</span>
           <span className="text-base font-black">{stats.pendentes}</span>
         </div>
         <div className="bg-warning/5 border border-warning/20 px-3 py-1.5 rounded flex items-center justify-between">
-          <span className="text-[9px] font-bold text-warning-foreground uppercase">Carga</span>
+          <span className="text-[9px] font-bold text-warning-foreground uppercase tracking-wider">Carregado</span>
           <span className="text-base font-black">{stats.carregando}</span>
         </div>
         <div className="bg-success/5 border border-success/20 px-3 py-1.5 rounded flex items-center justify-between">
-          <span className="text-[9px] font-bold text-success uppercase">Siga</span>
+          <span className="text-[9px] font-bold text-success uppercase tracking-wider">Despachado</span>
           <span className="text-base font-black">{stats.despachados}</span>
         </div>
         <div className="bg-info/5 border border-info/20 px-3 py-1.5 rounded flex items-center justify-between">
-          <span className="text-[9px] font-bold text-info uppercase">OK</span>
+          <span className="text-[9px] font-bold text-info uppercase tracking-wider">Finalizado</span>
           <span className="text-base font-black">{stats.finalizados}</span>
         </div>
       </div>
