@@ -10,17 +10,16 @@ import {
   AlertTriangle, 
   Trash2,
   ArrowRightLeft,
-  Ship,
-  Check,
   ChevronsUpDown,
   Eraser,
   Timer,
   Factory,
-  PackageCheck
+  PackageCheck,
+  ChevronRight,
+  MapPin
 } from 'lucide-react';
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
-import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { 
   Dialog, 
@@ -58,11 +57,58 @@ import { toast } from "sonner";
 import { PriorityLevel, RequestStatus } from '@/lib/types';
 import { cn } from "@/lib/utils";
 
+/**
+ * Componente de Sinaleiro / Stepper Operacional
+ */
+function StatusStepper({ currentStatus }: { currentStatus: RequestStatus }) {
+  const steps = [
+    { id: 'PENDENTE', label: 'Fila', color: 'bg-destructive' },
+    { id: 'CARREGANDO', label: 'Carga', color: 'bg-warning' },
+    { id: 'DESPACHADO', label: 'Trânsito', color: 'bg-success' },
+    { id: 'FINALIZADO', label: 'OK', color: 'bg-info' },
+  ];
+
+  const currentIndex = steps.findIndex(s => s.id === currentStatus);
+
+  return (
+    <div className="flex items-center gap-1.5 mt-3 bg-muted/30 p-2 rounded-lg border border-border/50">
+      {steps.map((step, idx) => {
+        const isPast = idx < currentIndex;
+        const isCurrent = idx === currentIndex;
+        const isFuture = idx > currentIndex;
+
+        return (
+          <React.Fragment key={step.id}>
+            <div className="flex flex-col items-center gap-1 flex-1">
+              <div 
+                className={cn(
+                  "h-2.5 w-full rounded-full transition-all duration-500",
+                  isPast ? step.color : 
+                  isCurrent ? `${step.color} animate-pulse shadow-[0_0_8px_var(--color-primary)]` : 
+                  "bg-muted-foreground/20"
+                )} 
+              />
+              <span className={cn(
+                "text-[9px] font-bold uppercase tracking-tighter",
+                isCurrent ? "text-foreground" : "text-muted-foreground/60"
+              )}>
+                {step.label}
+              </span>
+            </div>
+            {idx < steps.length - 1 && (
+              <ChevronRight className="h-3 w-3 text-muted-foreground/20 mt-[-14px]" />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function PrioridadesPage() {
   const ds = useDataset();
   const { userRole } = ds;
   const [isAddOpen, setIsAddOpen] = useState(false);
-  
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedContainer, setSelectedContainer] = useState("");
   const [fabricaSelect, setFabricaSelect] = useState<string>("CVU");
@@ -86,46 +132,35 @@ export default function PrioridadesPage() {
     finalizados: ds.priorityRequests.filter(r => r.status === 'FINALIZADO').length,
   };
 
-  const groupedRequests = useMemo(() => {
-    const list = ds.priorityRequests.map(req => {
-      const details = ds.cheios.find(c => c.conteiner === req.conteiner);
-      return { ...req, details };
+  const sortedRequests = useMemo(() => {
+    const weight: Record<string, number> = { 'CRITICA': 3, 'ALTA': 2, 'NORMAL': 1 };
+    return ds.priorityRequests.map(req => ({
+      ...req,
+      details: ds.cheios.find(c => c.conteiner === req.conteiner)
+    })).sort((a, b) => {
+      // Primeiro por status (Pendente > Carregando > Despachado > Finalizado)
+      const statusWeight: Record<RequestStatus, number> = { 'PENDENTE': 4, 'CARREGANDO': 3, 'DESPACHADO': 2, 'FINALIZADO': 1 };
+      if (statusWeight[a.status] !== statusWeight[b.status]) {
+        return statusWeight[b.status] - statusWeight[a.status];
+      }
+      // Segundo por nível de prioridade
+      if (weight[a.nivel] !== weight[b.nivel]) {
+        return weight[b.nivel] - weight[a.nivel];
+      }
+      // Por fim por data
+      return new Date(b.solicitadoEm).getTime() - new Date(a.solicitadoEm).getTime();
     });
-
-    const sortFn = (a: any, b: any) => {
-      const weight: Record<string, number> = { 'CRITICA': 3, 'ALTA': 2, 'NORMAL': 1 };
-      const valA = weight[a.nivel] || 0;
-      const valB = weight[b.nivel] || 0;
-      return valB - valA || new Date(b.solicitadoEm).getTime() - new Date(a.solicitadoEm).getTime();
-    };
-
-    return {
-      pendentes: list.filter(r => r.status === 'PENDENTE').sort(sortFn),
-      carregando: list.filter(r => r.status === 'CARREGANDO').sort(sortFn),
-      despachados: list.filter(r => r.status === 'DESPACHADO').sort(sortFn),
-      finalizados: list.filter(r => r.status === 'FINALIZADO').sort((a, b) => 
-        new Date(b.solicitadoEm).getTime() - new Date(a.solicitadoEm).getTime()
-      )
-    };
   }, [ds.priorityRequests, ds.cheios]);
 
   const handleCreateRequest = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedContainer) {
-      toast.error("Selecione um container válido.");
+      toast.error("Selecione um container.");
       return;
     }
-
     const formData = new FormData(e.currentTarget);
     const nivel = formData.get('nivel') as PriorityLevel;
-    const observacao = formData.get('observacao') as string;
-    
     const fabricaDestino = fabricaSelect === 'OUTROS' ? customFabrica : fabricaSelect;
-
-    if (!fabricaDestino) {
-      toast.error("Informe a fábrica de destino.");
-      return;
-    }
 
     addPriorityRequest({
       id: crypto.randomUUID(),
@@ -133,196 +168,124 @@ export default function PrioridadesPage() {
       nivel,
       status: 'PENDENTE',
       solicitadoEm: new Date().toISOString(),
-      fabricaDestino,
-      observacao
+      fabricaDestino: fabricaDestino || 'CVU',
+      observacao: formData.get('observacao') as string
     });
 
-    toast.success(`Prioridade agendada para ${fabricaDestino}!`);
+    toast.success("Prioridade agendada!");
     setIsAddOpen(false);
     setSelectedContainer("");
-    setCustomFabrica("");
-    setFabricaSelect("CVU");
-  };
-
-  const clearFinished = () => {
-    setDataset(prev => ({
-      ...prev,
-      priorityRequests: prev.priorityRequests.filter(r => r.status !== 'FINALIZADO')
-    }));
-    toast.info("Lista de finalizados limpa.");
-  };
-
-  const getDemurrageColor = (dateStr?: string) => {
-    if (!dateStr) return "text-muted-foreground";
-    const date = new Date(dateStr);
-    const diff = (date.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
-    if (diff < 0) return "text-destructive font-black";
-    if (diff <= 3) return "text-warning font-black";
-    return "text-success font-bold";
   };
 
   const RequestCard = ({ req }: { req: any }) => (
-    <div 
-      className={cn(
-        "group rounded-xl border p-3 flex flex-col md:flex-row md:items-center gap-4 transition-all hover:shadow-sm bg-card relative overflow-hidden",
-        req.nivel === 'CRITICA' && req.status !== 'FINALIZADO' ? 'border-l-4 border-l-destructive' : 'border-border',
-        req.status === 'FINALIZADO' && 'opacity-60 grayscale-[0.3]'
-      )}
-    >
-      <div className={cn(
-        "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
-        req.nivel === 'CRITICA' && req.status !== 'FINALIZADO' ? 'bg-destructive/10 text-destructive' :
-        req.nivel === 'ALTA' && req.status !== 'FINALIZADO' ? 'bg-warning/10 text-warning-foreground' :
-        req.status === 'FINALIZADO' ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'
-      )}>
-        {req.status === 'FINALIZADO' ? <PackageCheck className="h-5 w-5" /> : <Zap className={cn("h-5 w-5", req.status === 'PENDENTE' && 'animate-pulse')} />}
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-lg font-bold tracking-tight">{req.conteiner}</span>
-          <StatusBadge tone={
-            req.status === 'FINALIZADO' ? 'success' :
-            req.status === 'DESPACHADO' ? 'info' :
-            req.nivel === 'CRITICA' ? 'destructive' :
-            req.nivel === 'ALTA' ? 'warning' : 'primary'
-          }>
-            {req.status === 'FINALIZADO' ? 'FINALIZADO' : req.nivel}
-          </StatusBadge>
-          {req.fabricaDestino && (
-            <span className="text-[10px] bg-sidebar text-sidebar-foreground px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-              <Factory className="h-3 w-3" /> {req.fabricaDestino}
+    <div className={cn(
+      "group rounded-xl border p-4 bg-card transition-all hover:ring-1 hover:ring-primary/20",
+      req.status === 'FINALIZADO' ? 'opacity-60 border-dashed' : 'border-border shadow-sm'
+    )}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xl font-black tracking-tight">{req.conteiner}</span>
+            <span className={cn(
+              "text-[10px] px-2 py-0.5 rounded-full font-black uppercase",
+              req.nivel === 'CRITICA' ? "bg-destructive text-white" :
+              req.nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
+            )}>
+              {req.nivel}
             </span>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
-          <div className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
-            <Clock className="h-3 w-3" /> {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+            {req.details?.conteinerDePara && (
+              <span className="text-[10px] bg-info/10 text-info px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                <ArrowRightLeft className="h-3 w-3" /> {req.details.conteinerDePara}
+              </span>
+            )}
           </div>
-          {req.details?.conteinerDePara && (
-            <div className="text-[11px] font-bold text-primary flex items-center gap-1">
-              <ArrowRightLeft className="h-3 w-3" /> Dê-para: {req.details.conteinerDePara}
+          
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+            <div className="flex items-center gap-1 font-bold text-foreground">
+              <Factory className="h-3.5 w-3.5 text-primary" /> {req.fabricaDestino}
             </div>
-          )}
-          {!req.details?.colunaAS && req.details?.demurrageVencimento && req.status !== 'FINALIZADO' && (
-            <div className={cn("text-[11px] flex items-center gap-1", getDemurrageColor(req.details.demurrageVencimento))}>
-              <Timer className="h-3 w-3" /> Expira: {new Date(req.details.demurrageVencimento).toLocaleDateString('pt-BR')}
+            <div className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" /> {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
             </div>
+            {req.details?.armador && <div>{req.details.armador}</div>}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1">
+          {isTransportadora && req.status === 'PENDENTE' && (
+            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'CARREGANDO')} className="h-9 bg-destructive hover:bg-destructive/90 text-white font-bold">
+              <Truck className="h-4 w-4 mr-1.5" /> INICIAR CARGA
+            </Button>
           )}
-          {req.observacao && (
-            <div className="text-[11px] text-muted-foreground italic truncate max-w-[200px]">
-              "{req.observacao}"
-            </div>
+          {isTransportadora && req.status === 'CARREGANDO' && (
+            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'DESPACHADO')} className="h-9 bg-warning hover:bg-warning/90 text-warning-foreground font-bold">
+              <MapPin className="h-4 w-4 mr-1.5" /> DESPACHAR
+            </Button>
           )}
+          {isTransportadora && req.status === 'DESPACHADO' && (
+            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'FINALIZADO')} className="h-9 bg-success hover:bg-success/90 text-white font-bold">
+              <PackageCheck className="h-4 w-4 mr-1.5" /> FINALIZAR
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" onClick={() => deletePriorityRequest(req.id)} className="text-muted-foreground hover:text-destructive">
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 self-end md:self-center">
-        {isTransportadora && req.status === 'PENDENTE' && (
-          <Button 
-            size="sm"
-            onClick={() => updatePriorityStatus(req.id, 'CARREGANDO')}
-            className="h-8 px-3 bg-info hover:bg-info/90 text-white font-bold"
-          >
-            <Truck className="h-3.5 w-3.5 mr-1.5" /> CARREGAR
-          </Button>
-        )}
-        {isTransportadora && req.status === 'CARREGANDO' && (
-          <Button 
-            size="sm"
-            onClick={() => updatePriorityStatus(req.id, 'DESPACHADO')}
-            className="h-8 px-3 bg-primary hover:bg-primary/90 text-white font-bold"
-          >
-            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> DESPACHAR
-          </Button>
-        )}
-        {isTransportadora && req.status === 'DESPACHADO' && (
-          <Button 
-            size="sm"
-            onClick={() => updatePriorityStatus(req.id, 'FINALIZADO')}
-            className="h-8 px-3 bg-success hover:bg-success/90 text-white font-bold"
-          >
-            <PackageCheck className="h-3.5 w-3.5 mr-1.5" /> FINALIZAR
-          </Button>
-        )}
-        
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-          onClick={() => {
-            deletePriorityRequest(req.id);
-            toast.info("Removido.");
-          }}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
+      <StatusStepper currentStatus={req.status} />
+      
+      {req.observacao && (
+        <div className="mt-3 p-2 bg-muted/50 rounded text-[11px] text-muted-foreground italic border-l-2 border-primary/20">
+          "{req.observacao}"
+        </div>
+      )}
     </div>
   );
 
   return (
     <AppShell>
       <PageHeader 
-        title="Painel de Prioridades" 
-        subtitle={isCliente ? "Solicite prioridade para fábrica" : "Operação de despacho Renault"}
+        title="Controle Sinaleiro de Prioridades" 
+        subtitle={isCliente ? "Renault: Solicitação de Carga" : "Transportadora: Gestão de Fluxo"}
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={clearFinished} className="hidden sm:flex gap-2 text-xs">
-              <Eraser className="h-3.5 w-3.5" /> Limpar Finalizados
+            <Button variant="outline" size="sm" onClick={() => setDataset(prev => ({...prev, priorityRequests: prev.priorityRequests.filter(r => r.status !== 'FINALIZADO')}))} className="text-xs">
+              <Eraser className="h-4 w-4 mr-2" /> Resetar Dia
             </Button>
-            
             {isCliente && (
               <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DialogTrigger asChild>
-                  <Button className="gap-2 bg-primary hover:bg-primary/90 shadow-md">
-                    <Plus className="h-4 w-4" /> Solicitar
+                  <Button className="bg-primary hover:bg-primary/90 font-bold shadow-lg">
+                    <Plus className="h-4 w-4 mr-1" /> NOVA PRIORIDADE
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent>
                   <form onSubmit={handleCreateRequest}>
                     <DialogHeader>
-                      <DialogTitle>Nova Solicitação Renault</DialogTitle>
-                      <DialogDescription>Selecione um container em pátio para priorizar.</DialogDescription>
+                      <DialogTitle>Solicitar Prioridade Renault</DialogTitle>
                     </DialogHeader>
-                    <div className="grid gap-5 py-5">
+                    <div className="grid gap-4 py-4">
                       <div className="space-y-2">
-                        <Label className="text-sm font-bold text-primary">Localizar Container</Label>
+                        <Label>Container no Pátio</Label>
                         <Popover open={searchOpen} onOpenChange={setSearchOpen}>
                           <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className="w-full justify-between h-10 text-left font-normal border-2"
-                            >
-                              {selectedContainer
-                                ? availableContainers.find((c) => c.conteiner === selectedContainer)?.conteiner
-                                : "Buscar por número ou dê-para..."}
+                            <Button variant="outline" className="w-full justify-between font-normal border-2">
+                              {selectedContainer || "Selecione o container..."}
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-[450px] p-0" align="start">
                             <Command>
-                              <CommandInput placeholder="Ex: CMAU, MSC, Dê-para..." />
+                              <CommandInput placeholder="Filtrar por ID ou Dê-para..." />
                               <CommandList>
-                                <CommandEmpty>Nenhum container disponível.</CommandEmpty>
+                                <CommandEmpty>Nenhum disponível no pátio.</CommandEmpty>
                                 <CommandGroup>
                                   {availableContainers.map((c) => (
-                                    <CommandItem
-                                      key={c.conteiner}
-                                      value={`${c.conteiner} ${c.armador} ${c.conteinerDePara}`}
-                                      onSelect={() => {
-                                        setSelectedContainer(c.conteiner);
-                                        setSearchOpen(false);
-                                      }}
-                                      className="flex flex-col items-start py-2 px-4 cursor-pointer"
-                                    >
-                                      <div className="font-bold text-primary">{c.conteiner}</div>
-                                      <div className="flex gap-2 mt-1">
-                                        <span className="text-[10px] font-bold text-muted-foreground uppercase">{c.armador}</span>
-                                        {c.conteinerDePara && (
-                                          <span className="text-[10px] font-bold text-primary">Dê-para: {c.conteinerDePara}</span>
-                                        )}
+                                    <CommandItem key={c.conteiner} value={`${c.conteiner} ${c.conteinerDePara}`} onSelect={() => { setSelectedContainer(c.conteiner); setSearchOpen(false); }} className="cursor-pointer">
+                                      <div className="flex flex-col">
+                                        <span className="font-bold">{c.conteiner}</span>
+                                        {c.conteinerDePara && <span className="text-[10px] text-primary">Dê-para: {c.conteinerDePara}</span>}
                                       </div>
                                     </CommandItem>
                                   ))}
@@ -332,56 +295,26 @@ export default function PrioridadesPage() {
                           </PopoverContent>
                         </Popover>
                       </div>
-
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-sm font-bold">Fábrica de Destino</Label>
+                          <Label>Destino</Label>
                           <Select value={fabricaSelect} onValueChange={setFabricaSelect}>
-                            <SelectTrigger className="h-10 border-2">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="CVU">🏭 CVU</SelectItem>
-                              <SelectItem value="CVP">🏭 CVP</SelectItem>
-                              <SelectItem value="OUTROS">✏️ Outra Fábrica...</SelectItem>
-                            </SelectContent>
+                            <SelectTrigger className="border-2"><SelectValue /></SelectTrigger>
+                            <SelectContent><SelectItem value="CVU">CVU</SelectItem><SelectItem value="CVP">CVP</SelectItem><SelectItem value="OUTROS">Outra...</SelectItem></SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-sm font-bold">Urgência</Label>
+                          <Label>Urgência</Label>
                           <Select name="nivel" defaultValue="NORMAL">
-                            <SelectTrigger className="h-10 border-2">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="NORMAL">🟢 Normal</SelectItem>
-                              <SelectItem value="ALTA">🟠 Alta</SelectItem>
-                              <SelectItem value="CRITICA">🔴 Crítica</SelectItem>
-                            </SelectContent>
+                            <SelectTrigger className="border-2"><SelectValue /></SelectTrigger>
+                            <SelectContent><SelectItem value="NORMAL">Normal</SelectItem><SelectItem value="ALTA">Alta</SelectItem><SelectItem value="CRITICA">Crítica</SelectItem></SelectContent>
                           </Select>
                         </div>
                       </div>
-
-                      {fabricaSelect === 'OUTROS' && (
-                        <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-                          <Label className="text-sm font-bold">Nome da Fábrica</Label>
-                          <Input 
-                            placeholder="Digite o destino..." 
-                            value={customFabrica} 
-                            onChange={(e) => setCustomFabrica(e.target.value)} 
-                            className="h-10 border-2"
-                          />
-                        </div>
-                      )}
-
-                      <div className="space-y-2">
-                        <Label className="text-sm font-bold">Observação</Label>
-                        <Input name="observacao" placeholder="Opcional" className="h-10 border-2" />
-                      </div>
+                      {fabricaSelect === 'OUTROS' && <Input placeholder="Nome da fábrica" value={customFabrica} onChange={(e) => setCustomFabrica(e.target.value)} className="border-2" />}
+                      <Input name="observacao" placeholder="Observações (opcional)" className="border-2" />
                     </div>
-                    <DialogFooter>
-                      <Button type="submit" className="w-full h-11 font-bold">Adicionar à Fila</Button>
-                    </DialogFooter>
+                    <DialogFooter><Button type="submit" className="w-full font-bold h-11">ENVIAR PARA OPERAÇÃO</Button></DialogFooter>
                   </form>
                 </DialogContent>
               </Dialog>
@@ -391,76 +324,23 @@ export default function PrioridadesPage() {
       />
 
       <div className="px-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Aguardando" value={stats.pendentes} icon={Clock} tone="warning" />
-        <StatCard label="Em Carga" value={stats.carregando} icon={Truck} tone="info" />
-        <StatCard label="Despachados" value={stats.despachados} icon={CheckCircle2} tone="primary" />
-        <StatCard label="Finalizados" value={stats.finalizados} icon={PackageCheck} tone="success" />
+        <StatCard label="Aguardando (Pare)" value={stats.pendentes} icon={AlertTriangle} tone="destructive" />
+        <StatCard label="Em Carga (Atenção)" value={stats.carregando} icon={Truck} tone="warning" />
+        <StatCard label="Em Trânsito (Siga)" value={stats.despachados} icon={MapPin} tone="success" />
+        <StatCard label="Finalizados" value={stats.finalizados} icon={PackageCheck} tone="info" />
       </div>
 
-      <div className="px-6 mt-6 pb-20 space-y-8">
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="h-6 w-1 bg-warning rounded-full" />
-            <h3 className="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
-              Aguardando Início <span className="text-[10px] bg-warning/20 text-warning-foreground px-2 py-0.5 rounded-full">{groupedRequests.pendentes.length}</span>
-            </h3>
+      <div className="px-6 mt-6 pb-20 space-y-3">
+        <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-2">
+          <Zap className="h-3 w-3 text-primary animate-pulse" /> Fila de Execução Ordenada
+        </div>
+        {sortedRequests.length === 0 ? (
+          <div className="text-center py-20 border-2 border-dashed rounded-xl border-border/50">
+            <p className="text-muted-foreground text-sm">Nenhuma prioridade na fila.</p>
           </div>
-          <div className="space-y-2">
-            {groupedRequests.pendentes.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic pl-3">Nenhuma solicitação pendente.</p>
-            ) : (
-              groupedRequests.pendentes.map(req => <RequestCard key={req.id} req={req} />)
-            )}
-          </div>
-        </section>
-
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="h-6 w-1 bg-info rounded-full" />
-            <h3 className="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
-              Em Processo de Carga <span className="text-[10px] bg-info/20 text-info px-2 py-0.5 rounded-full">{groupedRequests.carregando.length}</span>
-            </h3>
-          </div>
-          <div className="space-y-2">
-            {groupedRequests.carregando.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic pl-3">Nenhum container sendo carregado no momento.</p>
-            ) : (
-              groupedRequests.carregando.map(req => <RequestCard key={req.id} req={req} />)
-            )}
-          </div>
-        </section>
-
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="h-6 w-1 bg-primary rounded-full" />
-            <h3 className="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
-              Em Trânsito p/ Fábrica <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full">{groupedRequests.despachados.length}</span>
-            </h3>
-          </div>
-          <div className="space-y-2">
-            {groupedRequests.despachados.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic pl-3">Nenhum container em trânsito.</p>
-            ) : (
-              groupedRequests.despachados.map(req => <RequestCard key={req.id} req={req} />)
-            )}
-          </div>
-        </section>
-
-        <section className="opacity-70">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="h-6 w-1 bg-success rounded-full" />
-            <h3 className="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
-              Concluídos (Finalizados) <span className="text-[10px] bg-success/20 text-success px-2 py-0.5 rounded-full">{groupedRequests.finalizados.length}</span>
-            </h3>
-          </div>
-          <div className="space-y-2">
-            {groupedRequests.finalizados.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic pl-3">Nenhum container finalizado ainda.</p>
-            ) : (
-              groupedRequests.finalizados.slice(0, 20).map(req => <RequestCard key={req.id} req={req} />)
-            )}
-          </div>
-        </section>
+        ) : (
+          sortedRequests.map(req => <RequestCard key={req.id} req={req} />)
+        )}
       </div>
     </AppShell>
   );
