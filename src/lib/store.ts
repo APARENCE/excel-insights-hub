@@ -94,6 +94,16 @@ export function updatePriorityStatus(id: string, status: PriorityRequest["status
         }
         return c;
       });
+    } else if (status === 'FINALIZADO') {
+      newCheios = prev.cheios.map(c => {
+        if (c.conteiner === request.conteiner) {
+          return {
+            ...c,
+            status: "FINALIZADO" as const
+          };
+        }
+        return c;
+      });
     }
 
     return {

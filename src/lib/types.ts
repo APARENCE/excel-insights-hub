@@ -7,7 +7,7 @@ export type ContainerStatus =
   | "OUTRO";
 
 export type PriorityLevel = "CRITICA" | "ALTA" | "NORMAL";
-export type RequestStatus = "PENDENTE" | "CARREGANDO" | "DESPACHADO";
+export type RequestStatus = "PENDENTE" | "CARREGANDO" | "DESPACHADO" | "FINALIZADO";
 
 export interface PriorityRequest {
   id: string;
@@ -15,7 +15,7 @@ export interface PriorityRequest {
   nivel: PriorityLevel;
   status: RequestStatus;
   solicitadoEm: string;
-  fabricaDestino?: string; // Novo campo
+  fabricaDestino?: string;
   previsaoFabrica?: string;
   observacao?: string;
 }

@@ -15,7 +15,8 @@ import {
   ChevronsUpDown,
   Eraser,
   Timer,
-  Factory
+  Factory,
+  PackageCheck
 } from 'lucide-react';
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
@@ -71,7 +72,7 @@ export default function PrioridadesPage() {
   const isTransportadora = userRole === "TRANSPORTADORA";
 
   const availableContainers = useMemo(() => {
-    const existingIds = new Set(ds.priorityRequests.filter(r => r.status !== 'DESPACHADO').map(r => r.conteiner));
+    const existingIds = new Set(ds.priorityRequests.filter(r => r.status !== 'FINALIZADO').map(r => r.conteiner));
     return ds.cheios.filter(c => 
       (c.status === "EM PATIO TLOG-SJP" || c.status === "DEPARA EM PATIO TLOG-SJP") && 
       !existingIds.has(c.conteiner)
@@ -82,7 +83,7 @@ export default function PrioridadesPage() {
     pendentes: ds.priorityRequests.filter(r => r.status === 'PENDENTE').length,
     carregando: ds.priorityRequests.filter(r => r.status === 'CARREGANDO').length,
     despachados: ds.priorityRequests.filter(r => r.status === 'DESPACHADO').length,
-    criticos: ds.priorityRequests.filter(r => r.nivel === 'CRITICA' && r.status !== 'DESPACHADO').length
+    finalizados: ds.priorityRequests.filter(r => r.status === 'FINALIZADO').length,
   };
 
   const groupedRequests = useMemo(() => {
@@ -101,7 +102,8 @@ export default function PrioridadesPage() {
     return {
       pendentes: list.filter(r => r.status === 'PENDENTE').sort(sortFn),
       carregando: list.filter(r => r.status === 'CARREGANDO').sort(sortFn),
-      despachados: list.filter(r => r.status === 'DESPACHADO').sort((a, b) => 
+      despachados: list.filter(r => r.status === 'DESPACHADO').sort(sortFn),
+      finalizados: list.filter(r => r.status === 'FINALIZADO').sort((a, b) => 
         new Date(b.solicitadoEm).getTime() - new Date(a.solicitadoEm).getTime()
       )
     };
@@ -145,9 +147,9 @@ export default function PrioridadesPage() {
   const clearFinished = () => {
     setDataset(prev => ({
       ...prev,
-      priorityRequests: prev.priorityRequests.filter(r => r.status !== 'DESPACHADO')
+      priorityRequests: prev.priorityRequests.filter(r => r.status !== 'FINALIZADO')
     }));
-    toast.info("Lista de despachados limpa.");
+    toast.info("Lista de finalizados limpa.");
   };
 
   const getDemurrageColor = (dateStr?: string) => {
@@ -163,27 +165,29 @@ export default function PrioridadesPage() {
     <div 
       className={cn(
         "group rounded-xl border p-3 flex flex-col md:flex-row md:items-center gap-4 transition-all hover:shadow-sm bg-card relative overflow-hidden",
-        req.nivel === 'CRITICA' && req.status !== 'DESPACHADO' ? 'border-l-4 border-l-destructive' : 'border-border'
+        req.nivel === 'CRITICA' && req.status !== 'FINALIZADO' ? 'border-l-4 border-l-destructive' : 'border-border',
+        req.status === 'FINALIZADO' && 'opacity-60 grayscale-[0.3]'
       )}
     >
       <div className={cn(
         "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
-        req.nivel === 'CRITICA' && req.status !== 'DESPACHADO' ? 'bg-destructive/10 text-destructive' :
-        req.nivel === 'ALTA' && req.status !== 'DESPACHADO' ? 'bg-warning/10 text-warning-foreground' :
-        req.status === 'DESPACHADO' ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'
+        req.nivel === 'CRITICA' && req.status !== 'FINALIZADO' ? 'bg-destructive/10 text-destructive' :
+        req.nivel === 'ALTA' && req.status !== 'FINALIZADO' ? 'bg-warning/10 text-warning-foreground' :
+        req.status === 'FINALIZADO' ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'
       )}>
-        <Zap className={cn("h-5 w-5", req.status === 'PENDENTE' && 'animate-pulse')} />
+        {req.status === 'FINALIZADO' ? <PackageCheck className="h-5 w-5" /> : <Zap className={cn("h-5 w-5", req.status === 'PENDENTE' && 'animate-pulse')} />}
       </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-lg font-bold tracking-tight">{req.conteiner}</span>
           <StatusBadge tone={
-            req.status === 'DESPACHADO' ? 'success' :
+            req.status === 'FINALIZADO' ? 'success' :
+            req.status === 'DESPACHADO' ? 'info' :
             req.nivel === 'CRITICA' ? 'destructive' :
             req.nivel === 'ALTA' ? 'warning' : 'primary'
           }>
-            {req.nivel}
+            {req.status === 'FINALIZADO' ? 'FINALIZADO' : req.nivel}
           </StatusBadge>
           {req.fabricaDestino && (
             <span className="text-[10px] bg-sidebar text-sidebar-foreground px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
@@ -200,7 +204,7 @@ export default function PrioridadesPage() {
               <ArrowRightLeft className="h-3 w-3" /> Dê-para: {req.details.conteinerDePara}
             </div>
           )}
-          {!req.details?.colunaAS && req.details?.demurrageVencimento && (
+          {!req.details?.colunaAS && req.details?.demurrageVencimento && req.status !== 'FINALIZADO' && (
             <div className={cn("text-[11px] flex items-center gap-1", getDemurrageColor(req.details.demurrageVencimento))}>
               <Timer className="h-3 w-3" /> Expira: {new Date(req.details.demurrageVencimento).toLocaleDateString('pt-BR')}
             </div>
@@ -214,7 +218,6 @@ export default function PrioridadesPage() {
       </div>
 
       <div className="flex items-center gap-2 self-end md:self-center">
-        {/* Ações exclusivas para TRANSPORTADORA */}
         {isTransportadora && req.status === 'PENDENTE' && (
           <Button 
             size="sm"
@@ -228,13 +231,21 @@ export default function PrioridadesPage() {
           <Button 
             size="sm"
             onClick={() => updatePriorityStatus(req.id, 'DESPACHADO')}
-            className="h-8 px-3 bg-success hover:bg-success/90 text-white font-bold"
+            className="h-8 px-3 bg-primary hover:bg-primary/90 text-white font-bold"
           >
             <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> DESPACHAR
           </Button>
         )}
+        {isTransportadora && req.status === 'DESPACHADO' && (
+          <Button 
+            size="sm"
+            onClick={() => updatePriorityStatus(req.id, 'FINALIZADO')}
+            className="h-8 px-3 bg-success hover:bg-success/90 text-white font-bold"
+          >
+            <PackageCheck className="h-3.5 w-3.5 mr-1.5" /> FINALIZAR
+          </Button>
+        )}
         
-        {/* Cliente e Transportadora podem apagar? No fluxo real talvez só cliente, mas mantendo delete para ambos por enquanto para testes */}
         <Button 
           variant="ghost" 
           size="icon" 
@@ -258,10 +269,9 @@ export default function PrioridadesPage() {
         actions={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={clearFinished} className="hidden sm:flex gap-2 text-xs">
-              <Eraser className="h-3.5 w-3.5" /> Limpar Concluídos
+              <Eraser className="h-3.5 w-3.5" /> Limpar Finalizados
             </Button>
             
-            {/* Somente o CLIENTE pode solicitar novas prioridades */}
             {isCliente && (
               <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DialogTrigger asChild>
@@ -305,7 +315,7 @@ export default function PrioridadesPage() {
                                         setSelectedContainer(c.conteiner);
                                         setSearchOpen(false);
                                       }}
-                                      className="flex flex-col items-start py-2 px-4"
+                                      className="flex flex-col items-start py-2 px-4 cursor-pointer"
                                     >
                                       <div className="font-bold text-primary">{c.conteiner}</div>
                                       <div className="flex gap-2 mt-1">
@@ -383,12 +393,11 @@ export default function PrioridadesPage() {
       <div className="px-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Aguardando" value={stats.pendentes} icon={Clock} tone="warning" />
         <StatCard label="Em Carga" value={stats.carregando} icon={Truck} tone="info" />
-        <StatCard label="Despachados" value={stats.despachados} icon={CheckCircle2} tone="success" />
-        <StatCard label="Críticos" value={stats.criticos} icon={AlertTriangle} tone="destructive" />
+        <StatCard label="Despachados" value={stats.despachados} icon={CheckCircle2} tone="primary" />
+        <StatCard label="Finalizados" value={stats.finalizados} icon={PackageCheck} tone="success" />
       </div>
 
       <div className="px-6 mt-6 pb-20 space-y-8">
-        {/* SEÇÃO: PENDENTES */}
         <section>
           <div className="flex items-center gap-2 mb-3">
             <div className="h-6 w-1 bg-warning rounded-full" />
@@ -405,7 +414,6 @@ export default function PrioridadesPage() {
           </div>
         </section>
 
-        {/* SEÇÃO: EM CARGA */}
         <section>
           <div className="flex items-center gap-2 mb-3">
             <div className="h-6 w-1 bg-info rounded-full" />
@@ -422,22 +430,34 @@ export default function PrioridadesPage() {
           </div>
         </section>
 
-        {/* SEÇÃO: CONCLUÍDOS */}
-        <section className="opacity-70">
+        <section>
           <div className="flex items-center gap-2 mb-3">
-            <div className="h-6 w-1 bg-success rounded-full" />
+            <div className="h-6 w-1 bg-primary rounded-full" />
             <h3 className="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
-              Despachados Hoje <span className="text-[10px] bg-success/20 text-success px-2 py-0.5 rounded-full">{groupedRequests.despachados.length}</span>
+              Em Trânsito p/ Fábrica <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full">{groupedRequests.despachados.length}</span>
             </h3>
           </div>
           <div className="space-y-2">
             {groupedRequests.despachados.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic pl-3">Nenhum despacho registrado hoje.</p>
+              <p className="text-xs text-muted-foreground italic pl-3">Nenhum container em trânsito.</p>
             ) : (
-              groupedRequests.despachados.slice(0, 20).map(req => <RequestCard key={req.id} req={req} />)
+              groupedRequests.despachados.map(req => <RequestCard key={req.id} req={req} />)
             )}
-            {groupedRequests.despachados.length > 20 && (
-              <p className="text-center text-[11px] text-muted-foreground py-2">Mostrando as últimas 20 conclusões. Use "Limpar Concluídos" para resetar a lista.</p>
+          </div>
+        </section>
+
+        <section className="opacity-70">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="h-6 w-1 bg-success rounded-full" />
+            <h3 className="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+              Concluídos (Finalizados) <span className="text-[10px] bg-success/20 text-success px-2 py-0.5 rounded-full">{groupedRequests.finalizados.length}</span>
+            </h3>
+          </div>
+          <div className="space-y-2">
+            {groupedRequests.finalizados.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic pl-3">Nenhum container finalizado ainda.</p>
+            ) : (
+              groupedRequests.finalizados.slice(0, 20).map(req => <RequestCard key={req.id} req={req} />)
             )}
           </div>
         </section>
