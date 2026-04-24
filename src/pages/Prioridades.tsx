@@ -6,20 +6,15 @@ import {
   Plus, 
   Truck, 
   Clock, 
-  CheckCircle2, 
-  AlertTriangle, 
   Trash2,
-  ArrowRightLeft,
   ChevronsUpDown,
   Eraser,
-  Timer,
   Factory,
   PackageCheck,
-  ChevronRight,
-  MapPin
+  MapPin,
+  ArrowRight
 } from 'lucide-react';
 import { AppShell, PageHeader } from "@/components/AppShell";
-import { StatCard } from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { 
   Dialog, 
@@ -27,8 +22,7 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogTrigger,
-  DialogFooter,
-  DialogDescription
+  DialogFooter
 } from "@/components/ui/dialog";
 import { 
   Select, 
@@ -58,46 +52,34 @@ import { PriorityLevel, RequestStatus } from '@/lib/types';
 import { cn } from "@/lib/utils";
 
 /**
- * Versão Compacta do Sinaleiro
+ * Sinaleiro Ultra-Compacto em Linha
  */
-function StatusStepper({ currentStatus }: { currentStatus: RequestStatus }) {
+function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) {
   const steps = [
-    { id: 'PENDENTE', label: 'Fila', color: 'bg-destructive' },
-    { id: 'CARREGANDO', label: 'Carga', color: 'bg-warning' },
-    { id: 'DESPACHADO', label: 'Siga', color: 'bg-success' },
-    { id: 'FINALIZADO', label: 'OK', color: 'bg-info' },
+    { id: 'PENDENTE', color: 'bg-destructive' },
+    { id: 'CARREGANDO', color: 'bg-warning' },
+    { id: 'DESPACHADO', color: 'bg-success' },
+    { id: 'FINALIZADO', color: 'bg-info' },
   ];
 
   const currentIndex = steps.findIndex(s => s.id === currentStatus);
 
   return (
-    <div className="flex items-center gap-1 mt-2 bg-muted/20 p-1.5 rounded-md border border-border/40">
+    <div className="flex items-center gap-1 w-32">
       {steps.map((step, idx) => {
         const isPast = idx < currentIndex;
         const isCurrent = idx === currentIndex;
 
         return (
-          <React.Fragment key={step.id}>
-            <div className="flex flex-col items-center gap-0.5 flex-1">
-              <div 
-                className={cn(
-                  "h-1.5 w-full rounded-full transition-all duration-500",
-                  isPast ? step.color : 
-                  isCurrent ? `${step.color} animate-pulse` : 
-                  "bg-muted-foreground/15"
-                )} 
-              />
-              <span className={cn(
-                "text-[8px] font-bold uppercase tracking-tighter leading-none",
-                isCurrent ? "text-foreground" : "text-muted-foreground/50"
-              )}>
-                {step.label}
-              </span>
-            </div>
-            {idx < steps.length - 1 && (
-              <div className="w-1 h-1 rounded-full bg-border/40 mb-2" />
-            )}
-          </React.Fragment>
+          <div 
+            key={step.id}
+            className={cn(
+              "h-1.5 flex-1 rounded-full transition-all duration-500",
+              isPast ? step.color : 
+              isCurrent ? `${step.color} animate-pulse ring-1 ring-offset-1 ring-foreground/20` : 
+              "bg-muted"
+            )} 
+          />
         );
       })}
     </div>
@@ -173,94 +155,99 @@ export default function PrioridadesPage() {
     setSelectedContainer("");
   };
 
-  const RequestCard = ({ req }: { req: any }) => (
+  const RequestRow = ({ req }: { req: any }) => (
     <div className={cn(
-      "group rounded-lg border p-2.5 bg-card transition-all hover:bg-muted/5",
-      req.status === 'FINALIZADO' ? 'opacity-50 border-dashed bg-muted/20' : 'border-border shadow-sm'
+      "flex items-center gap-4 px-4 py-2 border-b border-border hover:bg-muted/30 transition-colors",
+      req.status === 'FINALIZADO' && "opacity-50 bg-muted/10"
     )}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex-1 min-w-0 flex items-center gap-3">
-          <div className={cn(
-            "h-7 w-7 rounded flex items-center justify-center shrink-0",
-            req.nivel === 'CRITICA' ? "bg-destructive text-white" :
-            req.nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
-          )}>
-            <Zap className="h-4 w-4" />
-          </div>
-          
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-base font-bold tracking-tight">{req.conteiner}</span>
-              {req.details?.conteinerDePara && (
-                <span className="text-[9px] bg-info/10 text-info px-1.5 py-0 rounded font-bold border border-info/20">
-                  {req.details.conteinerDePara}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-0.5">
-              <div className="flex items-center gap-1 font-bold text-foreground/80">
-                <Factory className="h-3 w-3 text-primary" /> {req.fabricaDestino}
-              </div>
-              <div className="flex items-center gap-1">
-                <Clock className="h-3 w-3" /> {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Prioridade */}
+      <div className={cn(
+        "h-6 w-6 rounded flex items-center justify-center shrink-0",
+        req.nivel === 'CRITICA' ? "bg-destructive text-white" :
+        req.nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
+      )}>
+        <Zap className="h-3.5 w-3.5" />
+      </div>
 
-        <div className="flex items-center gap-1.5">
-          {isTransportadora && req.status === 'PENDENTE' && (
-            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'CARREGANDO')} className="h-7 px-2 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-bold">
-              INICIAR
-            </Button>
+      {/* Container Info */}
+      <div className="w-40 shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold">{req.conteiner}</span>
+          {req.details?.conteinerDePara && (
+            <span className="text-[9px] bg-info/10 text-info px-1 rounded font-bold border border-info/20">
+              {req.details.conteinerDePara}
+            </span>
           )}
-          {isTransportadora && req.status === 'CARREGANDO' && (
-            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'DESPACHADO')} className="h-7 px-2 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold">
-              DESPACHAR
-            </Button>
-          )}
-          {isTransportadora && req.status === 'DESPACHADO' && (
-            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'FINALIZADO')} className="h-7 px-2 text-[10px] bg-success hover:bg-success/90 text-white font-bold">
-              FINALIZAR
-            </Button>
-          )}
-          <Button variant="ghost" size="icon" onClick={() => deletePriorityRequest(req.id)} className="h-7 w-7 text-muted-foreground hover:text-destructive">
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
         </div>
       </div>
 
-      <StatusStepper currentStatus={req.status} />
-      
-      {req.observacao && (
-        <div className="mt-2 text-[9px] text-muted-foreground italic truncate pl-2 border-l border-primary/30">
-          {req.observacao}
-        </div>
-      )}
+      {/* Destino */}
+      <div className="w-24 shrink-0 flex items-center gap-1.5 text-xs font-medium">
+        <Factory className="h-3 w-3 text-muted-foreground" />
+        {req.fabricaDestino}
+      </div>
+
+      {/* Hora */}
+      <div className="w-20 shrink-0 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <Clock className="h-3 w-3" />
+        {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+      </div>
+
+      {/* Status Visual */}
+      <div className="flex-1 flex items-center justify-center">
+        <StatusStepperLine currentStatus={req.status} />
+      </div>
+
+      {/* Ações Operacionais */}
+      <div className="flex items-center gap-2 shrink-0">
+        {isTransportadora && req.status === 'PENDENTE' && (
+          <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'CARREGANDO')} className="h-7 px-3 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-bold">
+            CARREGAR
+          </Button>
+        )}
+        {isTransportadora && req.status === 'CARREGANDO' && (
+          <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'DESPACHADO')} className="h-7 px-3 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold">
+            DESPACHAR
+          </Button>
+        )}
+        {isTransportadora && req.status === 'DESPACHADO' && (
+          <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'FINALIZADO')} className="h-7 px-3 text-[10px] bg-success hover:bg-success/90 text-white font-bold">
+            FINALIZAR
+          </Button>
+        )}
+        {req.status === 'FINALIZADO' && (
+          <div className="text-success flex items-center gap-1 text-[10px] font-bold px-2">
+            <PackageCheck className="h-3.5 w-3.5" /> OK
+          </div>
+        )}
+        <Button variant="ghost" size="icon" onClick={() => deletePriorityRequest(req.id)} className="h-7 w-7 text-muted-foreground hover:text-destructive">
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
     </div>
   );
 
   return (
     <AppShell>
       <PageHeader 
-        title="Painel de Prioridades" 
-        subtitle="Controle Operacional"
+        title="Prioridades Fábrica" 
+        subtitle="Fluxo de Saída em Tempo Real"
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setDataset(prev => ({...prev, priorityRequests: prev.priorityRequests.filter(r => r.status !== 'FINALIZADO')}))} className="text-[10px] h-8">
-              <Eraser className="h-3 w-3 mr-1.5" /> Limpar OK
+            <Button variant="outline" size="sm" onClick={() => setDataset(prev => ({...prev, priorityRequests: prev.priorityRequests.filter(r => r.status !== 'FINALIZADO')}))} className="text-xs h-8">
+              <Eraser className="h-3.5 w-3.5 mr-2" /> Limpar Finalizados
             </Button>
             {isCliente && (
               <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-primary hover:bg-primary/90 font-bold h-8 text-xs">
-                    <Plus className="h-3.5 w-3.5 mr-1" /> SOLICITAR
+                    <Plus className="h-4 w-4 mr-1" /> SOLICITAR
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-md">
                   <form onSubmit={handleCreateRequest}>
                     <DialogHeader>
-                      <DialogTitle>Solicitar Prioridade Renault</DialogTitle>
+                      <DialogTitle>Nova Solicitação de Prioridade</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                       <div className="space-y-1.5">
@@ -320,33 +307,50 @@ export default function PrioridadesPage() {
         }
       />
 
+      {/* Resumo de Status */}
       <div className="px-6 grid grid-cols-4 gap-2 mb-4">
-        <div className="bg-destructive/10 border border-destructive/20 p-2 rounded-lg text-center">
-          <div className="text-[8px] uppercase font-bold text-destructive">Pare (Fila)</div>
-          <div className="text-lg font-black">{stats.pendentes}</div>
+        <div className="bg-destructive/5 border border-destructive/20 px-3 py-2 rounded flex items-center justify-between">
+          <span className="text-[10px] font-bold text-destructive uppercase">Fila</span>
+          <span className="text-lg font-black">{stats.pendentes}</span>
         </div>
-        <div className="bg-warning/10 border border-warning/20 p-2 rounded-lg text-center">
-          <div className="text-[8px] uppercase font-bold text-warning-foreground">Atenção (Carga)</div>
-          <div className="text-lg font-black">{stats.carregando}</div>
+        <div className="bg-warning/5 border border-warning/20 px-3 py-2 rounded flex items-center justify-between">
+          <span className="text-[10px] font-bold text-warning-foreground uppercase">Carga</span>
+          <span className="text-lg font-black">{stats.carregando}</span>
         </div>
-        <div className="bg-success/10 border border-success/20 p-2 rounded-lg text-center">
-          <div className="text-[8px] uppercase font-bold text-success">Siga (Trânsito)</div>
-          <div className="text-lg font-black">{stats.despachados}</div>
+        <div className="bg-success/5 border border-success/20 px-3 py-2 rounded flex items-center justify-between">
+          <span className="text-[10px] font-bold text-success uppercase">Siga</span>
+          <span className="text-lg font-black">{stats.despachados}</span>
         </div>
-        <div className="bg-info/10 border border-info/20 p-2 rounded-lg text-center">
-          <div className="text-[8px] uppercase font-bold text-info">Finalizados</div>
-          <div className="text-lg font-black">{stats.finalizados}</div>
+        <div className="bg-info/5 border border-info/20 px-3 py-2 rounded flex items-center justify-between">
+          <span className="text-[10px] font-bold text-info uppercase">OK</span>
+          <span className="text-lg font-black">{stats.finalizados}</span>
         </div>
       </div>
 
-      <div className="px-6 pb-10 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
-        {sortedRequests.length === 0 ? (
-          <div className="col-span-full text-center py-10 border border-dashed rounded-lg text-muted-foreground text-xs italic">
-            Sem solicitações na fila.
+      {/* Listagem em Linha */}
+      <div className="px-6 pb-10">
+        <div className="rounded-lg border border-border bg-card overflow-hidden">
+          {/* Cabeçalho da Tabela */}
+          <div className="flex items-center gap-4 px-4 py-2 bg-muted/50 border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+            <div className="w-6 shrink-0">Prio</div>
+            <div className="w-40 shrink-0">Container / Dê-para</div>
+            <div className="w-24 shrink-0">Destino</div>
+            <div className="w-20 shrink-0">Solicitado</div>
+            <div className="flex-1 text-center">Status Operacional (Sinaleiro)</div>
+            <div className="w-32 shrink-0 text-right">Ações</div>
           </div>
-        ) : (
-          sortedRequests.map(req => <RequestCard key={req.id} req={req} />)
-        )}
+
+          {/* Linhas de Dados */}
+          <div className="divide-y divide-border">
+            {sortedRequests.length === 0 ? (
+              <div className="py-12 text-center text-muted-foreground text-xs italic">
+                Nenhuma solicitação ativa na fila.
+              </div>
+            ) : (
+              sortedRequests.map(req => <RequestRow key={req.id} req={req} />)
+            )}
+          </div>
+        </div>
       </div>
     </AppShell>
   );
