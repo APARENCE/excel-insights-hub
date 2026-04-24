@@ -4,15 +4,13 @@ import React, { useState, useMemo } from 'react';
 import { 
   Zap, 
   Plus, 
-  Truck, 
   Clock, 
   Trash2,
   ChevronsUpDown,
   Eraser,
   Factory,
   PackageCheck,
-  MapPin,
-  ArrowRight
+  Calendar
 } from 'lucide-react';
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -51,9 +49,6 @@ import { toast } from "sonner";
 import { PriorityLevel, RequestStatus } from '@/lib/types';
 import { cn } from "@/lib/utils";
 
-/**
- * Sinaleiro Ultra-Compacto em Linha
- */
 function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) {
   const steps = [
     { id: 'PENDENTE', color: 'bg-destructive' },
@@ -65,7 +60,7 @@ function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) 
   const currentIndex = steps.findIndex(s => s.id === currentStatus);
 
   return (
-    <div className="flex items-center gap-1 w-32">
+    <div className="flex items-center gap-1 w-28">
       {steps.map((step, idx) => {
         const isPast = idx < currentIndex;
         const isCurrent = idx === currentIndex;
@@ -139,6 +134,7 @@ export default function PrioridadesPage() {
     const formData = new FormData(e.currentTarget);
     const nivel = formData.get('nivel') as PriorityLevel;
     const fabricaDestino = fabricaSelect === 'OUTROS' ? customFabrica : fabricaSelect;
+    const previsao = formData.get('previsao') as string;
 
     addPriorityRequest({
       id: crypto.randomUUID(),
@@ -147,6 +143,7 @@ export default function PrioridadesPage() {
       status: 'PENDENTE',
       solicitadoEm: new Date().toISOString(),
       fabricaDestino: fabricaDestino || 'CVU',
+      previsaoFabrica: previsao || undefined,
       observacao: formData.get('observacao') as string
     });
 
@@ -157,71 +154,70 @@ export default function PrioridadesPage() {
 
   const RequestRow = ({ req }: { req: any }) => (
     <div className={cn(
-      "flex items-center gap-4 px-4 py-2 border-b border-border hover:bg-muted/30 transition-colors",
+      "flex items-center gap-4 px-4 py-1.5 border-b border-border hover:bg-muted/30 transition-colors",
       req.status === 'FINALIZADO' && "opacity-50 bg-muted/10"
     )}>
-      {/* Prioridade */}
       <div className={cn(
-        "h-6 w-6 rounded flex items-center justify-center shrink-0",
+        "h-5 w-5 rounded flex items-center justify-center shrink-0",
         req.nivel === 'CRITICA' ? "bg-destructive text-white" :
         req.nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
       )}>
-        <Zap className="h-3.5 w-3.5" />
+        <Zap className="h-3 w-3" />
       </div>
 
-      {/* Container Info */}
-      <div className="w-40 shrink-0">
+      <div className="w-36 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-bold">{req.conteiner}</span>
+          <span className="text-xs font-bold">{req.conteiner}</span>
           {req.details?.conteinerDePara && (
-            <span className="text-[9px] bg-info/10 text-info px-1 rounded font-bold border border-info/20">
+            <span className="text-[8px] bg-info/10 text-info px-1 rounded font-bold border border-info/20">
               {req.details.conteinerDePara}
             </span>
           )}
         </div>
       </div>
 
-      {/* Destino */}
-      <div className="w-24 shrink-0 flex items-center gap-1.5 text-xs font-medium">
+      <div className="w-20 shrink-0 flex items-center gap-1 text-[10px] font-medium">
         <Factory className="h-3 w-3 text-muted-foreground" />
         {req.fabricaDestino}
       </div>
 
-      {/* Hora */}
-      <div className="w-20 shrink-0 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+      <div className="w-24 shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground">
+        <Calendar className="h-3 w-3 text-primary/60" />
+        {req.previsaoFabrica ? new Date(req.previsaoFabrica).toLocaleDateString('pt-BR') : "—"}
+      </div>
+
+      <div className="w-16 shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground">
         <Clock className="h-3 w-3" />
         {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
       </div>
 
-      {/* Status Visual */}
       <div className="flex-1 flex items-center justify-center">
         <StatusStepperLine currentStatus={req.status} />
       </div>
 
-      {/* Ações Operacionais */}
       <div className="flex items-center gap-2 shrink-0">
         {isTransportadora && req.status === 'PENDENTE' && (
-          <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'CARREGANDO')} className="h-7 px-3 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-bold">
+          <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'CARREGANDO')} className="h-6 px-2 text-[9px] bg-destructive hover:bg-destructive/90 text-white font-bold">
             CARREGAR
           </Button>
         )}
         {isTransportadora && req.status === 'CARREGANDO' && (
-          <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'DESPACHADO')} className="h-7 px-3 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold">
+          <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'DESPACHADO')} className="h-6 px-2 text-[9px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold">
             DESPACHAR
           </Button>
         )}
         {isTransportadora && req.status === 'DESPACHADO' && (
-          <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'FINALIZADO')} className="h-7 px-3 text-[10px] bg-success hover:bg-success/90 text-white font-bold">
+          <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'FINALIZADO')} className="h-6 px-2 text-[9px] bg-success hover:bg-success/90 text-white font-bold">
             FINALIZAR
           </Button>
         )}
         {req.status === 'FINALIZADO' && (
-          <div className="text-success flex items-center gap-1 text-[10px] font-bold px-2">
-            <PackageCheck className="h-3.5 w-3.5" /> OK
+          <div className="text-success flex items-center gap-1 text-[9px] font-bold px-1">
+            <PackageCheck className="h-3 w-3" /> OK
           </div>
         )}
-        <Button variant="ghost" size="icon" onClick={() => deletePriorityRequest(req.id)} className="h-7 w-7 text-muted-foreground hover:text-destructive">
-          <Trash2 className="h-3.5 w-3.5" />
+        <Button variant="ghost" size="icon" onClick={() => deletePriorityRequest(req.id)} className="h-6 w-6 text-muted-foreground hover:text-destructive">
+          <Trash2 className="h-3 w-3" />
         </Button>
       </div>
     </div>
@@ -234,14 +230,14 @@ export default function PrioridadesPage() {
         subtitle="Fluxo de Saída em Tempo Real"
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setDataset(prev => ({...prev, priorityRequests: prev.priorityRequests.filter(r => r.status !== 'FINALIZADO')}))} className="text-xs h-8">
-              <Eraser className="h-3.5 w-3.5 mr-2" /> Limpar Finalizados
+            <Button variant="outline" size="sm" onClick={() => setDataset(prev => ({...prev, priorityRequests: prev.priorityRequests.filter(r => r.status !== 'FINALIZADO')}))} className="text-[10px] h-8">
+              <Eraser className="h-3 w-3 mr-1.5" /> Limpar OK
             </Button>
             {isCliente && (
               <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-primary hover:bg-primary/90 font-bold h-8 text-xs">
-                    <Plus className="h-4 w-4 mr-1" /> SOLICITAR
+                    <Plus className="h-3.5 w-3.5 mr-1" /> SOLICITAR
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-md">
@@ -295,6 +291,10 @@ export default function PrioridadesPage() {
                           </Select>
                         </div>
                       </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Previsão de Entrega</Label>
+                        <Input type="date" name="previsao" className="h-9 text-sm" />
+                      </div>
                       {fabricaSelect === 'OUTROS' && <Input placeholder="Nome da fábrica" value={customFabrica} onChange={(e) => setCustomFabrica(e.target.value)} className="h-9" />}
                       <Input name="observacao" placeholder="Obs (opcional)" className="h-9" />
                     </div>
@@ -307,43 +307,40 @@ export default function PrioridadesPage() {
         }
       />
 
-      {/* Resumo de Status */}
       <div className="px-6 grid grid-cols-4 gap-2 mb-4">
-        <div className="bg-destructive/5 border border-destructive/20 px-3 py-2 rounded flex items-center justify-between">
-          <span className="text-[10px] font-bold text-destructive uppercase">Fila</span>
-          <span className="text-lg font-black">{stats.pendentes}</span>
+        <div className="bg-destructive/5 border border-destructive/20 px-3 py-1.5 rounded flex items-center justify-between">
+          <span className="text-[9px] font-bold text-destructive uppercase">Fila</span>
+          <span className="text-base font-black">{stats.pendentes}</span>
         </div>
-        <div className="bg-warning/5 border border-warning/20 px-3 py-2 rounded flex items-center justify-between">
-          <span className="text-[10px] font-bold text-warning-foreground uppercase">Carga</span>
-          <span className="text-lg font-black">{stats.carregando}</span>
+        <div className="bg-warning/5 border border-warning/20 px-3 py-1.5 rounded flex items-center justify-between">
+          <span className="text-[9px] font-bold text-warning-foreground uppercase">Carga</span>
+          <span className="text-base font-black">{stats.carregando}</span>
         </div>
-        <div className="bg-success/5 border border-success/20 px-3 py-2 rounded flex items-center justify-between">
-          <span className="text-[10px] font-bold text-success uppercase">Siga</span>
-          <span className="text-lg font-black">{stats.despachados}</span>
+        <div className="bg-success/5 border border-success/20 px-3 py-1.5 rounded flex items-center justify-between">
+          <span className="text-[9px] font-bold text-success uppercase">Siga</span>
+          <span className="text-base font-black">{stats.despachados}</span>
         </div>
-        <div className="bg-info/5 border border-info/20 px-3 py-2 rounded flex items-center justify-between">
-          <span className="text-[10px] font-bold text-info uppercase">OK</span>
-          <span className="text-lg font-black">{stats.finalizados}</span>
+        <div className="bg-info/5 border border-info/20 px-3 py-1.5 rounded flex items-center justify-between">
+          <span className="text-[9px] font-bold text-info uppercase">OK</span>
+          <span className="text-base font-black">{stats.finalizados}</span>
         </div>
       </div>
 
-      {/* Listagem em Linha */}
       <div className="px-6 pb-10">
         <div className="rounded-lg border border-border bg-card overflow-hidden">
-          {/* Cabeçalho da Tabela */}
-          <div className="flex items-center gap-4 px-4 py-2 bg-muted/50 border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-            <div className="w-6 shrink-0">Prio</div>
-            <div className="w-40 shrink-0">Container / Dê-para</div>
-            <div className="w-24 shrink-0">Destino</div>
-            <div className="w-20 shrink-0">Solicitado</div>
-            <div className="flex-1 text-center">Status Operacional (Sinaleiro)</div>
+          <div className="flex items-center gap-4 px-4 py-1.5 bg-muted/50 border-b border-border text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+            <div className="w-5 shrink-0">Prio</div>
+            <div className="w-36 shrink-0">Container / Dê-para</div>
+            <div className="w-20 shrink-0">Destino</div>
+            <div className="w-24 shrink-0">Previsão</div>
+            <div className="w-16 shrink-0">Hora</div>
+            <div className="flex-1 text-center">Status Operacional</div>
             <div className="w-32 shrink-0 text-right">Ações</div>
           </div>
 
-          {/* Linhas de Dados */}
           <div className="divide-y divide-border">
             {sortedRequests.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground text-xs italic">
+              <div className="py-10 text-center text-muted-foreground text-[10px] italic">
                 Nenhuma solicitação ativa na fila.
               </div>
             ) : (
