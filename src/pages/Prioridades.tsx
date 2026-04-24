@@ -64,7 +64,7 @@ function StatusStepper({ currentStatus }: { currentStatus: RequestStatus }) {
   const steps = [
     { id: 'PENDENTE', label: 'Fila', color: 'bg-destructive' },
     { id: 'CARREGANDO', label: 'Carga', color: 'bg-warning' },
-    { id: 'DESPACHADO', label: 'Siga', color: 'bg-success' },
+    { id: 'DESPACHADO', label: 'Trânsito', color: 'bg-success' },
     { id: 'FINALIZADO', label: 'OK', color: 'bg-info' },
   ];
 
@@ -88,14 +88,14 @@ function StatusStepper({ currentStatus }: { currentStatus: RequestStatus }) {
                 )} 
               />
               <span className={cn(
-                "text-[8px] font-bold uppercase tracking-tighter leading-none",
+                "text-[8px] font-bold uppercase tracking-tighter",
                 isCurrent ? "text-foreground" : "text-muted-foreground/50"
               )}>
                 {step.label}
               </span>
             </div>
             {idx < steps.length - 1 && (
-              <div className="w-1 h-1 rounded-full bg-border/40 mb-2" />
+              <ChevronRight className="h-3 w-3 text-muted-foreground/20 mt-[-14px]" />
             )}
           </React.Fragment>
         );
@@ -208,19 +208,19 @@ export default function PrioridadesPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           {isTransportadora && req.status === 'PENDENTE' && (
-            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'CARREGANDO')} className="h-7 px-2 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-bold">
+            <Button size="sm" onClick={() => confirmAction(req.id, 'CARREGANDO', 'Iniciar Carga')} className="h-7 px-2 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-bold">
               INICIAR
             </Button>
           )}
           {isTransportadora && req.status === 'CARREGANDO' && (
-            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'DESPACHADO')} className="h-7 px-2 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold">
+            <Button size="sm" onClick={() => confirmAction(req.id, 'DESPACHADO', 'Despachar')} className="h-7 px-2 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold">
               DESPACHAR
             </Button>
           )}
           {isTransportadora && req.status === 'DESPACHADO' && (
-            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'FINALIZADO')} className="h-7 px-2 text-[10px] bg-success hover:bg-success/90 text-white font-bold">
+            <Button size="sm" onClick={() => confirmAction(req.id, 'FINALIZADO', 'Finalizar')} className="h-7 px-2 text-[10px] bg-success hover:bg-success/90 text-white font-bold">
               FINALIZAR
             </Button>
           )}
@@ -233,12 +233,45 @@ export default function PrioridadesPage() {
       <StatusStepper currentStatus={req.status} />
       
       {req.observacao && (
-        <div className="mt-2 text-[9px] text-muted-foreground italic truncate pl-2 border-l border-primary/30">
-          {req.observacao}
+        <div className="mt-2 p-2 bg-muted/50 rounded text-[11px] text-muted-foreground italic border-l border-primary/20">
+          "{req.observacao}"
         </div>
       )}
     </div>
   );
+
+  const confirmAction = (id: string, newStatus: RequestStatus, actionLabel: string) => {
+    const currentStatus = ds.priorityRequests.find(r => r.id === id)?.status;
+    if (!currentStatus || currentStatus === newStatus) return;
+
+    const confirmDialog = (
+      <Dialog open={true} onClose={() => setIsConfirmOpen(false)}>
+        <DialogTrigger asChild>
+          <Button className="bg-warning hover:bg-warning/90 font-bold h-8 text-xs">
+            <AlertTriangle className="h-3.5 w-3.5 mr-1" /> {actionLabel}
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <p className="text-sm text-muted-foreground">
+            Você está prestes a alterar o status de "{currentStatus}" para "{newStatus}". Deseja continuar?
+          </p>
+        </DialogContent>
+        <DialogFooter>
+          <Button type="button" onClick={() => setIsConfirmOpen(false)} className="w-full">
+            <ChevronRight className="h-3.5 w-3.5" /> Cancelar
+          </Button>
+          <Button type="button" onClick={() => {
+            setIsConfirmOpen(false);
+            updatePriorityStatus(id, newStatus);
+          }} className="w-full bg-success hover:bg-success/90 text-white font-bold">
+            <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Confirmar
+          </Button>
+        </DialogFooter>
+      </Dialog>
+    );
+
+    setIsConfirmOpen(true);
+  };
 
   return (
     <AppShell>
