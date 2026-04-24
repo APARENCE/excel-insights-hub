@@ -49,34 +49,57 @@ import { toast } from "sonner";
 import { PriorityLevel, RequestStatus } from '@/lib/types';
 import { cn } from "@/lib/utils";
 
+/**
+ * Sinaleiro com Rótulos de Texto
+ */
 function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) {
   const steps = [
-    { id: 'PENDENTE', color: 'bg-destructive' },
-    { id: 'CARREGANDO', color: 'bg-warning' },
-    { id: 'DESPACHADO', color: 'bg-success' },
-    { id: 'FINALIZADO', color: 'bg-info' },
+    { id: 'PENDENTE', label: 'FILA', color: 'bg-destructive' },
+    { id: 'CARREGANDO', label: 'CARREGADO', color: 'bg-warning' },
+    { id: 'DESPACHADO', label: 'DESPACHADO', color: 'bg-success' },
+    { id: 'FINALIZADO', label: 'FINALIZADO', color: 'bg-info' },
   ];
 
   const currentIndex = steps.findIndex(s => s.id === currentStatus);
 
   return (
-    <div className="flex items-center gap-1 w-28">
-      {steps.map((step, idx) => {
-        const isPast = idx < currentIndex;
-        const isCurrent = idx === currentIndex;
+    <div className="flex flex-col gap-1 w-48">
+      <div className="flex items-center gap-1">
+        {steps.map((step, idx) => {
+          const isPast = idx < currentIndex;
+          const isCurrent = idx === currentIndex;
 
-        return (
-          <div 
-            key={step.id}
-            className={cn(
-              "h-1.5 flex-1 rounded-full transition-all duration-500",
-              isPast ? step.color : 
-              isCurrent ? `${step.color} animate-pulse ring-1 ring-offset-1 ring-foreground/20` : 
-              "bg-muted"
-            )} 
-          />
-        );
-      })}
+          return (
+            <div 
+              key={step.id}
+              className={cn(
+                "h-1.5 flex-1 rounded-full transition-all duration-500",
+                isPast ? step.color : 
+                isCurrent ? `${step.color} animate-pulse ring-1 ring-offset-1 ring-foreground/20` : 
+                "bg-muted"
+              )} 
+            />
+          );
+        })}
+      </div>
+      <div className="flex justify-between px-0.5">
+        {steps.map((step, idx) => {
+          const isCurrent = idx === currentIndex;
+          const isPast = idx < currentIndex;
+          return (
+            <span 
+              key={step.id} 
+              className={cn(
+                "text-[7px] font-bold tracking-tighter",
+                isCurrent ? "text-foreground scale-110 transition-transform" : 
+                isPast ? "text-muted-foreground/70" : "text-muted-foreground/40"
+              )}
+            >
+              {step.label}
+            </span>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -154,7 +177,7 @@ export default function PrioridadesPage() {
 
   const RequestRow = ({ req }: { req: any }) => (
     <div className={cn(
-      "flex items-center gap-4 px-4 py-1.5 border-b border-border hover:bg-muted/30 transition-colors",
+      "flex items-center gap-4 px-4 py-2 border-b border-border hover:bg-muted/30 transition-colors",
       req.status === 'FINALIZADO' && "opacity-50 bg-muted/10"
     )}>
       <div className={cn(
