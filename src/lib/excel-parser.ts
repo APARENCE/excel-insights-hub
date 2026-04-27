@@ -35,18 +35,18 @@ function str(v: unknown): string | undefined {
 
 function normalizeStatus(s?: string): ContainerStatus {
   if (!s) return "OUTRO";
-  const u = s
-    .toUpperCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
   
-  if (u.includes("PROGRAMADA") || u.includes("AGENDADO")) return "PROGRAMADA ENTRADA NO PATIO";
-  if (u.includes("FINALIZ") || u.includes("DEVOLVIDO")) return "FINALIZADO";
-  if (u.includes("DEPARA") && u.includes("PATIO")) return "DEPARA EM PATIO TLOG-SJP";
-  if (u.includes("ENVIADO") && u.includes("FABRICA")) return "ENVIADO PARA FABRICA";
-  if (u.includes("EM PATIO")) return "EM PATIO TLOG-SJP";
+  // Remove acentos e converte para maiúsculo
+  const u = s.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  // Remove tudo que não for letra ou número para comparação robusta
+  const clean = u.replace(/[^A-Z0-9]/g, "");
+
+  // Ordem de checagem importa: termos mais específicos primeiro
+  if (clean.includes("PROGRAMADA") || clean.includes("AGENDADO")) return "PROGRAMADA ENTRADA NO PATIO";
+  if (clean.includes("FINALIZ") || clean.includes("DEVOLVIDO")) return "FINALIZADO";
+  if (clean.includes("DEPARA")) return "DEPARA EM PATIO TLOG-SJP";
+  if (clean.includes("ENVIADO") && clean.includes("FABRICA")) return "ENVIADO PARA FABRICA";
+  if (clean.includes("EMPATIO")) return "EM PATIO TLOG-SJP";
   
   return "OUTRO";
 }
