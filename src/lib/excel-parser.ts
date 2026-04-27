@@ -43,10 +43,10 @@ function normalizeStatus(s?: string): ContainerStatus {
     .trim();
   
   if (u.includes("PROGRAMADA") || u.includes("AGENDADO")) return "PROGRAMADA ENTRADA NO PATIO";
-  if (u.includes("FINALIZ")) return "FINALIZADO";
+  if (u.includes("FINALIZ") || u.includes("DEVOLVIDO")) return "FINALIZADO";
   if (u.includes("DEPARA") && u.includes("PATIO")) return "DEPARA EM PATIO TLOG-SJP";
   if (u.includes("ENVIADO") && u.includes("FABRICA")) return "ENVIADO PARA FABRICA";
-  if (u.startsWith("EM PATIO")) return "EM PATIO TLOG-SJP";
+  if (u.includes("EM PATIO")) return "EM PATIO TLOG-SJP";
   
   return "OUTRO";
 }
@@ -105,7 +105,7 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       status: col("AA"),
       dataEnvioFabrica: col("AD"),
       dataRetornoLocado: col("AH"),
-      infoAS: col("AS"), // Mapeando coluna AS
+      infoAS: col("AS"),
     };
     for (let i = 1; i < aoa.length; i++) {
       const r = aoa[i];
@@ -114,12 +114,7 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       if (!conteiner) continue;
 
       const rawStatusAA = str(r[C.status]);
-      const rawContentN = str(r[C.diasVenc]);
-      
-      let finalStatus: ContainerStatus = normalizeStatus(rawStatusAA);
-      if (rawContentN && (rawContentN.toUpperCase().includes("PROGRAMADA") || rawContentN.toUpperCase().includes("ENTRADA"))) {
-        finalStatus = "PROGRAMADA ENTRADA NO PATIO";
-      }
+      const finalStatus: ContainerStatus = normalizeStatus(rawStatusAA);
 
       cheios.push({
         conteiner,
