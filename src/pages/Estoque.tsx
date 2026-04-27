@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, FileText, CheckCircle2, Clock, ArrowDownToLine, Ship, ClipboardList, Repeat } from "lucide-react";
+import { Search, FileText, CheckCircle2, Clock, ArrowDownToLine, Ship } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -45,12 +45,10 @@ export default function EstoquePage() {
         }
       />
 
-      <div className="px-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        <StatCard label="Em Pátio" value={s.emPatio} hint="No pátio TLOG-SJP" icon={CheckCircle2} tone="primary" />
-        <StatCard label="Dê-para Pátio" value={s.dePara} hint="Processados" icon={Repeat} tone="info" />
-        <StatCard label="Programada" value={s.programadas} hint="Agendados" icon={ClipboardList} tone="warning" />
-        <StatCard label="Env. Fábrica" value={s.enviadoFabrica} hint="Em trânsito" icon={Clock} tone="default" />
-        <StatCard label="Finalizados" value={s.finalizados} hint="Concluídos" icon={ArrowDownToLine} tone="success" />
+      <div className="px-6 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <StatCard label="Em Pátio" value={s.emPatio} hint="No pátio TLOG-SJP" icon={CheckCircle2} tone="success" />
+        <StatCard label="Enviado p/ Fábrica" value={s.enviadoFabrica} hint="Saídas registradas" icon={Clock} tone="warning" />
+        <StatCard label="Finalizados" value={s.finalizados} hint="Concluídos" icon={ArrowDownToLine} tone="default" active />
       </div>
 
       <div className="px-6 mt-4 space-y-3">
