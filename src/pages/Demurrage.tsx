@@ -10,7 +10,7 @@ import {
   Cell,
   LabelList,
 } from "recharts";
-import { Search, FileText, FileSpreadsheet, AlertTriangle, Clock, CheckCircle2, Table2 } from "lucide-react";
+import { Search, FileText, FileSpreadsheet, AlertTriangle, Clock, Table2, MapPin } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -26,37 +26,37 @@ const sevColor = {
 
 export default function DemurragePage() {
   const ds = useDataset();
-  const buckets = useMemo(() => buildDemurrageBuckets(ds.cheios), [ds.cheios]);
-  const rows = useMemo(() => buildDemurrageRows(ds.cheios), [ds.cheios]);
+  
+  // Filtra apenas o que está EM PATIO TLOG-SJP para toda a análise da página
+  const filteredCheios = useMemo(() => 
+    ds.cheios.filter(c => c.status === "EM PATIO TLOG-SJP"), 
+    [ds.cheios]
+  );
+
+  const buckets = useMemo(() => buildDemurrageBuckets(filteredCheios), [filteredCheios]);
+  const rows = useMemo(() => buildDemurrageRows(filteredCheios), [filteredCheios]);
+  
   const [q, setQ] = useState("");
   const filteredRows = rows.filter((r) => (q ? r.conteiner.toLowerCase().includes(q.toLowerCase()) : true));
 
-  const total = ds.cheios.length;
-  const noPatio = rows.length;
+  const totalNoPatio = filteredCheios.length;
   const vencidos = rows.filter((r) => (r.diasRestantes ?? 0) < 0).length;
   const alerta = rows.filter((r) => (r.diasRestantes ?? 99) >= 0 && (r.diasRestantes ?? 99) <= 3).length;
-  const devolvidos = ds.cheios.filter((c) => c.status === "FINALIZADO").length;
+  const regular = rows.filter((r) => (r.diasRestantes ?? 0) > 7).length;
+  const alertaMedio = rows.filter((r) => (r.diasRestantes ?? 99) > 3 && (r.diasRestantes ?? 99) <= 7).length;
 
   const resumo = [
     { label: "Vencido", count: vencidos, color: "bg-destructive" },
     { label: "Urgente (0-3d)", count: alerta, color: "bg-orange-500" },
-    {
-      label: "Alerta (4-7d)",
-      count: rows.filter((r) => (r.diasRestantes ?? 99) > 3 && (r.diasRestantes ?? 99) <= 7).length,
-      color: "bg-warning",
-    },
-    {
-      label: "Regular (>7d)",
-      count: rows.filter((r) => (r.diasRestantes ?? 0) > 7).length,
-      color: "bg-success",
-    },
+    { label: "Alerta (4-7d)", count: alertaMedio, color: "bg-warning" },
+    { label: "Regular (>7d)", count: regular, color: "bg-success" },
   ];
 
   return (
     <AppShell>
       <PageHeader
         title="Demurrage"
-        subtitle="Gestão de prazos"
+        subtitle="Gestão de prazos (Apenas containers em pátio)"
         actions={
           <>
             <button className="inline-flex items-center gap-2 text-sm border border-border rounded-md px-3 py-1.5 bg-card hover:bg-accent">
@@ -69,17 +69,16 @@ export default function DemurragePage() {
         }
       />
 
-      <div className="px-6 grid grid-cols-2 md:grid-cols-5 gap-3">
-        <StatCard label="Total Containers" value={total} icon={Table2} />
-        <StatCard label="No Pátio TLOG" value={noPatio} icon={Table2} />
+      <div className="px-6 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label="Total em Pátio" value={totalNoPatio} icon={MapPin} tone="primary" />
         <StatCard label="Em Atraso" value={vencidos} tone="destructive" icon={AlertTriangle} />
-        <StatCard label="Alerta (Free Time)" value={alerta} tone="warning" icon={Clock} />
-        <StatCard label="Devolvidos" value={devolvidos} tone="success" icon={CheckCircle2} />
+        <StatCard label="Urgente (Free Time)" value={alerta} tone="warning" icon={Clock} />
+        <StatCard label="Regular" value={regular} tone="success" icon={Table2} />
       </div>
 
       <div className="px-6 mt-3">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-          Containers por Dias Restantes:
+          Distribuição de Vencimento (Containers em Pátio):
         </div>
         <div className="flex flex-wrap gap-1.5">
           {buckets.map((b) => (
@@ -136,7 +135,7 @@ export default function DemurragePage() {
               </li>
             ))}
           </ul>
-          <p className="text-[11px] text-muted-foreground mt-4">* Prazos calculados por data de chegada</p>
+          <p className="text-[11px] text-muted-foreground mt-4">* Prazos calculados apenas para containers com status "EM PATIO TLOG-SJP"</p>
         </div>
       </section>
 
@@ -146,7 +145,7 @@ export default function DemurragePage() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar container..."
+            placeholder="Buscar container no pátio..."
             className="w-full bg-card border border-border rounded-md pl-10 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
@@ -160,7 +159,6 @@ export default function DemurragePage() {
                 <th className="px-4 py-3 text-left font-medium">CHEGADA (G)</th>
                 <th className="px-4 py-3 text-left font-medium">FREE TIME (M)</th>
                 <th className="px-4 py-3 text-left font-medium">VENCIMENTO (N)</th>
-                <th className="px-4 py-3 text-left font-medium">DEVOLUÇÃO</th>
                 <th className="px-4 py-3 text-right font-medium">DIAS (O)</th>
                 <th className="px-4 py-3 text-left font-medium">STATUS</th>
               </tr>
@@ -168,8 +166,8 @@ export default function DemurragePage() {
             <tbody>
               {filteredRows.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
-                    Nenhum dado disponível.
+                  <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
+                    Nenhum container em pátio disponível para análise.
                   </td>
                 </tr>
               )}
@@ -184,9 +182,6 @@ export default function DemurragePage() {
                   <td className="px-4 py-2.5 text-muted-foreground">{r.freeTime ? `${r.freeTime} d` : "—"}</td>
                   <td className="px-4 py-2.5 text-muted-foreground">
                     {r.vencimento ? new Date(r.vencimento).toLocaleDateString("pt-BR") : "—"}
-                  </td>
-                  <td className="px-4 py-2.5 text-muted-foreground">
-                    {r.devolucao ? new Date(r.devolucao).toLocaleDateString("pt-BR") : "—"}
                   </td>
                   <td className="px-4 py-2.5 text-right font-semibold">{r.diasRestantes ?? "—"}</td>
                   <td className="px-4 py-2.5">
