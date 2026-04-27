@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, FileText, CheckCircle2, Clock, ArrowDownToLine } from "lucide-react";
+import { Search, FileText, CheckCircle2, Clock, ArrowDownToLine, Ship } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -84,6 +84,7 @@ export default function EstoquePage() {
             <thead className="bg-muted/50">
               <tr className="text-left text-xs text-muted-foreground">
                 <th className="px-4 py-3 font-medium">Identificação</th>
+                <th className="px-4 py-3 font-medium">Armador</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Posição</th>
                 <th className="px-4 py-3 font-medium">Data</th>
@@ -93,7 +94,7 @@ export default function EstoquePage() {
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-foreground">
                     Nenhum container. Importe um arquivo Excel em <strong>Importar Dados</strong>.
                   </td>
                 </tr>
@@ -103,6 +104,12 @@ export default function EstoquePage() {
                   <td className="px-4 py-3">
                     <div className="font-medium">{r.conteiner}</div>
                     <div className="text-[11px] text-muted-foreground">#{5158 + i}</div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <Ship className="h-3 w-3 text-muted-foreground" />
+                      <span className="font-medium">{r.armador || "—"}</span>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge tone={statusTone(r.status)}>{r.status}</StatusBadge>
