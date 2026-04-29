@@ -5,18 +5,18 @@ import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { Container } from 'lucide-react';
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 
 export default function Login() {
   const { session } = useAuth();
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (session) {
-      navigate('/');
+      // Usamos redirecionamento direto para garantir compatibilidade 
+      // entre TanStack Router (Editor) e React Router (Vercel)
+      window.location.href = '/';
     }
-  }, [session, navigate]);
+  }, [session]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
