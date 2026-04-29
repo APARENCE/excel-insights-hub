@@ -5,13 +5,13 @@ import {
   PackageOpen,
   CloudUpload,
   Zap,
-  X,
   Container,
   UserCircle,
   Truck,
   LogOut,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { NavLink, usePathname } from "@/components/NavLink";
 import { useDataset, setUserRole } from "@/lib/store";
@@ -29,7 +29,25 @@ const nav = [
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { userRole } = useDataset();
-  const { signOut, user } = useAuth();
+  const { signOut, user, session, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !session && window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
+  }, [session, loading]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!session && window.location.pathname !== '/login') {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex bg-background text-foreground">
@@ -41,7 +59,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        {/* Perfil Switcher */}
         <div className="px-3 py-4 border-b border-sidebar-border bg-sidebar-accent/30">
           <label className="text-[10px] font-bold text-sidebar-foreground/40 uppercase tracking-widest block mb-2 px-1">Perfil Ativo</label>
           <div className="flex flex-col gap-1">

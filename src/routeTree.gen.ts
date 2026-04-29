@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VaziosRouteImport } from './routes/vazios'
 import { Route as PrioridadesRouteImport } from './routes/prioridades'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as ImportarRouteImport } from './routes/importar'
 import { Route as EstoqueRouteImport } from './routes/estoque'
 import { Route as DemurrageRouteImport } from './routes/demurrage'
@@ -24,6 +25,11 @@ const VaziosRoute = VaziosRouteImport.update({
 const PrioridadesRoute = PrioridadesRouteImport.update({
   id: '/prioridades',
   path: '/prioridades',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ImportarRoute = ImportarRouteImport.update({
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/demurrage': typeof DemurrageRoute
   '/estoque': typeof EstoqueRoute
   '/importar': typeof ImportarRoute
+  '/login': typeof LoginRoute
   '/prioridades': typeof PrioridadesRoute
   '/vazios': typeof VaziosRoute
 }
@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
   '/demurrage': typeof DemurrageRoute
   '/estoque': typeof EstoqueRoute
   '/importar': typeof ImportarRoute
+  '/login': typeof LoginRoute
   '/prioridades': typeof PrioridadesRoute
   '/vazios': typeof VaziosRoute
 }
@@ -69,6 +77,7 @@ export interface FileRoutesById {
   '/demurrage': typeof DemurrageRoute
   '/estoque': typeof EstoqueRoute
   '/importar': typeof ImportarRoute
+  '/login': typeof LoginRoute
   '/prioridades': typeof PrioridadesRoute
   '/vazios': typeof VaziosRoute
 }
@@ -79,16 +88,25 @@ export interface FileRouteTypes {
     | '/demurrage'
     | '/estoque'
     | '/importar'
+    | '/login'
     | '/prioridades'
     | '/vazios'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/demurrage' | '/estoque' | '/importar' | '/prioridades' | '/vazios'
+  to:
+    | '/'
+    | '/demurrage'
+    | '/estoque'
+    | '/importar'
+    | '/login'
+    | '/prioridades'
+    | '/vazios'
   id:
     | '__root__'
     | '/'
     | '/demurrage'
     | '/estoque'
     | '/importar'
+    | '/login'
     | '/prioridades'
     | '/vazios'
   fileRoutesById: FileRoutesById
@@ -98,6 +116,7 @@ export interface RootRouteChildren {
   DemurrageRoute: typeof DemurrageRoute
   EstoqueRoute: typeof EstoqueRoute
   ImportarRoute: typeof ImportarRoute
+  LoginRoute: typeof LoginRoute
   PrioridadesRoute: typeof PrioridadesRoute
   VaziosRoute: typeof VaziosRoute
 }
@@ -116,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/prioridades'
       fullPath: '/prioridades'
       preLoaderRoute: typeof PrioridadesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/importar': {
@@ -154,6 +180,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemurrageRoute: DemurrageRoute,
   EstoqueRoute: EstoqueRoute,
   ImportarRoute: ImportarRoute,
+  LoginRoute: LoginRoute,
   PrioridadesRoute: PrioridadesRoute,
   VaziosRoute: VaziosRoute,
 }
