@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
-import type { AppDataset, PriorityRequest } from "./types";
-
-const STORAGE_KEY = "tlog-renault-spot-v1";
+import type { AppDataset, PriorityRequest, CheioRow, VazioLocadoRow, ImportRecord } from "./types";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export type UserRole = "CLIENTE" | "TRANSPORTADORA";
 
@@ -16,43 +16,83 @@ const initial: AppDataset & { userRole: UserRole } = {
   },
 };
 
-let state: AppDataset & { userRole: UserRole } = load();
+let state: AppDataset & { userRole: UserRole } = initial;
 const listeners = new Set<() => void>();
-
-function load(): AppDataset & { userRole: UserRole } {
-  if (typeof window === "undefined") return initial;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return initial;
-    const parsed = JSON.parse(raw) as AppDataset & { userRole: UserRole };
-    return { 
-      ...initial, 
-      ...parsed,
-      userRole: parsed.userRole || "CLIENTE",
-      settings: parsed.settings || initial.settings,
-      priorityRequests: parsed.priorityRequests || [],
-    };
-  } catch {
-    return initial;
-  }
-}
-
-function persist() {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {
-    console.warn("Persist error", e);
-  }
-}
 
 function emit() {
   for (const l of listeners) l();
 }
 
+// Fetch initial data from Supabase
+export async function syncFromSupabase() {
+  try {
+    const [
+      { data: cheios },
+      { data: vazios },
+      { data: imports },
+      { data: priorities },
+      { data: settings }
+    ] = await Promise.all([
+      supabase.from('containers_cheios').select('*'),
+      supabase.from('vazios_locados').select('*'),
+      supabase.from('import_history').select('*').order('imported_at', { ascending: false }).limit(50),
+      supabase.from('priority_requests').select('*').order('solicitado_em', { ascending: false }),
+      supabase.from('app_settings').select('*').single()
+    ]);
+
+    state = {
+      ...state,
+      cheios: (cheios || []).map(c => ({
+        ...c,
+        dataChegada: c.data_chegada,
+        diasNoPatio: c.dias_no_patio,
+        freeTime: c.free_time,
+        demurrageVencimento: c.demurrage_vencimento,
+        diasParaVencimento: c.dias_para_vencimento,
+        dataEnvioFabrica: c.data_envio_fabrica,
+        conteinerDePara: c.conteiner_de_para,
+        dataDevolucaoVazio: c.data_devolucao_vazio,
+        colunaAS: c.coluna_as
+      })),
+      vaziosLocados: (vazios || []).map(v => ({
+        ...v,
+        dataEntrada: v.data_entrada,
+        dataDePara: v.data_de_para,
+        cheioDePara: v.cheio_de_para,
+        statusUso: v.status_uso,
+        statusPatio: v.status_patio,
+        diasNoPatio: v.dias_no_patio
+      })),
+      imports: (imports || []).map(i => ({
+        id: i.id,
+        fileName: i.file_name,
+        importedAt: i.imported_at,
+        itemCount: i.item_count,
+        status: i.status as any
+      })),
+      priorityRequests: (priorities || []).map(p => ({
+        ...p,
+        solicitadoEm: p.solicitado_em,
+        fabricaDestino: p.fabrica_destino,
+        previsaoFabrica: p.previsao_fabrica
+      })),
+      settings: settings ? { capacidadePatio: settings.capacidade_patio } : initial.settings
+    };
+    emit();
+  } catch (error) {
+    console.error("Error syncing from Supabase:", error);
+  }
+}
+
+// Subscribe to real-time changes
+supabase.channel('db-changes')
+  .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+    syncFromSupabase();
+  })
+  .subscribe();
+
 export function setUserRole(role: UserRole) {
   state = { ...state, userRole: role };
-  persist();
   emit();
 }
 
@@ -60,72 +100,119 @@ export function getDataset() {
   return state;
 }
 
-export function setDataset(updater: (prev: AppDataset & { userRole: UserRole }) => AppDataset & { userRole: UserRole }) {
-  state = updater(state);
-  persist();
+export async function setDataset(updater: (prev: AppDataset & { userRole: UserRole }) => AppDataset & { userRole: UserRole }) {
+  const newState = updater(state);
+  
+  // If imports changed, we need to sync the new data to Supabase
+  if (newState.lastImportAt !== state.lastImportAt) {
+    const lastImport = newState.imports[0];
+    if (lastImport) {
+      await supabase.from('import_history').insert({
+        file_name: lastImport.fileName,
+        item_count: lastImport.itemCount,
+        status: lastImport.status
+      });
+
+      // Bulk update containers (this is a simplified version, in production you'd want to be more careful)
+      // For now, we'll just clear and re-insert to keep it simple as requested
+      await Promise.all([
+        supabase.from('containers_cheios').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+        supabase.from('vazios_locados').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+      ]);
+
+      await Promise.all([
+        supabase.from('containers_cheios').insert(newState.cheios.map(c => ({
+          conteiner: c.conteiner,
+          lacre: c.lacre,
+          tipo: c.tipo,
+          armador: c.armador,
+          navio: c.navio,
+          data_chegada: c.dataChegada,
+          dias_no_patio: c.diasNoPatio,
+          free_time: c.freeTime,
+          demurrage_vencimento: c.demurrageVencimento,
+          dias_para_vencimento: c.diasParaVencimento,
+          status: c.status,
+          fabrica: c.fabrica,
+          data_envio_fabrica: c.dataEnvioFabrica,
+          conteiner_de_para: c.conteinerDePara,
+          data_devolucao_vazio: c.dataDevolucaoVazio,
+          coluna_as: c.colunaAS
+        }))),
+        supabase.from('vazios_locados').insert(newState.vaziosLocados.map(v => ({
+          conteiner: v.conteiner,
+          armador: v.armador,
+          tipo: v.tipo,
+          data_entrada: v.dataEntrada,
+          data_de_para: v.dataDePara,
+          cheio_de_para: v.cheioDePara,
+          status_uso: v.statusUso,
+          status_patio: v.statusPatio,
+          dias_no_patio: v.diasNoPatio
+        })))
+      ]);
+    }
+  }
+  
+  state = newState;
   emit();
 }
 
-export function addPriorityRequest(req: PriorityRequest) {
-  setDataset(prev => ({
-    ...prev,
-    priorityRequests: [req, ...prev.priorityRequests]
-  }));
-}
-
-export function updatePriorityStatus(id: string, status: PriorityRequest["status"]) {
-  setDataset(prev => {
-    const request = prev.priorityRequests.find(r => r.id === id);
-    if (!request) return prev;
-
-    const newPriorityRequests = prev.priorityRequests.map(r => 
-      r.id === id ? { ...r, status } : r
-    );
-
-    let newCheios = prev.cheios;
-    if (status === 'DESPACHADO') {
-      newCheios = prev.cheios.map(c => {
-        if (c.conteiner === request.conteiner) {
-          return {
-            ...c,
-            status: "ENVIADO PARA FABRICA" as const,
-            dataEnvioFabrica: new Date().toISOString()
-          };
-        }
-        return c;
-      });
-    } else if (status === 'FINALIZADO') {
-      newCheios = prev.cheios.map(c => {
-        if (c.conteiner === request.conteiner) {
-          return {
-            ...c,
-            status: "FINALIZADO" as const
-          };
-        }
-        return c;
-      });
-    }
-
-    return {
-      ...prev,
-      priorityRequests: newPriorityRequests,
-      cheios: newCheios
-    };
+export async function addPriorityRequest(req: PriorityRequest) {
+  const { error } = await supabase.from('priority_requests').insert({
+    conteiner: req.conteiner,
+    nivel: req.nivel,
+    status: req.status,
+    fabrica_destino: req.fabricaDestino,
+    previsao_fabrica: req.previsaoFabrica,
+    observacao: req.observacao
   });
+
+  if (error) toast.error("Erro ao salvar prioridade");
+  else syncFromSupabase();
 }
 
-export function deletePriorityRequest(id: string) {
-  setDataset(prev => ({
-    ...prev,
-    priorityRequests: prev.priorityRequests.filter(r => r.id !== id)
-  }));
+export async function updatePriorityStatus(id: string, status: PriorityRequest["status"]) {
+  const { error } = await supabase.from('priority_requests').update({ status }).eq('id', id);
+  
+  if (error) {
+    toast.error("Erro ao atualizar status");
+    return;
+  }
+
+  // If dispatched or finished, update the container status too
+  const request = state.priorityRequests.find(r => r.id === id);
+  if (request) {
+    if (status === 'DESPACHADO') {
+      await supabase.from('containers_cheios')
+        .update({ 
+          status: "ENVIADO PARA FABRICA",
+          data_envio_fabrica: new Date().toISOString()
+        })
+        .eq('conteiner', request.conteiner);
+    } else if (status === 'FINALIZADO') {
+      await supabase.from('containers_cheios')
+        .update({ status: "FINALIZADO" })
+        .eq('conteiner', request.conteiner);
+    }
+  }
+
+  syncFromSupabase();
 }
 
-export function updateSettings(settings: Partial<AppDataset["settings"]>) {
-  setDataset((prev) => ({
-    ...prev,
-    settings: { ...prev.settings, ...settings },
-  }));
+export async function deletePriorityRequest(id: string) {
+  const { error } = await supabase.from('priority_requests').delete().eq('id', id);
+  if (error) toast.error("Erro ao excluir");
+  else syncFromSupabase();
+}
+
+export async function updateSettings(settings: Partial<AppDataset["settings"]>) {
+  const { error } = await supabase.from('app_settings').update({
+    capacidade_patio: settings.capacidadePatio
+  }).neq('id', '00000000-0000-0000-0000-000000000000'); // Update the single settings row
+
+  if (error) toast.error("Erro ao salvar configurações");
+  else syncFromSupabase();
 }
 
 export function useDataset() {
@@ -138,3 +225,6 @@ export function useDataset() {
     () => initial,
   );
 }
+
+// Initial sync
+syncFromSupabase();
