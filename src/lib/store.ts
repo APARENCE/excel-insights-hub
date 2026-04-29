@@ -27,22 +27,23 @@ function emit() {
 export async function syncFromSupabase() {
   try {
     const [
-      { data: cheios },
-      { data: vazios },
-      { data: imports },
-      { data: priorities },
-      { data: settings }
+      cheiosRes,
+      vaziosRes,
+      importsRes,
+      prioritiesRes,
+      settingsRes
     ] = await Promise.all([
       supabase.from('containers_cheios').select('*'),
       supabase.from('vazios_locados').select('*'),
       supabase.from('import_history').select('*').order('imported_at', { ascending: false }).limit(50),
       supabase.from('priority_requests').select('*').order('solicitado_em', { ascending: false }),
-      supabase.from('app_settings').select('*').single()
+      supabase.from('app_settings').select('*').maybeSingle()
     ]);
 
+    // Only update if we didn't get a 404 (table not found)
     state = {
       ...state,
-      cheios: (cheios || []).map(c => ({
+      cheios: cheiosRes.data ? cheiosRes.data.map(c => ({
         ...c,
         dataChegada: c.data_chegada,
         diasNoPatio: c.dias_no_patio,
@@ -53,8 +54,8 @@ export async function syncFromSupabase() {
         conteinerDePara: c.conteiner_de_para,
         dataDevolucaoVazio: c.data_devolucao_vazio,
         colunaAS: c.coluna_as
-      })),
-      vaziosLocados: (vazios || []).map(v => ({
+      })) : state.cheios,
+      vaziosLocados: vaziosRes.data ? vaziosRes.data.map(v => ({
         ...v,
         dataEntrada: v.data_entrada,
         dataDePara: v.data_de_para,
@@ -62,21 +63,21 @@ export async function syncFromSupabase() {
         statusUso: v.status_uso,
         statusPatio: v.status_patio,
         diasNoPatio: v.dias_no_patio
-      })),
-      imports: (imports || []).map(i => ({
+      })) : state.vaziosLocados,
+      imports: importsRes.data ? importsRes.data.map(i => ({
         id: i.id,
         fileName: i.file_name,
         importedAt: i.imported_at,
         itemCount: i.item_count,
         status: i.status as any
-      })),
-      priorityRequests: (priorities || []).map(p => ({
+      })) : state.imports,
+      priorityRequests: prioritiesRes.data ? prioritiesRes.data.map(p => ({
         ...p,
         solicitadoEm: p.solicitado_em,
         fabricaDestino: p.fabrica_destino,
         previsaoFabrica: p.previsao_fabrica
-      })),
-      settings: settings ? { capacidadePatio: settings.capacidade_patio } : initial.settings
+      })) : state.priorityRequests,
+      settings: settingsRes.data ? { capacidadePatio: settingsRes.data.capacidade_patio } : state.settings
     };
     emit();
   } catch (error) {
@@ -103,54 +104,59 @@ export function getDataset() {
 export async function setDataset(updater: (prev: AppDataset & { userRole: UserRole }) => AppDataset & { userRole: UserRole }) {
   const newState = updater(state);
   
-  // If imports changed, we need to sync the new data to Supabase
   if (newState.lastImportAt !== state.lastImportAt) {
     const lastImport = newState.imports[0];
     if (lastImport) {
-      await supabase.from('import_history').insert({
-        file_name: lastImport.fileName,
-        item_count: lastImport.itemCount,
-        status: lastImport.status
-      });
+      try {
+        await supabase.from('import_history').insert({
+          file_name: lastImport.fileName,
+          item_count: lastImport.itemCount,
+          status: lastImport.status
+        });
 
-      // Bulk update containers (this is a simplified version, in production you'd want to be more careful)
-      // For now, we'll just clear and re-insert to keep it simple as requested
-      await Promise.all([
-        supabase.from('containers_cheios').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-        supabase.from('vazios_locados').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-      ]);
+        await Promise.all([
+          supabase.from('containers_cheios').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+          supabase.from('vazios_locados').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+        ]);
 
-      await Promise.all([
-        supabase.from('containers_cheios').insert(newState.cheios.map(c => ({
-          conteiner: c.conteiner,
-          lacre: c.lacre,
-          tipo: c.tipo,
-          armador: c.armador,
-          navio: c.navio,
-          data_chegada: c.dataChegada,
-          dias_no_patio: c.diasNoPatio,
-          free_time: c.freeTime,
-          demurrage_vencimento: c.demurrageVencimento,
-          dias_para_vencimento: c.diasParaVencimento,
-          status: c.status,
-          fabrica: c.fabrica,
-          data_envio_fabrica: c.dataEnvioFabrica,
-          conteiner_de_para: c.conteinerDePara,
-          data_devolucao_vazio: c.dataDevolucaoVazio,
-          coluna_as: c.colunaAS
-        }))),
-        supabase.from('vazios_locados').insert(newState.vaziosLocados.map(v => ({
-          conteiner: v.conteiner,
-          armador: v.armador,
-          tipo: v.tipo,
-          data_entrada: v.dataEntrada,
-          data_de_para: v.dataDePara,
-          cheio_de_para: v.cheioDePara,
-          status_uso: v.statusUso,
-          status_patio: v.statusPatio,
-          dias_no_patio: v.diasNoPatio
-        })))
-      ]);
+        if (newState.cheios.length > 0) {
+          await supabase.from('containers_cheios').insert(newState.cheios.map(c => ({
+            conteiner: c.conteiner,
+            lacre: c.lacre,
+            tipo: c.tipo,
+            armador: c.armador,
+            navio: c.navio,
+            data_chegada: c.dataChegada,
+            dias_no_patio: c.diasNoPatio,
+            free_time: c.freeTime,
+            demurrage_vencimento: c.demurrageVencimento,
+            dias_para_vencimento: c.diasParaVencimento,
+            status: c.status,
+            fabrica: c.fabrica,
+            data_envio_fabrica: c.dataEnvioFabrica,
+            conteiner_de_para: c.conteinerDePara,
+            data_devolucao_vazio: c.dataDevolucaoVazio,
+            coluna_as: c.colunaAS
+          })));
+        }
+
+        if (newState.vaziosLocados.length > 0) {
+          await supabase.from('vazios_locados').insert(newState.vaziosLocados.map(v => ({
+            conteiner: v.conteiner,
+            armador: v.armador,
+            tipo: v.tipo,
+            data_entrada: v.dataEntrada,
+            data_de_para: v.dataDePara,
+            cheio_de_para: v.cheioDePara,
+            status_uso: v.statusUso,
+            status_patio: v.statusPatio,
+            dias_no_patio: v.diasNoPatio
+          })));
+        }
+      } catch (e) {
+        console.error("Error saving to Supabase:", e);
+        toast.error("Erro ao sincronizar com o banco de dados.");
+      }
     }
   }
   
@@ -180,7 +186,6 @@ export async function updatePriorityStatus(id: string, status: PriorityRequest["
     return;
   }
 
-  // If dispatched or finished, update the container status too
   const request = state.priorityRequests.find(r => r.id === id);
   if (request) {
     if (status === 'DESPACHADO') {
@@ -209,7 +214,7 @@ export async function deletePriorityRequest(id: string) {
 export async function updateSettings(settings: Partial<AppDataset["settings"]>) {
   const { error } = await supabase.from('app_settings').update({
     capacidade_patio: settings.capacidadePatio
-  }).neq('id', '00000000-0000-0000-0000-000000000000'); // Update the single settings row
+  }).neq('id', '00000000-0000-0000-0000-000000000000');
 
   if (error) toast.error("Erro ao salvar configurações");
   else syncFromSupabase();
@@ -226,5 +231,4 @@ export function useDataset() {
   );
 }
 
-// Initial sync
 syncFromSupabase();
