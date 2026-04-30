@@ -11,13 +11,16 @@ import {
   UserCircle,
   Truck,
   LogOut,
+  Menu,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { NavLink, usePathname } from "@/components/NavLink";
 import { useDataset, setUserRole } from "@/lib/store";
 import { useAuth } from "@/components/AuthProvider";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutGrid },
@@ -32,6 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { userRole } = useDataset();
   const { signOut, user, session, loading } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const userEmail = user?.email?.toLowerCase() || "";
   const isRestricted = userEmail === "renaultdobrasil.com@outlook.com";
@@ -41,11 +45,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       window.location.href = '/login';
     }
     
-    // Forçar papel de CLIENTE para o usuário restrito
     if (isRestricted && userRole !== "CLIENTE") {
       setUserRole("CLIENTE");
     }
   }, [session, loading, isRestricted, userRole]);
+
+  // Fecha o menu mobile quando a rota muda
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   if (loading) {
     return (
@@ -59,97 +67,126 @@ export function AppShell({ children }: { children: ReactNode }) {
     return null;
   }
 
-  // Filtrar itens de navegação para o usuário restrito
   const filteredNav = isRestricted 
     ? navItems.filter(item => ["/", "/prioridades", "/demurrage"].includes(item.to))
     : navItems;
 
-  return (
-    <div className="min-h-screen flex bg-background text-foreground">
-      <aside className="hidden md:flex flex-col w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
-        <div className="flex items-center justify-between px-4 py-4 border-b border-sidebar-border">
-          <div className="flex items-center gap-2">
-            <Container className="h-5 w-5 text-primary" />
-            <div className="text-sm font-semibold truncate">Operação Spot Renault</div>
-          </div>
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between px-4 py-4 border-b border-sidebar-border">
+        <div className="flex items-center gap-2">
+          <Container className="h-5 w-5 text-primary" />
+          <div className="text-sm font-semibold truncate">Operação Spot Renault</div>
         </div>
+      </div>
 
-        {!isRestricted && (
-          <div className="px-3 py-4 border-b border-sidebar-border bg-sidebar-accent/30">
-            <label className="text-[10px] font-bold text-sidebar-foreground/40 uppercase tracking-widest block mb-2 px-1">Perfil Ativo</label>
-            <div className="flex flex-col gap-1">
-              <button 
-                onClick={() => setUserRole("CLIENTE")}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-all",
-                  userRole === "CLIENTE" ? "bg-primary text-white font-bold" : "hover:bg-sidebar-accent text-sidebar-foreground/60"
-                )}
-              >
-                <UserCircle className="h-3.5 w-3.5" /> Cliente (Renault)
-              </button>
-              <button 
-                onClick={() => setUserRole("TRANSPORTADORA")}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-all",
-                  userRole === "TRANSPORTADORA" ? "bg-info text-white font-bold" : "hover:bg-sidebar-accent text-sidebar-foreground/60"
-                )}
-              >
-                <Truck className="h-3.5 w-3.5" /> Transportadora
-              </button>
-            </div>
-          </div>
-        )}
-
-        {isRestricted && (
-          <div className="px-4 py-3 border-b border-sidebar-border bg-primary/10">
-            <div className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Perfil</div>
-            <div className="text-xs font-bold text-sidebar-foreground flex items-center gap-2">
-              <UserCircle className="h-3.5 w-3.5 text-primary" /> Cliente Renault
-            </div>
-          </div>
-        )}
-
-        <nav className="flex-1 px-2 py-3 space-y-1">
-          {filteredNav.map((item) => {
-            const active = pathname === item.to;
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-                  active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </NavLink>
-            );
-          })}
-        </nav>
-        
-        <div className="px-4 py-4 border-t border-sidebar-border">
-          <div className="flex items-center justify-between mb-3">
-            <div className="min-w-0">
-              <div className="text-[10px] text-sidebar-foreground/50 uppercase truncate">{user?.email}</div>
-              <div className="flex items-center gap-1.5 text-[10px] text-success font-bold">
-                <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
-                ONLINE
-              </div>
-            </div>
+      {!isRestricted && (
+        <div className="px-3 py-4 border-b border-sidebar-border bg-sidebar-accent/30">
+          <label className="text-[10px] font-bold text-sidebar-foreground/40 uppercase tracking-widest block mb-2 px-1">Perfil Ativo</label>
+          <div className="flex flex-col gap-1">
             <button 
-              onClick={() => signOut()}
-              className="p-1.5 rounded-md hover:bg-destructive/20 text-sidebar-foreground/60 hover:text-destructive transition-colors"
-              title="Sair"
+              onClick={() => setUserRole("CLIENTE")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-all",
+                userRole === "CLIENTE" ? "bg-primary text-white font-bold" : "hover:bg-sidebar-accent text-sidebar-foreground/60"
+              )}
             >
-              <LogOut className="h-4 w-4" />
+              <UserCircle className="h-3.5 w-3.5" /> Cliente (Renault)
+            </button>
+            <button 
+              onClick={() => setUserRole("TRANSPORTADORA")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-all",
+                userRole === "TRANSPORTADORA" ? "bg-info text-white font-bold" : "hover:bg-sidebar-accent text-sidebar-foreground/60"
+              )}
+            >
+              <Truck className="h-3.5 w-3.5" /> Transportadora
             </button>
           </div>
         </div>
+      )}
+
+      {isRestricted && (
+        <div className="px-4 py-3 border-b border-sidebar-border bg-primary/10">
+          <div className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Perfil</div>
+          <div className="text-xs font-bold text-sidebar-foreground flex items-center gap-2">
+            <UserCircle className="h-3.5 w-3.5 text-primary" /> Cliente Renault
+          </div>
+        </div>
+      )}
+
+      <nav className="flex-1 px-2 py-3 space-y-1">
+        {filteredNav.map((item) => {
+          const active = pathname === item.to;
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                active
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {item.label}
+            </NavLink>
+          );
+        })}
+      </nav>
+      
+      <div className="px-4 py-4 border-t border-sidebar-border">
+        <div className="flex items-center justify-between mb-3">
+          <div className="min-w-0">
+            <div className="text-[10px] text-sidebar-foreground/50 uppercase truncate">{user?.email}</div>
+            <div className="flex items-center gap-1.5 text-[10px] text-success font-bold">
+              <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+              ONLINE
+            </div>
+          </div>
+          <button 
+            onClick={() => signOut()}
+            className="p-1.5 rounded-md hover:bg-destructive/20 text-sidebar-foreground/60 hover:text-destructive transition-colors"
+            title="Sair"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen flex flex-col md:flex-row bg-background text-foreground">
+      {/* Mobile Header */}
+      <header className="md:hidden flex items-center justify-between px-4 py-3 bg-sidebar text-sidebar-foreground border-b border-sidebar-border sticky top-0 z-50">
+        <div className="flex items-center gap-2">
+          <Container className="h-5 w-5 text-primary" />
+          <span className="text-sm font-semibold">Spot Renault</span>
+        </div>
+        <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="text-sidebar-foreground">
+              <Menu className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 w-64 bg-sidebar border-sidebar-border">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Menu de Navegação</SheetTitle>
+            </SheetHeader>
+            <SidebarContent />
+          </SheetContent>
+        </Sheet>
+      </header>
+
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex flex-col w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border sticky top-0 h-screen">
+        <SidebarContent />
       </aside>
+
+      {/* Main Content */}
       <main className="flex-1 min-w-0 overflow-x-hidden">{children}</main>
     </div>
   );
@@ -165,12 +202,12 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4">
+    <div className="flex flex-col sm:flex-row items-start justify-between gap-4 px-6 pt-5 pb-4">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
         {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
       </div>
-      {actions && <div className="flex gap-2">{actions}</div>}
+      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
   );
 }
