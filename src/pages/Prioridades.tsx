@@ -56,7 +56,7 @@ function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) 
   const steps = [
     { id: 'PENDENTE', label: 'FILA', color: 'bg-destructive' },
     { id: 'CARREGANDO', label: 'CARREGADO', color: 'bg-warning' },
-    { id: 'DESPACHADO', label: 'DESPACHADO', color: 'bg-success' },
+    { id: 'DESPACHADO', label: 'SAÍDA PÁTIO', color: 'bg-success' },
     { id: 'FINALIZADO', label: 'FINALIZADO', color: 'bg-info' },
   ];
 
@@ -226,7 +226,7 @@ export default function PrioridadesPage() {
         )}
         {isTransportadora && req.status === 'CARREGANDO' && (
           <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'DESPACHADO')} className="h-6 px-2 text-[9px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold">
-            DESPACHAR
+            SAÍDA PÁTIO
           </Button>
         )}
         {isTransportadora && req.status === 'DESPACHADO' && (
@@ -340,7 +340,7 @@ export default function PrioridadesPage() {
           <span className="text-base font-black">{stats.carregando}</span>
         </div>
         <div className="bg-success/5 border border-success/20 px-3 py-1.5 rounded flex items-center justify-between">
-          <span className="text-[9px] font-bold text-success uppercase tracking-wider">Despachado</span>
+          <span className="text-[9px] font-bold text-success uppercase tracking-wider">Saída Pátio</span>
           <span className="text-base font-black">{stats.despachados}</span>
         </div>
         <div className="bg-info/5 border border-info/20 px-3 py-1.5 rounded flex items-center justify-between">
