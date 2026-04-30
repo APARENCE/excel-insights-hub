@@ -1,20 +1,45 @@
 "use client";
 
-import { Auth } from '@supabase/auth-ui-react';
-import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { Container, ShieldCheck, ArrowRight } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
+
+type AuthUiModule = typeof import('@supabase/auth-ui-react');
+type AuthThemeModule = typeof import('@supabase/auth-ui-shared');
 
 export default function Login() {
   const { session } = useAuth();
+  const [authUi, setAuthUi] = useState<{
+    Auth: AuthUiModule['Auth'];
+    ThemeSupa: AuthThemeModule['ThemeSupa'];
+  } | null>(null);
 
   useEffect(() => {
     if (session) {
       window.location.href = '/';
     }
   }, [session]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    Promise.all([
+      import('@supabase/auth-ui-react'),
+      import('@supabase/auth-ui-shared'),
+    ]).then(([authModule, themeModule]) => {
+      if (mounted) {
+        setAuthUi({ Auth: authModule.Auth, ThemeSupa: themeModule.ThemeSupa });
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const Auth = authUi?.Auth;
+  const ThemeSupa = authUi?.ThemeSupa;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] relative overflow-hidden font-sans">
@@ -44,7 +69,7 @@ export default function Login() {
           </div>
 
           <div className="space-y-6 custom-auth-container">
-            <Auth
+            {Auth && ThemeSupa ? <Auth
               supabaseClient={supabase}
               appearance={{
                 theme: ThemeSupa,
@@ -93,7 +118,11 @@ export default function Login() {
                 },
               }}
               theme="dark"
-            />
+            /> : (
+              <div className="flex h-44 items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-500" />
+              </div>
+            )}
           </div>
 
           <div className="mt-10 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
