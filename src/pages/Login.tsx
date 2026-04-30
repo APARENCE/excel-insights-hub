@@ -12,8 +12,7 @@ export default function Login() {
 
   useEffect(() => {
     if (session) {
-      // Usamos redirecionamento direto para garantir compatibilidade 
-      // entre TanStack Router (Editor) e React Router (Vercel)
+      // Redireciona para a home assim que a sessão for detectada
       window.location.href = '/';
     }
   }, [session]);
@@ -64,6 +63,10 @@ export default function Login() {
           }}
           theme="light"
         />
+        
+        <p className="text-center text-[10px] text-muted-foreground mt-4">
+          Nota: Após desativar "Confirm email" no Dashboard do Supabase, o acesso será imediato após o cadastro.
+        </p>
       </div>
     </div>
   );
