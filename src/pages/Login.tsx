@@ -1,7 +1,7 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
-import { Container, ShieldCheck, ArrowRight } from "lucide-react";
+import { Container, ShieldCheck } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -11,7 +11,6 @@ export default function Login() {
   const { session } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -34,24 +33,15 @@ export default function Login() {
       return;
     }
 
-    const authAction = isSignUp
-      ? supabase.auth.signUp({
-          email: lowerEmail,
-          password,
-          options: { emailRedirectTo: window.location.origin },
-        })
-      : supabase.auth.signInWithPassword({ email: lowerEmail, password });
+    const { error } = await supabase.auth.signInWithPassword({ 
+      email: lowerEmail, 
+      password 
+    });
 
-    const { error } = await authAction;
     setSubmitting(false);
 
     if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    if (isSignUp) {
-      setMessage("Cadastro solicitado. Verifique seu e-mail para confirmar o acesso.");
+      setMessage("Credenciais inválidas ou erro de conexão.");
       return;
     }
 
@@ -119,8 +109,7 @@ export default function Login() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   required
-                  minLength={6}
-                  autoComplete={isSignUp ? "new-password" : "current-password"}
+                  autoComplete="current-password"
                   className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white outline-none transition-all placeholder:text-white/30 focus:border-blue-500/50"
                   placeholder="Digite sua senha"
                 />
@@ -135,32 +124,16 @@ export default function Login() {
                 disabled={submitting}
                 className="w-full rounded-xl bg-blue-600 py-4 text-[11px] font-bold uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {submitting
-                  ? "Verificando credenciais..."
-                  : isSignUp
-                    ? "Solicitar Acesso"
-                    : "Acessar Sistema"}
+                {submitting ? "Verificando..." : "Acessar Sistema"}
               </button>
             </form>
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUp((value) => !value);
-                setMessage(null);
-              }}
-              className="w-full text-center text-xs font-semibold text-blue-500 transition-colors hover:text-blue-400"
-            >
-              {isSignUp
-                ? "Já possui uma conta? Entre aqui"
-                : "Primeiro acesso? Solicite seu cadastro"}
-            </button>
           </div>
 
           <div className="mt-10 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
             <div className="flex items-center gap-2 text-gray-500">
               <ShieldCheck className="h-4 w-4 text-green-500/70" />
               <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
-                Ambiente Criptografado
+                Ambiente Restrito
               </span>
             </div>
           </div>
