@@ -1,1 +1,135 @@
-"use client"; import { Auth } from '@supabase/auth-ui-react'; import { ThemeSupa } from '@supabase/auth-ui-shared'; import { supabase } from '@/integrations/supabase/client'; import { Container, ShieldCheck } from 'lucide-react'; import { useEffect } from 'react'; import { useAuth } from '@/components/AuthProvider'; export default function Login() { const { session } = useAuth(); useEffect(() => { if (session) { window.location.href = '/'; } }, [session]); return ( <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden"> {/* Background Decorativo */} <div className="absolute inset-0 z-0"> <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-background to-info/5" /> <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, var(--color-primary) 1px, transparent 0)', backgroundSize: '24px 24px' }} /> </div> <div className="w-full max-w-md z-10 px-4"> <div className="bg-card p-8 rounded-2xl border border-border shadow-xl backdrop-blur-sm"> <div className="text-center mb-8"> <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4 rotate-3 hover:rotate-0 transition-transform duration-300"> <Container className="h-8 w-8 text-primary" /> </div> <h1 className="text-2xl font-bold tracking-tight text-foreground">Operação Spot Renault</h1> <p className="text-muted-foreground text-sm mt-1">Terminal TLOG — São José dos Pinhais</p> </div> <div className="space-y-6"> <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa, variables: { default: { colors: { brand: 'oklch(0.55 0.18 260)', brandAccent: 'oklch(0.65 0.2 260)', inputBackground: 'transparent', inputText: 'inherit', inputPlaceholder: 'oklch(0.5 0.02 255)', }, radii: { borderRadiusButton: '0.75rem', inputBorderRadius: '0.75rem', } }, }, className: { button: 'font-bold uppercase tracking-wider text-xs py-3', input: 'bg-background border-border focus:ring-2 focus:ring-primary/20 transition-all', label: 'text-[10px] font-bold uppercase text-muted-foreground mb-1 ml-1', } }} providers={[]} localization={{ variables: { sign_in: { email_label: 'E-mail Corporativo', password_label: 'Senha de Acesso', button_label: 'Entrar no Sistema', loading_button_label: 'Autenticando...', link_text: 'Já possui acesso? Entre aqui', }, sign_up: { email_label: 'E-mail', password_label: 'Senha', button_label: 'Solicitar Cadastro', loading_button_label: 'Processando...', link_text: 'Novo por aqui? Crie sua conta', }, }, }} theme="light" /> </div> <div className="mt-8 pt-6 border-t border-border flex items-center justify-center gap-2 text-muted-foreground"> <ShieldCheck className="h-4 w-4" /> <span className="text-[10px] font-medium uppercase tracking-widest">Acesso Restrito e Seguro</span> </div> </div> <p className="text-center text-[11px] text-muted-foreground/60 mt-6"> © {new Date().getFullYear()} Terminal TLOG. Todos os direitos reservados. </p> </div> </div> ); }
+"use client";
+
+import { Auth } from '@supabase/auth-ui-react';
+import { ThemeSupa } from '@supabase/auth-ui-shared';
+import { supabase } from '@/integrations/supabase/client';
+import { Container, ShieldCheck, ArrowRight } from 'lucide-react';
+import { useEffect } from 'react';
+import { useAuth } from '@/components/AuthProvider';
+
+export default function Login() {
+  const { session } = useAuth();
+
+  useEffect(() => {
+    if (session) {
+      window.location.href = '/';
+    }
+  }, [session]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] relative overflow-hidden font-sans">
+      {/* Background Animado e Decorativo */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-info/20 blur-[120px] animate-pulse delay-700" />
+        <div 
+          className="absolute inset-0 opacity-[0.05]" 
+          style={{ 
+            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', 
+            backgroundSize: '32px 32px' 
+          }} 
+        />
+      </div>
+
+      <div className="w-full max-w-[440px] z-10 px-6 py-12">
+        <div className="bg-black/40 backdrop-blur-xl p-8 md:p-10 rounded-3xl border border-white/10 shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)]">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 border border-primary/20 mb-6 shadow-inner">
+              <Container className="h-10 w-10 text-primary" />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Portal Operacional</h1>
+            <p className="text-gray-400 text-sm font-medium">
+              Gestão Spot Renault <span className="text-primary mx-1">•</span> Terminal TLOG
+            </p>
+          </div>
+
+          <div className="space-y-6 custom-auth-container">
+            <Auth
+              supabaseClient={supabase}
+              appearance={{
+                theme: ThemeSupa,
+                variables: {
+                  default: {
+                    colors: {
+                      brand: 'oklch(0.55 0.18 260)',
+                      brandAccent: 'oklch(0.65 0.2 260)',
+                      inputBackground: 'rgba(255, 255, 255, 0.03)',
+                      inputText: 'white',
+                      inputPlaceholder: 'rgba(255, 255, 255, 0.3)',
+                      inputBorder: 'rgba(255, 255, 255, 0.1)',
+                      inputBorderFocus: 'oklch(0.55 0.18 260)',
+                    },
+                    radii: {
+                      borderRadiusButton: '12px',
+                      inputBorderRadius: '12px',
+                    }
+                  },
+                },
+                className: {
+                  button: 'w-full font-bold uppercase tracking-widest text-[11px] py-4 shadow-lg shadow-primary/20 hover:translate-y-[-1px] transition-all duration-200',
+                  input: 'h-12 text-sm border-white/10 focus:border-primary/50 transition-all duration-200',
+                  label: 'text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1 tracking-wider',
+                  anchor: 'text-xs text-primary hover:text-primary/80 transition-colors',
+                  message: 'text-xs text-red-400 bg-red-400/10 p-3 rounded-lg border border-red-400/20 mt-2',
+                }
+              }}
+              providers={[]}
+              localization={{
+                variables: {
+                  sign_in: {
+                    email_label: 'E-mail Corporativo',
+                    password_label: 'Senha de Acesso',
+                    button_label: 'Acessar Sistema',
+                    loading_button_label: 'Verificando credenciais...',
+                    link_text: 'Já possui uma conta? Entre aqui',
+                  },
+                  sign_up: {
+                    email_label: 'E-mail',
+                    password_label: 'Senha',
+                    button_label: 'Solicitar Acesso',
+                    loading_button_label: 'Processando solicitação...',
+                    link_text: 'Primeiro acesso? Solicite seu cadastro',
+                  },
+                },
+              }}
+              theme="dark"
+            />
+          </div>
+
+          <div className="mt-10 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
+            <div className="flex items-center gap-2 text-gray-500">
+              <ShieldCheck className="h-4 w-4 text-success/70" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Ambiente Criptografado</span>
+            </div>
+            
+            <div className="flex items-center gap-4 text-[10px] font-medium text-gray-600">
+              <a href="#" className="hover:text-gray-400 transition-colors">Suporte Técnico</a>
+              <span className="w-1 h-1 rounded-full bg-gray-800" />
+              <a href="#" className="hover:text-gray-400 transition-colors">Termos de Uso</a>
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-8 flex items-center justify-center gap-3 text-gray-600">
+          <p className="text-[11px] font-medium">© {new Date().getFullYear()} Terminal TLOG SJP</p>
+          <ArrowRight className="h-3 w-3 opacity-30" />
+          <p className="text-[11px] font-medium">Operação Spot Renault</p>
+        </div>
+      </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        .custom-auth-container .supabase-auth-ui_ui-button {
+          background: linear-gradient(135deg, oklch(0.55 0.18 260), oklch(0.45 0.15 260)) !important;
+          border: none !important;
+        }
+        .custom-auth-container .supabase-auth-ui_ui-anchor {
+          text-decoration: none !important;
+          font-weight: 600 !important;
+        }
+        .custom-auth-container .supabase-auth-ui_ui-divider {
+          background-color: rgba(255, 255, 255, 0.05) !important;
+        }
+      `}} />
+    </div>
+  );
+}
