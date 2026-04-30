@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { syncFromSupabase } from '@/lib/store';
 
 interface AuthContextType {
   session: Session | null;
@@ -24,6 +25,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .then(({ data: { session } }) => {
         setSession(session);
         setUser(session?.user ?? null);
+        if (session) {
+          syncFromSupabase();
+        }
       })
       .catch((err) => {
         console.error("Auth initialization error:", err);
@@ -33,10 +37,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        syncFromSupabase();
+      }
     });
 
     return () => subscription.unsubscribe();

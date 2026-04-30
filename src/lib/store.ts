@@ -105,8 +105,6 @@ if (typeof window !== 'undefined') {
       syncFromSupabase();
     })
     .subscribe();
-    
-  syncFromSupabase();
 }
 
 export function setUserRole(role: UserRole) {
@@ -134,7 +132,6 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
         });
 
         // 2. Limpar tabelas atuais (substituição total)
-        // Usamos um filtro que sempre é verdadeiro para deletar tudo
         await supabase.from('containers_cheios').delete().neq('conteiner', 'placeholder_nao_existente');
         await supabase.from('vazios_locados').delete().neq('conteiner', 'placeholder_nao_existente');
 
