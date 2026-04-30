@@ -105,7 +105,7 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       status: col("AA"),
       dataEnvioFabrica: col("AD"),
       dataRetornoLocado: col("AH"),
-      infoAS: col("AS"), // Mapeando coluna AS
+      infoAS: col("AS"),
     };
     for (let i = 1; i < aoa.length; i++) {
       const r = aoa[i];
@@ -178,4 +178,11 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   }
 
   return { cheios, vaziosLocados };
+}
+
+export function exportToExcel(data: any[], fileName: string) {
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Estoque");
+  XLSX.writeFile(workbook, `${fileName}.xlsx`);
 }

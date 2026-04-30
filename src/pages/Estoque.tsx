@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, FileText, CheckCircle2, Clock, ArrowDownToLine, Ship } from "lucide-react";
+import { Search, FileText, CheckCircle2, Clock, ArrowDownToLine, Ship, FileSpreadsheet } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { useDataset } from "@/lib/store";
 import { summary } from "@/lib/analytics";
+import { exportToExcel } from "@/lib/excel-parser";
 
 function statusTone(s: string): "success" | "info" | "warning" | "default" | "primary" {
   if (s.includes("FINALIZ") || s.includes("DEVOLV")) return "success";
@@ -26,11 +27,26 @@ export default function EstoquePage() {
   const rows = useMemo(() => {
     return ds.cheios
       .filter((c) => (filter === "all" ? true : c.status === filter))
-      .filter((c) => (q ? c.conteiner.toLowerCase().includes(q.toLowerCase()) : true))
-      .slice(0, 200);
+      .filter((c) => (q ? c.conteiner.toLowerCase().includes(q.toLowerCase()) : true));
   }, [ds.cheios, q, filter]);
 
   const statuses = useMemo(() => Array.from(new Set(ds.cheios.map((c) => c.status))), [ds.cheios]);
+
+  const handleExport = () => {
+    const exportData = rows.map(r => ({
+      Container: r.conteiner,
+      Lacre: r.lacre || "",
+      Tipo: r.tipo || "",
+      Armador: r.armador || "",
+      Navio: r.navio || "",
+      "Data Chegada": r.dataChegada ? new Date(r.dataChegada).toLocaleDateString("pt-BR") : "",
+      Status: r.status,
+      "Dê-Para": r.conteinerDePara || "",
+      "Data Envio Fábrica": r.dataEnvioFabrica ? new Date(r.dataEnvioFabrica).toLocaleDateString("pt-BR") : "",
+      "Info AS": r.colunaAS || ""
+    }));
+    exportToExcel(exportData, `Estoque_TLOG_${new Date().toISOString().split('T')[0]}`);
+  };
 
   return (
     <AppShell>
@@ -39,8 +55,11 @@ export default function EstoquePage() {
         subtitle="Monitoramento e gestão"
         actions={
           <>
-            <button className="inline-flex items-center gap-2 text-sm border border-border rounded-md px-3 py-1.5 bg-card hover:bg-accent">
-              <FileText className="h-4 w-4" /> PDF
+            <button 
+              onClick={handleExport}
+              className="inline-flex items-center gap-2 text-sm border border-border rounded-md px-3 py-1.5 bg-card hover:bg-accent cursor-pointer"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-success" /> Exportar Excel
             </button>
             <SettingsDialog />
           </>
@@ -88,7 +107,7 @@ export default function EstoquePage() {
                 <th className="px-4 py-3 font-medium">Identificação</th>
                 <th className="px-4 py-3 font-medium">Armador</th>
                 <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Posição</th>
+                <th className="px-4 py-3 font-medium">Dê-Para</th>
                 <th className="px-4 py-3 font-medium">Data</th>
                 <th className="px-4 py-3 font-medium text-right">Ações</th>
               </tr>
@@ -97,15 +116,15 @@ export default function EstoquePage() {
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-foreground">
-                    Nenhum container. Importe um arquivo Excel em <strong>Importar Dados</strong>.
+                    Nenhum container encontrado.
                   </td>
                 </tr>
               )}
-              {rows.map((r, i) => (
+              {rows.slice(0, 200).map((r, i) => (
                 <tr key={r.conteiner + i} className="border-t border-border hover:bg-muted/30">
                   <td className="px-4 py-3">
                     <div className="font-medium">{r.conteiner}</div>
-                    <div className="text-[11px] text-muted-foreground">#{5158 + i}</div>
+                    <div className="text-[11px] text-muted-foreground">{r.tipo || "—"}</div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
@@ -116,7 +135,9 @@ export default function EstoquePage() {
                   <td className="px-4 py-3">
                     <StatusBadge tone={statusTone(r.status)}>{r.status}</StatusBadge>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">—</td>
+                  <td className="px-4 py-3 text-muted-foreground font-medium">
+                    {r.conteinerDePara || "—"}
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {r.dataChegada ? new Date(r.dataChegada).toLocaleDateString("pt-BR") : "—"}
                   </td>

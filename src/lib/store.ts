@@ -23,10 +23,8 @@ function emit() {
   for (const l of listeners) l();
 }
 
-// Auxiliar para garantir números inteiros seguros para o Postgres
 const toInt = (val: any) => (val != null && !isNaN(Number(val)) ? Math.round(Number(val)) : null);
 
-// Busca dados iniciais do Supabase
 export async function syncFromSupabase() {
   if (typeof window === 'undefined') return;
 
@@ -101,7 +99,6 @@ export async function syncFromSupabase() {
   }
 }
 
-// Inscrição em tempo real
 if (typeof window !== 'undefined') {
   supabase.channel('db-changes')
     .on('postgres_changes', { event: '*', schema: 'public' }, () => {
@@ -123,23 +120,19 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   const oldLastImport = state.lastImportAt;
   const newState = updater(state);
   
-  // Se houve uma nova importação
   if (newState.lastImportAt !== oldLastImport) {
     const lastImport = newState.imports[0];
     if (lastImport) {
       try {
-        // 1. Registrar histórico
         await supabase.from('import_history').insert({
           file_name: lastImport.fileName,
           item_count: lastImport.itemCount,
           status: lastImport.status
         });
 
-        // 2. Limpar tabelas atuais
         await supabase.from('containers_cheios').delete().neq('conteiner', '_none_');
         await supabase.from('vazios_locados').delete().neq('conteiner', '_none_');
 
-        // 3. Inserir novos dados
         if (newState.cheios.length > 0) {
           const { error: e1 } = await supabase.from('containers_cheios').insert(newState.cheios.map(c => ({
             conteiner: c.conteiner,
@@ -171,7 +164,7 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             data_de_para: v.dataDePara,
             cheio_de_para: v.cheioDePara,
             status_uso: v.statusUso,
-            status_patio: v.statusPatio,
+            status_patio: v.status_patio,
             dias_no_patio: toInt(v.diasNoPatio)
           })));
           if (e2) throw e2;
@@ -213,16 +206,13 @@ export async function updatePriorityStatus(id: string, status: PriorityRequest["
 
   const request = state.priorityRequests.find(r => r.id === id);
   if (request) {
-    if (status === 'DESPACHADO') {
+    // Se for SAIDA PATIO (DESPACHADO) ou FINALIZADO, atualiza o estoque principal
+    if (status === 'DESPACHADO' || status === 'FINALIZADO') {
       await supabase.from('containers_cheios')
         .update({ 
           status: "ENVIADO PARA FABRICA",
           data_envio_fabrica: new Date().toISOString()
         })
-        .eq('conteiner', request.conteiner);
-    } else if (status === 'FINALIZADO') {
-      await supabase.from('containers_cheios')
-        .update({ status: "FINALIZADO" })
         .eq('conteiner', request.conteiner);
     }
   }
