@@ -1,21 +1,21 @@
 "use client";
 
-import { supabase } from '@/integrations/supabase/client';
-import { Container, ShieldCheck, ArrowRight } from 'lucide-react';
-import { FormEvent, useEffect, useState } from 'react';
-import { useAuth } from '@/components/AuthProvider';
+import { supabase } from "@/integrations/supabase/client";
+import { Container, ShieldCheck, ArrowRight } from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function Login() {
   const { session } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (session) {
-      window.location.href = '/';
+      window.location.href = "/";
     }
   }, [session]);
 
@@ -41,11 +41,11 @@ export default function Login() {
     }
 
     if (isSignUp) {
-      setMessage('Cadastro solicitado. Verifique seu e-mail para confirmar o acesso.');
+      setMessage("Cadastro solicitado. Verifique seu e-mail para confirmar o acesso.");
       return;
     }
 
-    window.location.href = '/';
+    window.location.href = "/";
   }
 
   return (
@@ -54,12 +54,12 @@ export default function Login() {
       <div className="absolute inset-0 z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/20 blur-[120px] animate-pulse" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-cyan-600/20 blur-[120px] animate-pulse delay-700" />
-        <div 
-          className="absolute inset-0 opacity-[0.05]" 
-          style={{ 
-            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', 
-            backgroundSize: '32px 32px' 
-          }} 
+        <div
+          className="absolute inset-0 opacity-[0.05]"
+          style={{
+            backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
+            backgroundSize: "32px 32px",
+          }}
         />
       </div>
 
@@ -69,7 +69,9 @@ export default function Login() {
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-blue-600/10 border border-blue-600/20 mb-6 shadow-inner">
               <Container className="h-10 w-10 text-blue-500" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Portal Operacional</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-white mb-2">
+              Portal Operacional
+            </h1>
             <p className="text-gray-400 text-sm font-medium">
               Gestão Spot Renault <span className="text-blue-500 mx-1">•</span> Terminal TLOG
             </p>
@@ -78,7 +80,10 @@ export default function Login() {
           <div className="space-y-6">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="email" className="text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1 tracking-wider block">
+                <label
+                  htmlFor="email"
+                  className="text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1 tracking-wider block"
+                >
                   E-mail Corporativo
                 </label>
                 <input
@@ -93,7 +98,10 @@ export default function Login() {
                 />
               </div>
               <div>
-                <label htmlFor="password" className="text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1 tracking-wider block">
+                <label
+                  htmlFor="password"
+                  className="text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1 tracking-wider block"
+                >
                   Senha de Acesso
                 </label>
                 <input
@@ -103,7 +111,7 @@ export default function Login() {
                   onChange={(event) => setPassword(event.target.value)}
                   required
                   minLength={6}
-                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
                   className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white outline-none transition-all placeholder:text-white/30 focus:border-blue-500/50"
                   placeholder="Digite sua senha"
                 />
@@ -118,7 +126,11 @@ export default function Login() {
                 disabled={submitting}
                 className="w-full rounded-xl bg-blue-600 py-4 text-[11px] font-bold uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {submitting ? 'Verificando credenciais...' : isSignUp ? 'Solicitar Acesso' : 'Acessar Sistema'}
+                {submitting
+                  ? "Verificando credenciais..."
+                  : isSignUp
+                    ? "Solicitar Acesso"
+                    : "Acessar Sistema"}
               </button>
             </form>
             <button
@@ -129,24 +141,32 @@ export default function Login() {
               }}
               className="w-full text-center text-xs font-semibold text-blue-500 transition-colors hover:text-blue-400"
             >
-              {isSignUp ? 'Já possui uma conta? Entre aqui' : 'Primeiro acesso? Solicite seu cadastro'}
+              {isSignUp
+                ? "Já possui uma conta? Entre aqui"
+                : "Primeiro acesso? Solicite seu cadastro"}
             </button>
           </div>
 
           <div className="mt-10 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
             <div className="flex items-center gap-2 text-gray-500">
               <ShieldCheck className="h-4 w-4 text-green-500/70" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Ambiente Criptografado</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
+                Ambiente Criptografado
+              </span>
             </div>
-            
+
             <div className="flex items-center gap-4 text-[10px] font-medium text-gray-600">
-              <a href="#" className="hover:text-gray-400 transition-colors">Suporte Técnico</a>
+              <a href="#" className="hover:text-gray-400 transition-colors">
+                Suporte Técnico
+              </a>
               <span className="w-1 h-1 rounded-full bg-gray-800" />
-              <a href="#" className="hover:text-gray-400 transition-colors">Termos de Uso</a>
+              <a href="#" className="hover:text-gray-400 transition-colors">
+                Termos de Uso
+              </a>
             </div>
           </div>
         </div>
-        
+
         <div className="mt-8 flex items-center justify-center gap-3 text-gray-600">
           <p className="text-[11px] font-medium">© {new Date().getFullYear()} Terminal TLOG SJP</p>
           <ArrowRight className="h-3 w-3 opacity-30" />
