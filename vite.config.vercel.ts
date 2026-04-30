@@ -4,8 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import path from "node:path";
 
-// Vercel-only build config: pure SPA (no TanStack Start / SSR / Cloudflare).
-// Uses index.html at project root + src/main.tsx as entry.
+// Vercel-only build config: pure SPA.
 export default defineConfig({
   plugins: [react(), tailwindcss(), tsconfigPaths()],
   base: "/",
@@ -18,18 +17,6 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     sourcemap: false,
-    assetsDir: "assets",
-    rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, "index.html"),
-      },
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['lucide-react', 'recharts', 'sonner'],
-          excel: ['xlsx']
-        }
-      }
-    }
-  },
+    assetsDir: "assets"
+  }
 });
