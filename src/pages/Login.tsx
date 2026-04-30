@@ -1,20 +1,52 @@
 "use client";
 
-import { Auth } from '@supabase/auth-ui-react';
-import { ThemeSupa } from '@supabase/auth-ui-shared';
-import { supabase } from '@/integrations/supabase/client';
-import { Container, ShieldCheck, ArrowRight } from 'lucide-react';
-import { useEffect } from 'react';
-import { useAuth } from '@/components/AuthProvider';
+import { supabase } from "@/integrations/supabase/client";
+import { Container, ShieldCheck, ArrowRight } from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function Login() {
   const { session } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (session) {
-      window.location.href = '/';
+      window.location.href = "/";
     }
   }, [session]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setMessage(null);
+
+    const authAction = isSignUp
+      ? supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: window.location.origin },
+        })
+      : supabase.auth.signInWithPassword({ email, password });
+
+    const { error } = await authAction;
+    setSubmitting(false);
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    if (isSignUp) {
+      setMessage("Cadastro solicitado. Verifique seu e-mail para confirmar o acesso.");
+      return;
+    }
+
+    window.location.href = "/";
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] relative overflow-hidden font-sans">
@@ -22,12 +54,12 @@ export default function Login() {
       <div className="absolute inset-0 z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/20 blur-[120px] animate-pulse" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-cyan-600/20 blur-[120px] animate-pulse delay-700" />
-        <div 
-          className="absolute inset-0 opacity-[0.05]" 
-          style={{ 
-            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', 
-            backgroundSize: '32px 32px' 
-          }} 
+        <div
+          className="absolute inset-0 opacity-[0.05]"
+          style={{
+            backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
+            backgroundSize: "32px 32px",
+          }}
         />
       </div>
 
@@ -37,99 +69,110 @@ export default function Login() {
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-blue-600/10 border border-blue-600/20 mb-6 shadow-inner">
               <Container className="h-10 w-10 text-blue-500" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Portal Operacional</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-white mb-2">
+              Portal Operacional
+            </h1>
             <p className="text-gray-400 text-sm font-medium">
               Gestão Spot Renault <span className="text-blue-500 mx-1">•</span> Terminal TLOG
             </p>
           </div>
 
-          <div className="space-y-6 custom-auth-container">
-            <Auth
-              supabaseClient={supabase}
-              appearance={{
-                theme: ThemeSupa,
-                variables: {
-                  default: {
-                    colors: {
-                      brand: '#2563eb',
-                      brandAccent: '#1d4ed8',
-                      inputBackground: 'rgba(255, 255, 255, 0.03)',
-                      inputText: 'white',
-                      inputPlaceholder: 'rgba(255, 255, 255, 0.3)',
-                      inputBorder: 'rgba(255, 255, 255, 0.1)',
-                      inputBorderFocus: '#2563eb',
-                    },
-                    radii: {
-                      borderRadiusButton: '12px',
-                      inputBorderRadius: '12px',
-                    }
-                  },
-                },
-                className: {
-                  button: 'w-full font-bold uppercase tracking-widest text-[11px] py-4 shadow-lg shadow-blue-600/20 hover:translate-y-[-1px] transition-all duration-200',
-                  input: 'h-12 text-sm border-white/10 focus:border-blue-500/50 transition-all duration-200',
-                  label: 'text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1 tracking-wider',
-                  anchor: 'text-xs text-blue-500 hover:text-blue-400 transition-colors',
-                  message: 'text-xs text-red-400 bg-red-400/10 p-3 rounded-lg border border-red-400/20 mt-2',
-                }
+          <div className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="email"
+                  className="text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1 tracking-wider block"
+                >
+                  E-mail Corporativo
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  autoComplete="email"
+                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white outline-none transition-all placeholder:text-white/30 focus:border-blue-500/50"
+                  placeholder="seu.email@empresa.com"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="password"
+                  className="text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1 tracking-wider block"
+                >
+                  Senha de Acesso
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  minLength={6}
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
+                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white outline-none transition-all placeholder:text-white/30 focus:border-blue-500/50"
+                  placeholder="Digite sua senha"
+                />
+              </div>
+              {message && (
+                <div className="rounded-lg border border-red-400/20 bg-red-400/10 p-3 text-xs text-red-400">
+                  {message}
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full rounded-xl bg-blue-600 py-4 text-[11px] font-bold uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting
+                  ? "Verificando credenciais..."
+                  : isSignUp
+                    ? "Solicitar Acesso"
+                    : "Acessar Sistema"}
+              </button>
+            </form>
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp((value) => !value);
+                setMessage(null);
               }}
-              providers={[]}
-              localization={{
-                variables: {
-                  sign_in: {
-                    email_label: 'E-mail Corporativo',
-                    password_label: 'Senha de Acesso',
-                    button_label: 'Acessar Sistema',
-                    loading_button_label: 'Verificando credenciais...',
-                    link_text: 'Já possui uma conta? Entre aqui',
-                  },
-                  sign_up: {
-                    email_label: 'E-mail',
-                    password_label: 'Senha',
-                    button_label: 'Solicitar Acesso',
-                    loading_button_label: 'Processando solicitação...',
-                    link_text: 'Primeiro acesso? Solicite seu cadastro',
-                  },
-                },
-              }}
-              theme="dark"
-            />
+              className="w-full text-center text-xs font-semibold text-blue-500 transition-colors hover:text-blue-400"
+            >
+              {isSignUp
+                ? "Já possui uma conta? Entre aqui"
+                : "Primeiro acesso? Solicite seu cadastro"}
+            </button>
           </div>
 
           <div className="mt-10 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
             <div className="flex items-center gap-2 text-gray-500">
               <ShieldCheck className="h-4 w-4 text-green-500/70" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Ambiente Criptografado</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
+                Ambiente Criptografado
+              </span>
             </div>
-            
+
             <div className="flex items-center gap-4 text-[10px] font-medium text-gray-600">
-              <a href="#" className="hover:text-gray-400 transition-colors">Suporte Técnico</a>
+              <a href="#" className="hover:text-gray-400 transition-colors">
+                Suporte Técnico
+              </a>
               <span className="w-1 h-1 rounded-full bg-gray-800" />
-              <a href="#" className="hover:text-gray-400 transition-colors">Termos de Uso</a>
+              <a href="#" className="hover:text-gray-400 transition-colors">
+                Termos de Uso
+              </a>
             </div>
           </div>
         </div>
-        
+
         <div className="mt-8 flex items-center justify-center gap-3 text-gray-600">
           <p className="text-[11px] font-medium">© {new Date().getFullYear()} Terminal TLOG SJP</p>
           <ArrowRight className="h-3 w-3 opacity-30" />
           <p className="text-[11px] font-medium">Operação Spot Renault</p>
         </div>
       </div>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        .custom-auth-container .supabase-auth-ui_ui-button {
-          background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
-          border: none !important;
-        }
-        .custom-auth-container .supabase-auth-ui_ui-anchor {
-          text-decoration: none !important;
-          font-weight: 600 !important;
-        }
-        .custom-auth-container .supabase-auth-ui_ui-divider {
-          background-color: rgba(255, 255, 255, 0.05) !important;
-        }
-      `}} />
     </div>
   );
 }
