@@ -23,9 +23,9 @@ function emit() {
   for (const l of listeners) l();
 }
 
-// Fetch initial data from Supabase
+// Busca dados iniciais do Supabase
 export async function syncFromSupabase() {
-  if (typeof window === 'undefined') return; // Proteção para SSR
+  if (typeof window === 'undefined') return;
 
   try {
     const [
@@ -45,19 +45,27 @@ export async function syncFromSupabase() {
     state = {
       ...state,
       cheios: cheiosRes.data ? cheiosRes.data.map(c => ({
-        ...c,
+        conteiner: c.conteiner,
+        lacre: c.lacre,
+        tipo: c.tipo,
+        armador: c.armador,
+        navio: c.navio,
         dataChegada: c.data_chegada,
         diasNoPatio: c.dias_no_patio,
         freeTime: c.free_time,
         demurrageVencimento: c.demurrage_vencimento,
         diasParaVencimento: c.dias_para_vencimento,
+        status: c.status,
+        fabrica: c.fabrica,
         dataEnvioFabrica: c.data_envio_fabrica,
         conteinerDePara: c.conteiner_de_para,
         dataDevolucaoVazio: c.data_devolucao_vazio,
         colunaAS: c.coluna_as
       })) : state.cheios,
       vaziosLocados: vaziosRes.data ? vaziosRes.data.map(v => ({
-        ...v,
+        conteiner: v.conteiner,
+        armador: v.armador,
+        tipo: v.tipo,
         dataEntrada: v.data_entrada,
         dataDePara: v.data_de_para,
         cheioDePara: v.cheio_de_para,
@@ -73,20 +81,24 @@ export async function syncFromSupabase() {
         status: i.status as any
       })) : state.imports,
       priorityRequests: prioritiesRes.data ? prioritiesRes.data.map(p => ({
-        ...p,
+        id: p.id,
+        conteiner: p.conteiner,
+        nivel: p.nivel,
+        status: p.status,
         solicitadoEm: p.solicitado_em,
         fabricaDestino: p.fabrica_destino,
-        previsaoFabrica: p.previsao_fabrica
+        previsaoFabrica: p.previsao_fabrica,
+        observacao: p.observacao
       })) : state.priorityRequests,
       settings: settingsRes.data ? { capacidadePatio: settingsRes.data.capacidade_patio } : state.settings
     };
     emit();
   } catch (error) {
-    console.error("Error syncing from Supabase:", error);
+    console.error("Erro ao sincronizar do Supabase:", error);
   }
 }
 
-// Subscribe to real-time changes (apenas no cliente)
+// Inscrição em tempo real
 if (typeof window !== 'undefined') {
   supabase.channel('db-changes')
     .on('postgres_changes', { event: '*', schema: 'public' }, () => {
@@ -109,23 +121,26 @@ export function getDataset() {
 export async function setDataset(updater: (prev: AppDataset & { userRole: UserRole }) => AppDataset & { userRole: UserRole }) {
   const newState = updater(state);
   
+  // Se houve uma nova importação (detectada pelo lastImportAt)
   if (newState.lastImportAt !== state.lastImportAt) {
     const lastImport = newState.imports[0];
     if (lastImport) {
       try {
+        // 1. Registrar histórico
         await supabase.from('import_history').insert({
           file_name: lastImport.fileName,
           item_count: lastImport.itemCount,
           status: lastImport.status
         });
 
-        await Promise.all([
-          supabase.from('containers_cheios').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-          supabase.from('vazios_locados').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-        ]);
+        // 2. Limpar tabelas atuais (substituição total)
+        // Usamos um filtro que sempre é verdadeiro para deletar tudo
+        await supabase.from('containers_cheios').delete().neq('conteiner', 'placeholder_nao_existente');
+        await supabase.from('vazios_locados').delete().neq('conteiner', 'placeholder_nao_existente');
 
+        // 3. Inserir novos dados em lotes
         if (newState.cheios.length > 0) {
-          await supabase.from('containers_cheios').insert(newState.cheios.map(c => ({
+          const { error: e1 } = await supabase.from('containers_cheios').insert(newState.cheios.map(c => ({
             conteiner: c.conteiner,
             lacre: c.lacre,
             tipo: c.tipo,
@@ -143,10 +158,11 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             data_devolucao_vazio: c.dataDevolucaoVazio,
             coluna_as: c.colunaAS
           })));
+          if (e1) throw e1;
         }
 
         if (newState.vaziosLocados.length > 0) {
-          await supabase.from('vazios_locados').insert(newState.vaziosLocados.map(v => ({
+          const { error: e2 } = await supabase.from('vazios_locados').insert(newState.vaziosLocados.map(v => ({
             conteiner: v.conteiner,
             armador: v.armador,
             tipo: v.tipo,
@@ -157,10 +173,13 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             status_patio: v.statusPatio,
             dias_no_patio: v.diasNoPatio
           })));
+          if (e2) throw e2;
         }
+        
+        toast.success("Dados sincronizados com o Supabase!");
       } catch (e) {
-        console.error("Error saving to Supabase:", e);
-        toast.error("Erro ao sincronizar com o banco de dados.");
+        console.error("Erro ao salvar no Supabase:", e);
+        toast.error("Erro ao persistir dados no banco.");
       }
     }
   }
