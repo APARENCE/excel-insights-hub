@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import path from "node:path";
 
-// Configuração otimizada para build SPA (Vercel)
+// Configuração de build SPA pura para Vercel
 export default defineConfig({
   plugins: [react(), tailwindcss(), tsconfigPaths()],
   base: "/",
@@ -17,6 +17,8 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     sourcemap: false,
-    assetsDir: "assets"
-  }
+    rollupOptions: {
+      input: path.resolve(__dirname, "index.html"),
+    },
+  },
 });
