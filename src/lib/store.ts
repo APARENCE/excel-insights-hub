@@ -23,6 +23,9 @@ function emit() {
   for (const l of listeners) l();
 }
 
+// Auxiliar para garantir números inteiros seguros para o Postgres
+const toInt = (val: any) => (val != null && !isNaN(Number(val)) ? Math.round(Number(val)) : null);
+
 // Busca dados iniciais do Supabase
 export async function syncFromSupabase() {
   if (typeof window === 'undefined') return;
@@ -117,10 +120,11 @@ export function getDataset() {
 }
 
 export async function setDataset(updater: (prev: AppDataset & { userRole: UserRole }) => AppDataset & { userRole: UserRole }) {
+  const oldLastImport = state.lastImportAt;
   const newState = updater(state);
   
-  // Se houve uma nova importação (detectada pelo lastImportAt)
-  if (newState.lastImportAt !== state.lastImportAt) {
+  // Se houve uma nova importação
+  if (newState.lastImportAt !== oldLastImport) {
     const lastImport = newState.imports[0];
     if (lastImport) {
       try {
@@ -131,11 +135,11 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
           status: lastImport.status
         });
 
-        // 2. Limpar tabelas atuais (substituição total)
-        await supabase.from('containers_cheios').delete().neq('conteiner', 'placeholder_nao_existente');
-        await supabase.from('vazios_locados').delete().neq('conteiner', 'placeholder_nao_existente');
+        // 2. Limpar tabelas atuais
+        await supabase.from('containers_cheios').delete().neq('conteiner', '_none_');
+        await supabase.from('vazios_locados').delete().neq('conteiner', '_none_');
 
-        // 3. Inserir novos dados em lotes
+        // 3. Inserir novos dados
         if (newState.cheios.length > 0) {
           const { error: e1 } = await supabase.from('containers_cheios').insert(newState.cheios.map(c => ({
             conteiner: c.conteiner,
@@ -144,10 +148,10 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             armador: c.armador,
             navio: c.navio,
             data_chegada: c.dataChegada,
-            dias_no_patio: c.diasNoPatio,
-            free_time: c.freeTime,
+            dias_no_patio: toInt(c.diasNoPatio),
+            free_time: toInt(c.freeTime),
             demurrage_vencimento: c.demurrageVencimento,
-            dias_para_vencimento: c.diasParaVencimento,
+            dias_para_vencimento: toInt(c.diasParaVencimento),
             status: c.status,
             fabrica: c.fabrica,
             data_envio_fabrica: c.dataEnvioFabrica,
@@ -168,15 +172,15 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             cheio_de_para: v.cheioDePara,
             status_uso: v.statusUso,
             status_patio: v.statusPatio,
-            dias_no_patio: v.diasNoPatio
+            dias_no_patio: toInt(v.diasNoPatio)
           })));
           if (e2) throw e2;
         }
         
-        toast.success("Dados sincronizados com o Supabase!");
+        toast.success("Dados sincronizados com sucesso!");
       } catch (e) {
-        console.error("Erro ao salvar no Supabase:", e);
-        toast.error("Erro ao persistir dados no banco.");
+        console.error("Erro detalhado na persistência:", e);
+        toast.error("Erro ao salvar no banco. Verifique o formato dos dados.");
       }
     }
   }
