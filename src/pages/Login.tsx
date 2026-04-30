@@ -5,6 +5,8 @@ import { Container, ShieldCheck, ArrowRight } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 
+const ALLOWED_EMAILS = ["patiotlog@outlook.com", "renaultdobrasil.com@outlook.com"];
+
 export default function Login() {
   const { session } = useAuth();
   const [email, setEmail] = useState("");
@@ -24,13 +26,21 @@ export default function Login() {
     setSubmitting(true);
     setMessage(null);
 
+    const lowerEmail = email.toLowerCase().trim();
+
+    if (!ALLOWED_EMAILS.includes(lowerEmail)) {
+      setMessage("Este e-mail não possui autorização de acesso ao sistema.");
+      setSubmitting(false);
+      return;
+    }
+
     const authAction = isSignUp
       ? supabase.auth.signUp({
-          email,
+          email: lowerEmail,
           password,
           options: { emailRedirectTo: window.location.origin },
         })
-      : supabase.auth.signInWithPassword({ email, password });
+      : supabase.auth.signInWithPassword({ email: lowerEmail, password });
 
     const { error } = await authAction;
     setSubmitting(false);
@@ -50,7 +60,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] relative overflow-hidden font-sans">
-      {/* Background Animado e Decorativo */}
       <div className="absolute inset-0 z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/20 blur-[120px] animate-pulse" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-cyan-600/20 blur-[120px] animate-pulse delay-700" />
@@ -154,23 +163,7 @@ export default function Login() {
                 Ambiente Criptografado
               </span>
             </div>
-
-            <div className="flex items-center gap-4 text-[10px] font-medium text-gray-600">
-              <a href="#" className="hover:text-gray-400 transition-colors">
-                Suporte Técnico
-              </a>
-              <span className="w-1 h-1 rounded-full bg-gray-800" />
-              <a href="#" className="hover:text-gray-400 transition-colors">
-                Termos de Uso
-              </a>
-            </div>
           </div>
-        </div>
-
-        <div className="mt-8 flex items-center justify-center gap-3 text-gray-600">
-          <p className="text-[11px] font-medium">© {new Date().getFullYear()} Terminal TLOG SJP</p>
-          <ArrowRight className="h-3 w-3 opacity-30" />
-          <p className="text-[11px] font-medium">Operação Spot Renault</p>
         </div>
       </div>
     </div>

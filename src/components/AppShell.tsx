@@ -19,7 +19,7 @@ import { NavLink, usePathname } from "@/components/NavLink";
 import { useDataset, setUserRole } from "@/lib/store";
 import { useAuth } from "@/components/AuthProvider";
 
-const nav = [
+const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutGrid },
   { to: "/estoque", label: "Estoque do Pátio", icon: Boxes },
   { to: "/prioridades", label: "Prioridades Fábrica", icon: Zap },
@@ -33,11 +33,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { userRole } = useDataset();
   const { signOut, user, session, loading } = useAuth();
 
+  const userEmail = user?.email?.toLowerCase() || "";
+  const isRestricted = userEmail === "renaultdobrasil.com@outlook.com";
+
   useEffect(() => {
     if (!loading && !session && typeof window !== 'undefined' && window.location.pathname !== '/login') {
       window.location.href = '/login';
     }
-  }, [session, loading]);
+    
+    // Forçar papel de CLIENTE para o usuário restrito
+    if (isRestricted && userRole !== "CLIENTE") {
+      setUserRole("CLIENTE");
+    }
+  }, [session, loading, isRestricted, userRole]);
 
   if (loading) {
     return (
@@ -51,6 +59,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     return null;
   }
 
+  // Filtrar itens de navegação para o usuário restrito
+  const filteredNav = isRestricted 
+    ? navItems.filter(item => ["/", "/prioridades", "/demurrage"].includes(item.to))
+    : navItems;
+
   return (
     <div className="min-h-screen flex bg-background text-foreground">
       <aside className="hidden md:flex flex-col w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
@@ -61,32 +74,43 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <div className="px-3 py-4 border-b border-sidebar-border bg-sidebar-accent/30">
-          <label className="text-[10px] font-bold text-sidebar-foreground/40 uppercase tracking-widest block mb-2 px-1">Perfil Ativo</label>
-          <div className="flex flex-col gap-1">
-            <button 
-              onClick={() => setUserRole("CLIENTE")}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-all",
-                userRole === "CLIENTE" ? "bg-primary text-white font-bold" : "hover:bg-sidebar-accent text-sidebar-foreground/60"
-              )}
-            >
-              <UserCircle className="h-3.5 w-3.5" /> Cliente (Renault)
-            </button>
-            <button 
-              onClick={() => setUserRole("TRANSPORTADORA")}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-all",
-                userRole === "TRANSPORTADORA" ? "bg-info text-white font-bold" : "hover:bg-sidebar-accent text-sidebar-foreground/60"
-              )}
-            >
-              <Truck className="h-3.5 w-3.5" /> Transportadora
-            </button>
+        {!isRestricted && (
+          <div className="px-3 py-4 border-b border-sidebar-border bg-sidebar-accent/30">
+            <label className="text-[10px] font-bold text-sidebar-foreground/40 uppercase tracking-widest block mb-2 px-1">Perfil Ativo</label>
+            <div className="flex flex-col gap-1">
+              <button 
+                onClick={() => setUserRole("CLIENTE")}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-all",
+                  userRole === "CLIENTE" ? "bg-primary text-white font-bold" : "hover:bg-sidebar-accent text-sidebar-foreground/60"
+                )}
+              >
+                <UserCircle className="h-3.5 w-3.5" /> Cliente (Renault)
+              </button>
+              <button 
+                onClick={() => setUserRole("TRANSPORTADORA")}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-all",
+                  userRole === "TRANSPORTADORA" ? "bg-info text-white font-bold" : "hover:bg-sidebar-accent text-sidebar-foreground/60"
+                )}
+              >
+                <Truck className="h-3.5 w-3.5" /> Transportadora
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {isRestricted && (
+          <div className="px-4 py-3 border-b border-sidebar-border bg-primary/10">
+            <div className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Perfil</div>
+            <div className="text-xs font-bold text-sidebar-foreground flex items-center gap-2">
+              <UserCircle className="h-3.5 w-3.5 text-primary" /> Cliente Renault
+            </div>
+          </div>
+        )}
 
         <nav className="flex-1 px-2 py-3 space-y-1">
-          {nav.map((item) => {
+          {filteredNav.map((item) => {
             const active = pathname === item.to;
             const Icon = item.icon;
             return (

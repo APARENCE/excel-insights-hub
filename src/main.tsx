@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import "./styles.css";
 import Dashboard from "@/pages/Dashboard";
 import EstoquePage from "@/pages/Estoque";
@@ -13,7 +13,8 @@ import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import { Toaster } from "sonner";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuth();
+  const { session, loading, user } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -25,6 +26,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!session) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Proteção de rotas baseada no e-mail
+  const userEmail = user?.email?.toLowerCase() || "";
+  const isRestricted = userEmail === "renaultdobrasil.com@outlook.com";
+  const allowedPaths = ["/", "/prioridades", "/demurrage", "/login"];
+
+  if (isRestricted && !allowedPaths.includes(location.pathname)) {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
