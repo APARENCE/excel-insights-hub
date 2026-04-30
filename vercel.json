@@ -1,8 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "npx vite build --config vite.config.vercel.ts",
+  "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist",
-  "framework": "vite",
   "rewrites": [
     {
       "source": "/(.*)",
