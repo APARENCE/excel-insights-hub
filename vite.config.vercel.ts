@@ -8,6 +8,7 @@ import path from "node:path";
 // Uses index.html at project root + src/main.tsx as entry.
 export default defineConfig({
   plugins: [react(), tailwindcss(), tsconfigPaths()],
+  base: "/",
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -17,7 +18,11 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     sourcemap: false,
+    assetsDir: "assets",
     rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, "index.html"),
+      },
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
