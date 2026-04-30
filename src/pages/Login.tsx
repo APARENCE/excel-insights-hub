@@ -2,18 +2,16 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Container, ShieldCheck, ArrowRight } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
-
-type AuthUiModule = typeof import('@supabase/auth-ui-react');
-type AuthThemeModule = typeof import('@supabase/auth-ui-shared');
 
 export default function Login() {
   const { session } = useAuth();
-  const [authUi, setAuthUi] = useState<{
-    Auth: AuthUiModule['Auth'];
-    ThemeSupa: AuthThemeModule['ThemeSupa'];
-  } | null>(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (session) {
@@ -21,25 +19,34 @@ export default function Login() {
     }
   }, [session]);
 
-  useEffect(() => {
-    let mounted = true;
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setMessage(null);
 
-    Promise.all([
-      import('@supabase/auth-ui-react'),
-      import('@supabase/auth-ui-shared'),
-    ]).then(([authModule, themeModule]) => {
-      if (mounted) {
-        setAuthUi({ Auth: authModule.Auth, ThemeSupa: themeModule.ThemeSupa });
-      }
-    });
+    const authAction = isSignUp
+      ? supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: window.location.origin },
+        })
+      : supabase.auth.signInWithPassword({ email, password });
 
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    const { error } = await authAction;
+    setSubmitting(false);
 
-  const Auth = authUi?.Auth;
-  const ThemeSupa = authUi?.ThemeSupa;
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    if (isSignUp) {
+      setMessage('Cadastro solicitado. Verifique seu e-mail para confirmar o acesso.');
+      return;
+    }
+
+    window.location.href = '/';
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] relative overflow-hidden font-sans">
@@ -68,61 +75,62 @@ export default function Login() {
             </p>
           </div>
 
-          <div className="space-y-6 custom-auth-container">
-            {Auth && ThemeSupa ? <Auth
-              supabaseClient={supabase}
-              appearance={{
-                theme: ThemeSupa,
-                variables: {
-                  default: {
-                    colors: {
-                      brand: '#2563eb',
-                      brandAccent: '#1d4ed8',
-                      inputBackground: 'rgba(255, 255, 255, 0.03)',
-                      inputText: 'white',
-                      inputPlaceholder: 'rgba(255, 255, 255, 0.3)',
-                      inputBorder: 'rgba(255, 255, 255, 0.1)',
-                      inputBorderFocus: '#2563eb',
-                    },
-                    radii: {
-                      borderRadiusButton: '12px',
-                      inputBorderRadius: '12px',
-                    }
-                  },
-                },
-                className: {
-                  button: 'w-full font-bold uppercase tracking-widest text-[11px] py-4 shadow-lg shadow-blue-600/20 hover:translate-y-[-1px] transition-all duration-200',
-                  input: 'h-12 text-sm border-white/10 focus:border-blue-500/50 transition-all duration-200',
-                  label: 'text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1 tracking-wider',
-                  anchor: 'text-xs text-blue-500 hover:text-blue-400 transition-colors',
-                  message: 'text-xs text-red-400 bg-red-400/10 p-3 rounded-lg border border-red-400/20 mt-2',
-                }
-              }}
-              providers={[]}
-              localization={{
-                variables: {
-                  sign_in: {
-                    email_label: 'E-mail Corporativo',
-                    password_label: 'Senha de Acesso',
-                    button_label: 'Acessar Sistema',
-                    loading_button_label: 'Verificando credenciais...',
-                    link_text: 'Já possui uma conta? Entre aqui',
-                  },
-                  sign_up: {
-                    email_label: 'E-mail',
-                    password_label: 'Senha',
-                    button_label: 'Solicitar Acesso',
-                    loading_button_label: 'Processando solicitação...',
-                    link_text: 'Primeiro acesso? Solicite seu cadastro',
-                  },
-                },
-              }}
-              theme="dark"
-            /> : (
-              <div className="flex h-44 items-center justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-500" />
+          <div className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="email" className="text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1 tracking-wider block">
+                  E-mail Corporativo
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  autoComplete="email"
+                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white outline-none transition-all placeholder:text-white/30 focus:border-blue-500/50"
+                  placeholder="seu.email@empresa.com"
+                />
               </div>
-            )}
+              <div>
+                <label htmlFor="password" className="text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1 tracking-wider block">
+                  Senha de Acesso
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  minLength={6}
+                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white outline-none transition-all placeholder:text-white/30 focus:border-blue-500/50"
+                  placeholder="Digite sua senha"
+                />
+              </div>
+              {message && (
+                <div className="rounded-lg border border-red-400/20 bg-red-400/10 p-3 text-xs text-red-400">
+                  {message}
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full rounded-xl bg-blue-600 py-4 text-[11px] font-bold uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? 'Verificando credenciais...' : isSignUp ? 'Solicitar Acesso' : 'Acessar Sistema'}
+              </button>
+            </form>
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp((value) => !value);
+                setMessage(null);
+              }}
+              className="w-full text-center text-xs font-semibold text-blue-500 transition-colors hover:text-blue-400"
+            >
+              {isSignUp ? 'Já possui uma conta? Entre aqui' : 'Primeiro acesso? Solicite seu cadastro'}
+            </button>
           </div>
 
           <div className="mt-10 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
@@ -145,20 +153,6 @@ export default function Login() {
           <p className="text-[11px] font-medium">Operação Spot Renault</p>
         </div>
       </div>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        .custom-auth-container .supabase-auth-ui_ui-button {
-          background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
-          border: none !important;
-        }
-        .custom-auth-container .supabase-auth-ui_ui-anchor {
-          text-decoration: none !important;
-          font-weight: 600 !important;
-        }
-        .custom-auth-container .supabase-auth-ui_ui-divider {
-          background-color: rgba(255, 255, 255, 0.05) !important;
-        }
-      `}} />
     </div>
   );
 }
