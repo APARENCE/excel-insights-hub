@@ -25,6 +25,8 @@ function emit() {
 
 // Fetch initial data from Supabase
 export async function syncFromSupabase() {
+  if (typeof window === 'undefined') return; // Proteção para SSR
+
   try {
     const [
       cheiosRes,
@@ -40,7 +42,6 @@ export async function syncFromSupabase() {
       supabase.from('app_settings').select('*').maybeSingle()
     ]);
 
-    // Only update if we didn't get a 404 (table not found)
     state = {
       ...state,
       cheios: cheiosRes.data ? cheiosRes.data.map(c => ({
@@ -85,12 +86,16 @@ export async function syncFromSupabase() {
   }
 }
 
-// Subscribe to real-time changes
-supabase.channel('db-changes')
-  .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-    syncFromSupabase();
-  })
-  .subscribe();
+// Subscribe to real-time changes (apenas no cliente)
+if (typeof window !== 'undefined') {
+  supabase.channel('db-changes')
+    .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+      syncFromSupabase();
+    })
+    .subscribe();
+    
+  syncFromSupabase();
+}
 
 export function setUserRole(role: UserRole) {
   state = { ...state, userRole: role };
@@ -230,5 +235,3 @@ export function useDataset() {
     () => initial,
   );
 }
-
-syncFromSupabase();
