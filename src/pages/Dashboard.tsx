@@ -1,3 +1,5 @@
+"use client";
+
 import {
   ResponsiveContainer,
   BarChart,
@@ -39,7 +41,7 @@ export default function Dashboard() {
             <SettingsDialog />
             <button 
               className="inline-flex items-center gap-2 text-sm border border-border rounded-md px-2.5 py-1.5 bg-card hover:bg-accent"
-              onClick={() => window.location.reload()}
+              onClick={() => typeof window !== 'undefined' && window.location.reload()}
             >
               <RefreshCw className="h-4 w-4" />
             </button>

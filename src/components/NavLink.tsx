@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 
@@ -33,6 +35,7 @@ export function usePathname() {
     typeof window === "undefined" ? "/" : window.location.pathname,
   );
   useEffect(() => {
+    if (typeof window === "undefined") return;
     function update() {
       setPathname(window.location.pathname);
     }

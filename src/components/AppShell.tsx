@@ -1,3 +1,5 @@
+"use client";
+
 import {
   LayoutGrid,
   Boxes,
@@ -32,7 +34,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { signOut, user, session, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading && !session && window.location.pathname !== '/login') {
+    if (!loading && !session && typeof window !== 'undefined' && window.location.pathname !== '/login') {
       window.location.href = '/login';
     }
   }, [session, loading]);
@@ -45,7 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!session && window.location.pathname !== '/login') {
+  if (!session && typeof window !== 'undefined' && window.location.pathname !== '/login') {
     return null;
   }
 

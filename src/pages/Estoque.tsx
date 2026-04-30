@@ -1,3 +1,5 @@
+"use client";
+
 import { useMemo, useState } from "react";
 import { Search, FileText, CheckCircle2, Clock, ArrowDownToLine, Ship } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";

@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { CloudUpload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
