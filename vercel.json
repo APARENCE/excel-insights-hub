@@ -1,8 +1,8 @@
 {
   "version": 2,
   "framework": "vite",
-  "installCommand": "npm install --legacy-peer-deps",
-  "buildCommand": "npm run build:vercel",
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm run build:vercel",
   "outputDirectory": "dist",
   "rewrites": [
     {
