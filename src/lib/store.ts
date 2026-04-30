@@ -164,7 +164,7 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             data_de_para: v.dataDePara,
             cheio_de_para: v.cheioDePara,
             status_uso: v.statusUso,
-            status_patio: v.status_patio,
+            status_patio: v.statusPatio,
             dias_no_patio: toInt(v.diasNoPatio)
           })));
           if (e2) throw e2;
@@ -206,7 +206,7 @@ export async function updatePriorityStatus(id: string, status: PriorityRequest["
 
   const request = state.priorityRequests.find(r => r.id === id);
   if (request) {
-    // Se for SAIDA PATIO (DESPACHADO) ou FINALIZADO, atualiza o estoque principal
+    // Se o status for SAÍDA PÁTIO (DESPACHADO) ou FINALIZADO, atualiza o estoque principal
     if (status === 'DESPACHADO' || status === 'FINALIZADO') {
       await supabase.from('containers_cheios')
         .update({ 
