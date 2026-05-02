@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo, useCallback } from 'react';
 import { 
   Zap, 
   Plus, 
@@ -311,24 +311,25 @@ export default function PrioridadesPage() {
     });
   }, [ds.priorityRequests, ds.cheios]);
 
-  const handleUpdateStatus = async (id: string, status: RequestStatus) => {
+  // Estabilizando as funções com useCallback para evitar re-renders desnecessários e garantir o ID correto
+  const handleUpdateStatus = useCallback(async (id: string, status: RequestStatus) => {
     setIsUpdating(true);
     try {
       await updatePriorityStatus(id, status);
     } finally {
-      // Delay de 300ms para evitar cliques fantasmas após reordenamento
+      // Delay de 300ms para garantir que o navegador processe o reordenamento antes de liberar novos cliques
       setTimeout(() => setIsUpdating(false), 300);
     }
-  };
+  }, []);
 
-  const handleDeleteRequest = async (id: string) => {
+  const handleDeleteRequest = useCallback(async (id: string) => {
     setIsUpdating(true);
     try {
       await deletePriorityRequest(id);
     } finally {
       setTimeout(() => setIsUpdating(false), 300);
     }
-  };
+  }, []);
 
   const handleCreateRequest = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -363,6 +364,11 @@ export default function PrioridadesPage() {
 
   return (
     <AppShell>
+      {/* ESCUDO DE CLIQUES: Camada invisível que bloqueia qualquer clique na tela enquanto o sistema processa */}
+      {isUpdating && (
+        <div className="fixed inset-0 z-[9999] cursor-wait bg-transparent" />
+      )}
+
       <PageHeader 
         title="Prioridades Fábrica" 
         subtitle="Fluxo de Saída em Tempo Real"
@@ -516,7 +522,7 @@ export default function PrioridadesPage() {
       <div className="px-4 md:px-8 pb-16">
         <div className={cn(
           "rounded-2xl border border-border bg-card overflow-hidden shadow-sm transition-all",
-          isUpdating && "pointer-events-none opacity-80"
+          isUpdating && "opacity-80"
         )}>
           <div className="hidden md:flex items-center gap-4 px-6 py-3 bg-muted/50 border-b border-border text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
             <div className="w-8 shrink-0">Prio</div>
