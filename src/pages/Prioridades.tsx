@@ -54,7 +54,7 @@ import { toast } from "sonner";
 import { PriorityLevel, RequestStatus } from '@/lib/types';
 import { cn } from "@/lib/utils";
 
-// Componente de linha memoizado para evitar re-renderizações instáveis e garantir que o clique seja preciso
+// Componente de linha memoizado e ultra-estável
 const RequestRow = memo(({ 
   req, 
   isTransportadora, 
@@ -68,16 +68,29 @@ const RequestRow = memo(({
 }) => {
   const [isBusy, setIsBusy] = useState(false);
 
-  const handleAction = async (e: React.MouseEvent, action: () => Promise<void>) => {
+  const handleAction = async (e: React.MouseEvent, targetId: string, status: RequestStatus) => {
     e.preventDefault();
     e.stopPropagation();
     if (isBusy) return;
     
     setIsBusy(true);
     try {
-      await action();
+      await onUpdateStatus(targetId, status);
     } catch (err) {
       console.error("Erro na ação:", err);
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, targetId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isBusy) return;
+    
+    setIsBusy(true);
+    try {
+      await onDelete(targetId);
     } finally {
       setIsBusy(false);
     }
@@ -136,9 +149,10 @@ const RequestRow = memo(({
         <div className="flex items-center gap-2">
           {isTransportadora && req.status === 'PENDENTE' && (
             <Button 
+              type="button"
               size="sm" 
               disabled={isBusy}
-              onClick={(e) => handleAction(e, () => onUpdateStatus(req.id, 'CARREGANDO'))} 
+              onClick={(e) => handleAction(e, req.id, 'CARREGANDO')} 
               className="h-8 px-4 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-bold rounded-xl shadow-lg shadow-destructive/20"
             >
               {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : "CARREGAR"}
@@ -146,9 +160,10 @@ const RequestRow = memo(({
           )}
           {isTransportadora && req.status === 'CARREGANDO' && (
             <Button 
+              type="button"
               size="sm" 
               disabled={isBusy}
-              onClick={(e) => handleAction(e, () => onUpdateStatus(req.id, 'DESPACHADO'))} 
+              onClick={(e) => handleAction(e, req.id, 'DESPACHADO')} 
               className="h-8 px-4 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold rounded-xl shadow-lg shadow-warning/20"
             >
               {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : "SAÍDA PÁTIO"}
@@ -156,9 +171,10 @@ const RequestRow = memo(({
           )}
           {isTransportadora && req.status === 'DESPACHADO' && (
             <Button 
+              type="button"
               size="sm" 
               disabled={isBusy}
-              onClick={(e) => handleAction(e, () => onUpdateStatus(req.id, 'FINALIZADO'))} 
+              onClick={(e) => handleAction(e, req.id, 'FINALIZADO')} 
               className="h-8 px-4 text-[10px] bg-success hover:bg-success/90 text-white font-bold rounded-xl shadow-lg shadow-success/20"
             >
               {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : "FINALIZAR"}
@@ -170,10 +186,11 @@ const RequestRow = memo(({
             </div>
           )}
           <Button 
+            type="button"
             variant="ghost" 
             size="icon" 
             disabled={isBusy}
-            onClick={(e) => handleAction(e, () => onDelete(req.id))} 
+            onClick={(e) => handleDelete(e, req.id)} 
             className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
           >
             <Trash2 className="h-4 w-4" />
@@ -274,20 +291,15 @@ export default function PrioridadesPage() {
       ...req,
       details: ds.cheios.find(c => c.conteiner === req.conteiner)
     })).sort((a, b) => {
-      // 1. Status (Fila primeiro)
       if (statusWeight[a.status] !== statusWeight[b.status]) {
         return statusWeight[b.status] - statusWeight[a.status];
       }
-      // 2. Urgência (Crítica primeiro)
       if (weight[a.nivel] !== weight[b.nivel]) {
         return weight[b.nivel] - weight[a.nivel];
       }
-      // 3. Data (Mais recente primeiro)
       const timeA = new Date(a.solicitadoEm).getTime();
       const timeB = new Date(b.solicitadoEm).getTime();
       if (timeA !== timeB) return timeB - timeA;
-      
-      // 4. ID como tie-breaker final para garantir que a ordem NUNCA mude aleatoriamente
       return a.id.localeCompare(b.id);
     });
   }, [ds.priorityRequests, ds.cheios]);
