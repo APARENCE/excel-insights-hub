@@ -229,7 +229,7 @@ export default function PrioridadesPage() {
   const [fabricaSelect, setFabricaSelect] = useState<string>("CVU");
   const [customFabrica, setCustomFabrica] = useState("");
   const [nivelSelect, setNivelSelect] = useState<PriorityLevel>("NORMAL");
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
 
   const isCliente = userRole === "CLIENTE";
   const isTransportadora = userRole === "TRANSPORTADORA";
@@ -271,34 +271,42 @@ export default function PrioridadesPage() {
   }, [ds.priorityRequests, ds.cheios]);
 
   const handleUpdateStatus = async (id: string, currentStatus: RequestStatus, conteiner: string) => {
-    if (busyId) return;
+    if (busyIds.has(id)) return;
     
     let nextStatus: RequestStatus = 'PENDENTE';
     if (currentStatus === 'PENDENTE') nextStatus = 'CARREGANDO';
     else if (currentStatus === 'CARREGANDO') nextStatus = 'DESPACHADO';
     else if (currentStatus === 'DESPACHADO') nextStatus = 'FINALIZADO';
 
-    setBusyId(id);
+    setBusyIds(prev => new Set(prev).add(id));
     try {
       await updatePriorityStatus(id, nextStatus);
       toast.success(`${conteiner} atualizado para ${nextStatus}`);
     } catch (e) {
       toast.error("Erro ao atualizar status");
     } finally {
-      setBusyId(null);
+      setBusyIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
     }
   };
 
   const handleDeleteRequest = async (id: string, conteiner: string) => {
-    if (busyId) return;
-    setBusyId(id);
+    if (busyIds.has(id)) return;
+    setBusyIds(prev => new Set(prev).add(id));
     try {
       await deletePriorityRequest(id);
       toast.success(`Solicitação de ${conteiner} removida`);
     } catch (e) {
       toast.error("Erro ao excluir");
     } finally {
-      setBusyId(null);
+      setBusyIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
     }
   };
 
@@ -312,10 +320,11 @@ export default function PrioridadesPage() {
     const fabricaDestino = fabricaSelect === 'OUTROS' ? customFabrica : fabricaSelect;
     const previsao = formData.get('previsao') as string;
 
-    setBusyId('creating');
+    const newId = crypto.randomUUID();
+    setBusyIds(prev => new Set(prev).add(newId));
     try {
       await addPriorityRequest({
-        id: crypto.randomUUID(),
+        id: newId,
         conteiner: selectedContainer,
         nivel: nivelSelect,
         status: 'PENDENTE',
@@ -329,7 +338,11 @@ export default function PrioridadesPage() {
       setSelectedContainer("");
       setNivelSelect("NORMAL");
     } finally {
-      setBusyId(null);
+      setBusyIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(newId);
+        return newSet;
+      });
     }
   };
 
@@ -343,7 +356,7 @@ export default function PrioridadesPage() {
             <Button 
               variant="outline" 
               size="sm" 
-              disabled={!!busyId}
+              disabled={busyIds.size > 0}
               onClick={() => setDataset(prev => ({...prev, priorityRequests: prev.priorityRequests.filter(r => r.status !== 'FINALIZADO')}))} 
               className="text-[10px] h-10 rounded-xl flex-1 sm:flex-none font-semibold"
             >
@@ -352,7 +365,7 @@ export default function PrioridadesPage() {
             {isCliente && (
               <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DialogTrigger asChild>
-                  <Button disabled={!!busyId} className="bg-primary hover:bg-primary/90 font-bold h-10 text-xs rounded-xl flex-1 sm:flex-none shadow-lg shadow-primary/20">
+                  <Button disabled={busyIds.size > 0} className="bg-primary hover:bg-primary/90 font-bold h-10 text-xs rounded-xl flex-1 sm:flex-none shadow-lg shadow-primary/20">
                     <Plus className="h-4 w-4 mr-2" /> SOLICITAR
                   </Button>
                 </DialogTrigger>
@@ -457,7 +470,7 @@ export default function PrioridadesPage() {
                       {fabricaSelect === 'OUTROS' && <Input placeholder="Nome da fábrica" value={customFabrica} onChange={(e) => setCustomFabrica(e.target.value)} className="h-12 rounded-xl border-2 font-semibold" />}
                       <Input name="observacao" placeholder="Observações adicionais (opcional)" className="h-12 rounded-xl border-2 font-semibold" />
                     </div>
-                    <DialogFooter><Button type="submit" disabled={!!busyId} className="w-full h-14 font-bold text-base rounded-2xl shadow-xl shadow-primary/20">ENVIAR PRIORIDADE</Button></DialogFooter>
+                    <DialogFooter><Button type="submit" disabled={busyIds.size > 0} className="w-full h-14 font-bold text-base rounded-2xl shadow-xl shadow-primary/20">ENVIAR PRIORIDADE</Button></DialogFooter>
                   </form>
                 </DialogContent>
               </Dialog>
@@ -500,7 +513,7 @@ export default function PrioridadesPage() {
                 isTransportadora={isTransportadora}
                 onUpdate={handleUpdateStatus}
                 onDelete={handleDeleteRequest}
-                isBusy={busyId === req.id}
+                isBusy={busyIds.has(req.id)}
               />
             ))
           )}
