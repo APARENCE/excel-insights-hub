@@ -101,7 +101,7 @@ export async function syncFromSupabase() {
 
 // Configuração de Realtime e Polling (Atualização Automática)
 if (typeof window !== 'undefined') {
-  // 1. Escuta mudanças em tempo real
+  // 1. Escuta mudanças em tempo real (Push)
   supabase.channel('db-changes')
     .on(
       'postgres_changes',
@@ -115,10 +115,10 @@ if (typeof window !== 'undefined') {
     )
     .subscribe();
 
-  // 2. Polling de segurança: Atualiza a cada 30 segundos como garantia extra
+  // 2. Polling de alta frequência: Atualiza a cada 2 segundos para garantir sincronia total
   setInterval(() => {
     syncFromSupabase();
-  }, 30000);
+  }, 2000);
 }
 
 export function setUserRole(role: UserRole) {
