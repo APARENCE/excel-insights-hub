@@ -112,11 +112,6 @@ if (typeof window !== 'undefined') {
       () => syncFromSupabase()
     )
     .subscribe();
-
-  // Polling de segurança a cada 30 segundos
-  setInterval(() => {
-    syncFromSupabase();
-  }, 30000);
 }
 
 export function setUserRole(role: UserRole) {
