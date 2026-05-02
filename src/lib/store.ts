@@ -99,7 +99,6 @@ export async function syncFromSupabase() {
   }
 }
 
-// Configuração de Realtime (Atualização Automática por Eventos)
 if (typeof window !== 'undefined') {
   supabase.channel('db-changes')
     .on(
@@ -114,7 +113,7 @@ if (typeof window !== 'undefined') {
     )
     .subscribe();
 
-  // Polling de segurança reduzido para 30 segundos (apenas para garantir consistência)
+  // Polling de segurança a cada 30 segundos
   setInterval(() => {
     syncFromSupabase();
   }, 30000);
@@ -186,7 +185,7 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
         toast.success("Dados sincronizados com sucesso!");
       } catch (e) {
         console.error("Erro detalhado na persistência:", e);
-        toast.error("Erro ao salvar no banco. Verifique o formato dos dados.");
+        toast.error("Erro ao salvar no banco.");
       }
     }
   }
@@ -205,11 +204,8 @@ export async function addPriorityRequest(req: PriorityRequest) {
     observacao: req.observacao
   });
 
-  if (error) {
-    toast.error("Erro ao salvar prioridade");
-  } else {
-    syncFromSupabase();
-  }
+  if (error) toast.error("Erro ao salvar prioridade");
+  else syncFromSupabase();
 }
 
 export async function updatePriorityStatus(id: string, status: PriorityRequest["status"]) {
@@ -221,15 +217,13 @@ export async function updatePriorityStatus(id: string, status: PriorityRequest["
   }
 
   const request = state.priorityRequests.find(r => r.id === id);
-  if (request) {
-    if (status === 'DESPACHADO' || status === 'FINALIZADO') {
-      await supabase.from('containers_cheios')
-        .update({ 
-          status: "ENVIADO PARA FABRICA",
-          data_envio_fabrica: new Date().toISOString()
-        })
-        .eq('conteiner', request.conteiner);
-    }
+  if (request && (status === 'DESPACHADO' || status === 'FINALIZADO')) {
+    await supabase.from('containers_cheios')
+      .update({ 
+        status: "ENVIADO PARA FABRICA",
+        data_envio_fabrica: new Date().toISOString()
+      })
+      .eq('conteiner', request.conteiner);
   }
 
   syncFromSupabase();

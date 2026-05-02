@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, memo, useCallback } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { 
   Zap, 
   Plus, 
@@ -54,7 +54,6 @@ import { toast } from "sonner";
 import { PriorityLevel, RequestStatus } from '@/lib/types';
 import { cn } from "@/lib/utils";
 
-// Componente de linha ultra-estável com props primitivas para garantir memoização perfeita
 const RequestRow = memo(({ 
   id,
   conteiner,
@@ -82,8 +81,7 @@ const RequestRow = memo(({
 }) => {
   const [isBusy, setIsBusy] = useState(false);
 
-  // Usamos onPointerDown para capturar a intenção ANTES da lista reordenar no mobile
-  const handleAction = async (e: React.PointerEvent, targetStatus: RequestStatus) => {
+  const handleAction = async (e: React.MouseEvent, targetStatus: RequestStatus) => {
     e.preventDefault();
     e.stopPropagation();
     if (isBusy) return;
@@ -91,13 +89,14 @@ const RequestRow = memo(({
     setIsBusy(true);
     try {
       await onUpdateStatus(id, targetStatus);
+      // Pequeno delay para evitar que o clique "vaze" para o próximo item que subir na lista
+      setTimeout(() => setIsBusy(false), 800);
     } catch (err) {
-      console.error("Erro na ação:", err);
       setIsBusy(false);
     }
   };
 
-  const handleDelete = async (e: React.PointerEvent) => {
+  const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (isBusy) return;
@@ -114,7 +113,7 @@ const RequestRow = memo(({
     <div className={cn(
       "flex flex-col md:flex-row md:items-center gap-4 px-4 md:px-6 py-4 border-b border-border hover:bg-muted/30 transition-all duration-300",
       status === 'FINALIZADO' && "opacity-60 bg-muted/10",
-      isBusy && "pointer-events-none opacity-70"
+      isBusy && "pointer-events-none"
     )}>
       <div className="flex items-center justify-between md:justify-start gap-4">
         <div className={cn(
@@ -166,8 +165,9 @@ const RequestRow = memo(({
             <Button 
               type="button"
               size="sm" 
-              onPointerDown={(e) => handleAction(e, 'CARREGANDO')} 
-              className="h-8 px-4 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-bold rounded-xl shadow-lg shadow-destructive/20 touch-none"
+              disabled={isBusy}
+              onClick={(e) => handleAction(e, 'CARREGANDO')} 
+              className="h-8 px-4 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-bold rounded-xl shadow-lg shadow-destructive/20"
             >
               {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : "CARREGAR"}
             </Button>
@@ -176,8 +176,9 @@ const RequestRow = memo(({
             <Button 
               type="button"
               size="sm" 
-              onPointerDown={(e) => handleAction(e, 'DESPACHADO')} 
-              className="h-8 px-4 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold rounded-xl shadow-lg shadow-warning/20 touch-none"
+              disabled={isBusy}
+              onClick={(e) => handleAction(e, 'DESPACHADO')} 
+              className="h-8 px-4 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold rounded-xl shadow-lg shadow-warning/20"
             >
               {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : "SAÍDA PÁTIO"}
             </Button>
@@ -186,8 +187,9 @@ const RequestRow = memo(({
             <Button 
               type="button"
               size="sm" 
-              onPointerDown={(e) => handleAction(e, 'FINALIZADO')} 
-              className="h-8 px-4 text-[10px] bg-success hover:bg-success/90 text-white font-bold rounded-xl shadow-lg shadow-success/20 touch-none"
+              disabled={isBusy}
+              onClick={(e) => handleAction(e, 'FINALIZADO')} 
+              className="h-8 px-4 text-[10px] bg-success hover:bg-success/90 text-white font-bold rounded-xl shadow-lg shadow-success/20"
             >
               {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : "FINALIZAR"}
             </Button>
@@ -201,8 +203,9 @@ const RequestRow = memo(({
             type="button"
             variant="ghost" 
             size="icon" 
-            onPointerDown={handleDelete} 
-            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl touch-none"
+            disabled={isBusy}
+            onClick={handleDelete} 
+            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
