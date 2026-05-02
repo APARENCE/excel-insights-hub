@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo, useCallback } from 'react';
 import { 
   Zap, 
   Plus, 
@@ -54,133 +54,145 @@ import { toast } from "sonner";
 import { PriorityLevel, RequestStatus } from '@/lib/types';
 import { cn } from "@/lib/utils";
 
-// Componente de linha memoizado e ultra-estável
+// Componente de linha ultra-estável com props primitivas para garantir memoização perfeita
 const RequestRow = memo(({ 
-  req, 
+  id,
+  conteiner,
+  status,
+  nivel,
+  solicitadoEm,
+  fabricaDestino,
+  previsaoFabrica,
+  conteinerDePara,
   isTransportadora, 
   onUpdateStatus, 
   onDelete 
 }: { 
-  req: any; 
+  id: string;
+  conteiner: string;
+  status: RequestStatus;
+  nivel: PriorityLevel;
+  solicitadoEm: string;
+  fabricaDestino?: string;
+  previsaoFabrica?: string;
+  conteinerDePara?: string;
   isTransportadora: boolean; 
   onUpdateStatus: (id: string, status: RequestStatus) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) => {
   const [isBusy, setIsBusy] = useState(false);
 
-  const handleAction = async (e: React.MouseEvent, targetId: string, status: RequestStatus) => {
+  // Usamos onPointerDown para capturar a intenção ANTES da lista reordenar no mobile
+  const handleAction = async (e: React.PointerEvent, targetStatus: RequestStatus) => {
     e.preventDefault();
     e.stopPropagation();
     if (isBusy) return;
     
     setIsBusy(true);
     try {
-      await onUpdateStatus(targetId, status);
+      await onUpdateStatus(id, targetStatus);
     } catch (err) {
       console.error("Erro na ação:", err);
-    } finally {
       setIsBusy(false);
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, targetId: string) => {
+  const handleDelete = async (e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (isBusy) return;
     
     setIsBusy(true);
     try {
-      await onDelete(targetId);
-    } finally {
+      await onDelete(id);
+    } catch (err) {
       setIsBusy(false);
     }
   };
 
   return (
     <div className={cn(
-      "flex flex-col md:flex-row md:items-center gap-4 px-4 md:px-6 py-4 border-b border-border hover:bg-muted/30 transition-all duration-200",
-      req.status === 'FINALIZADO' && "opacity-60 bg-muted/10"
+      "flex flex-col md:flex-row md:items-center gap-4 px-4 md:px-6 py-4 border-b border-border hover:bg-muted/30 transition-all duration-300",
+      status === 'FINALIZADO' && "opacity-60 bg-muted/10",
+      isBusy && "pointer-events-none opacity-70"
     )}>
       <div className="flex items-center justify-between md:justify-start gap-4">
         <div className={cn(
           "h-8 w-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
-          req.nivel === 'CRITICA' ? "bg-destructive text-white" :
-          req.nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
+          nivel === 'CRITICA' ? "bg-destructive text-white" :
+          nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
         )}>
           <Zap className="h-4 w-4" />
         </div>
 
         <div className="flex-1 md:w-44 shrink-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold tracking-tight">{req.conteiner}</span>
-            {req.details?.conteinerDePara && (
+            <span className="text-sm font-bold tracking-tight">{conteiner}</span>
+            {conteinerDePara && (
               <span className="text-[9px] bg-info/10 text-info px-2 py-0.5 rounded-full font-bold border border-info/20 uppercase">
-                {req.details.conteinerDePara}
+                {conteinerDePara}
               </span>
             )}
           </div>
           <div className="flex items-center gap-3 mt-1">
             <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
               <Factory className="h-3 w-3" />
-              {req.fabricaDestino}
+              {fabricaDestino}
             </div>
             <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
               <Calendar className="h-3 w-3" />
-              {req.previsaoFabrica ? new Date(req.previsaoFabrica).toLocaleDateString('pt-BR') : "—"}
+              {previsaoFabrica ? new Date(previsaoFabrica).toLocaleDateString('pt-BR') : "—"}
             </div>
           </div>
         </div>
 
         <div className="md:hidden">
-          <StatusStepperLine currentStatus={req.status} />
+          <StatusStepperLine currentStatus={status} />
         </div>
       </div>
 
       <div className="hidden md:flex flex-1 items-center justify-center">
-        <StatusStepperLine currentStatus={req.status} />
+        <StatusStepperLine currentStatus={status} />
       </div>
 
       <div className="flex items-center justify-between md:justify-end gap-3 mt-2 md:mt-0">
         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-semibold uppercase">
           <Clock className="h-3.5 w-3.5" />
-          {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+          {new Date(solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
         </div>
 
         <div className="flex items-center gap-2">
-          {isTransportadora && req.status === 'PENDENTE' && (
+          {isTransportadora && status === 'PENDENTE' && (
             <Button 
               type="button"
               size="sm" 
-              disabled={isBusy}
-              onClick={(e) => handleAction(e, req.id, 'CARREGANDO')} 
-              className="h-8 px-4 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-bold rounded-xl shadow-lg shadow-destructive/20"
+              onPointerDown={(e) => handleAction(e, 'CARREGANDO')} 
+              className="h-8 px-4 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-bold rounded-xl shadow-lg shadow-destructive/20 touch-none"
             >
               {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : "CARREGAR"}
             </Button>
           )}
-          {isTransportadora && req.status === 'CARREGANDO' && (
+          {isTransportadora && status === 'CARREGANDO' && (
             <Button 
               type="button"
               size="sm" 
-              disabled={isBusy}
-              onClick={(e) => handleAction(e, req.id, 'DESPACHADO')} 
-              className="h-8 px-4 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold rounded-xl shadow-lg shadow-warning/20"
+              onPointerDown={(e) => handleAction(e, 'DESPACHADO')} 
+              className="h-8 px-4 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold rounded-xl shadow-lg shadow-warning/20 touch-none"
             >
               {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : "SAÍDA PÁTIO"}
             </Button>
           )}
-          {isTransportadora && req.status === 'DESPACHADO' && (
+          {isTransportadora && status === 'DESPACHADO' && (
             <Button 
               type="button"
               size="sm" 
-              disabled={isBusy}
-              onClick={(e) => handleAction(e, req.id, 'FINALIZADO')} 
-              className="h-8 px-4 text-[10px] bg-success hover:bg-success/90 text-white font-bold rounded-xl shadow-lg shadow-success/20"
+              onPointerDown={(e) => handleAction(e, 'FINALIZADO')} 
+              className="h-8 px-4 text-[10px] bg-success hover:bg-success/90 text-white font-bold rounded-xl shadow-lg shadow-success/20 touch-none"
             >
               {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : "FINALIZAR"}
             </Button>
           )}
-          {req.status === 'FINALIZADO' && (
+          {status === 'FINALIZADO' && (
             <div className="text-success flex items-center gap-1.5 text-[10px] font-bold px-3 py-1 bg-success/10 rounded-full border border-success/20 uppercase">
               <PackageCheck className="h-3.5 w-3.5" /> CONCLUÍDO
             </div>
@@ -189,9 +201,8 @@ const RequestRow = memo(({
             type="button"
             variant="ghost" 
             size="icon" 
-            disabled={isBusy}
-            onClick={(e) => handleDelete(e, req.id)} 
-            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
+            onPointerDown={handleDelete} 
+            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl touch-none"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -496,7 +507,14 @@ export default function PrioridadesPage() {
               sortedRequests.map(req => (
                 <RequestRow 
                   key={req.id} 
-                  req={req} 
+                  id={req.id}
+                  conteiner={req.conteiner}
+                  status={req.status}
+                  nivel={req.nivel}
+                  solicitadoEm={req.solicitadoEm}
+                  fabricaDestino={req.fabricaDestino}
+                  previsaoFabrica={req.previsaoFabrica}
+                  conteinerDePara={req.details?.conteinerDePara}
                   isTransportadora={isTransportadora}
                   onUpdateStatus={updatePriorityStatus}
                   onDelete={deletePriorityRequest}
