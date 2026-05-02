@@ -51,9 +51,10 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useDataset, addPriorityRequest, updatePriorityStatus, deletePriorityRequest, setDataset } from "@/lib/store";
 import { toast } from "sonner";
-import { PriorityLevel, RequestStatus } from '@/lib/types';
+import { PriorityLevel, RequestStatus, PriorityRequest } from '@/lib/types';
 import { cn } from "@/lib/utils";
 
+// Componente de Stepper isolado
 function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) {
   const steps = [
     { id: 'PENDENTE', label: 'FILA', color: 'bg-destructive' },
@@ -106,6 +107,119 @@ function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) 
   );
 }
 
+// Componente de Linha Isolado para evitar bugs de estado cruzado
+function PriorityRow({ 
+  req, 
+  isTransportadora, 
+  onUpdate, 
+  onDelete,
+  isBusy 
+}: { 
+  req: PriorityRequest & { details?: any }, 
+  isTransportadora: boolean, 
+  onUpdate: (id: string, status: RequestStatus, conteiner: string) => Promise<void>,
+  onDelete: (id: string, conteiner: string) => Promise<void>,
+  isBusy: boolean
+}) {
+  return (
+    <div 
+      data-row-id={req.id} // ID invisível no DOM para rastreabilidade
+      className={cn(
+        "flex flex-col md:flex-row md:items-center gap-4 px-5 md:px-7 py-6 border border-border rounded-2xl transition-all duration-300 bg-card shadow-sm",
+        req.status === 'FINALIZADO' && "opacity-60 bg-muted/10",
+        isBusy && "bg-primary/5 ring-2 ring-primary/20",
+        !isBusy && "hover:shadow-md hover:border-primary/20"
+      )}
+    >
+      {/* ID Invisível para o usuário mas presente no código */}
+      <span className="sr-only">ID: {req.id}</span>
+
+      <div className="flex items-center justify-between md:justify-start gap-4">
+        <div className={cn(
+          "h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
+          req.nivel === 'CRITICA' ? "bg-destructive text-white" :
+          req.nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
+        )}>
+          <Zap className="h-5 w-5" />
+        </div>
+
+        <div className="flex-1 md:w-48 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-base font-bold tracking-tight">{req.conteiner}</span>
+            {req.details?.conteinerDePara && (
+              <span className="text-[10px] bg-info/10 text-info px-2 py-0.5 rounded-full font-bold border border-info/20 uppercase">
+                {req.details.conteinerDePara}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 mt-1.5">
+            <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
+              <Factory className="h-3 w-3" />
+              {req.fabricaDestino}
+            </div>
+            <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
+              <Calendar className="h-3 w-3" />
+              {req.previsaoFabrica ? new Date(req.previsaoFabrica).toLocaleDateString('pt-BR') : "—"}
+            </div>
+          </div>
+        </div>
+
+        <div className="md:hidden">
+          <StatusStepperLine currentStatus={req.status} />
+        </div>
+      </div>
+
+      <div className="hidden md:flex flex-1 items-center justify-center px-8">
+        <StatusStepperLine currentStatus={req.status} />
+      </div>
+
+      <div className="flex items-center justify-between md:justify-end gap-4 mt-2 md:mt-0">
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-semibold uppercase">
+          <Clock className="h-4 w-4" />
+          {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {isTransportadora && req.status !== 'FINALIZADO' && (
+            <Button 
+              type="button"
+              size="sm" 
+              disabled={isBusy}
+              onClick={() => onUpdate(req.id, req.status, req.conteiner)} 
+              className={cn(
+                "h-10 px-5 text-[11px] font-bold rounded-xl shadow-lg transition-all min-w-[120px]",
+                req.status === 'PENDENTE' && "bg-destructive hover:bg-destructive/90 text-white shadow-destructive/20",
+                req.status === 'CARREGANDO' && "bg-warning hover:bg-warning/90 text-warning-foreground shadow-warning/20",
+                req.status === 'DESPACHADO' && "bg-success hover:bg-success/90 text-white shadow-success/20"
+              )}
+            >
+              {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+                req.status === 'PENDENTE' ? "CARREGAR" :
+                req.status === 'CARREGANDO' ? "SAÍDA PÁTIO" : "FINALIZAR"
+              )}
+            </Button>
+          )}
+          {req.status === 'FINALIZADO' && (
+            <div className="text-success flex items-center gap-1.5 text-[10px] font-bold px-4 py-2 bg-success/10 rounded-full border border-success/20 uppercase">
+              <PackageCheck className="h-4 w-4" /> CONCLUÍDO
+            </div>
+          )}
+          <Button 
+            type="button"
+            variant="ghost" 
+            size="icon" 
+            disabled={isBusy}
+            onClick={() => onDelete(req.id, req.conteiner)} 
+            className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
+          >
+            <Trash2 className="h-5 w-5" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PrioridadesPage() {
   const ds = useDataset();
   const { userRole } = ds;
@@ -115,7 +229,6 @@ export default function PrioridadesPage() {
   const [fabricaSelect, setFabricaSelect] = useState<string>("CVU");
   const [customFabrica, setCustomFabrica] = useState("");
   const [nivelSelect, setNivelSelect] = useState<PriorityLevel>("NORMAL");
-  const [isUpdating, setIsUpdating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const isCliente = userRole === "CLIENTE";
@@ -158,7 +271,7 @@ export default function PrioridadesPage() {
   }, [ds.priorityRequests, ds.cheios]);
 
   const handleUpdateStatus = async (id: string, currentStatus: RequestStatus, conteiner: string) => {
-    if (isUpdating || busyId) return;
+    if (busyId) return;
     
     let nextStatus: RequestStatus = 'PENDENTE';
     if (currentStatus === 'PENDENTE') nextStatus = 'CARREGANDO';
@@ -166,26 +279,26 @@ export default function PrioridadesPage() {
     else if (currentStatus === 'DESPACHADO') nextStatus = 'FINALIZADO';
 
     setBusyId(id);
-    setIsUpdating(true);
     try {
       await updatePriorityStatus(id, nextStatus);
       toast.success(`${conteiner} atualizado para ${nextStatus}`);
+    } catch (e) {
+      toast.error("Erro ao atualizar status");
     } finally {
       setBusyId(null);
-      setIsUpdating(false);
     }
   };
 
   const handleDeleteRequest = async (id: string, conteiner: string) => {
-    if (isUpdating || busyId) return;
+    if (busyId) return;
     setBusyId(id);
-    setIsUpdating(true);
     try {
       await deletePriorityRequest(id);
       toast.success(`Solicitação de ${conteiner} removida`);
+    } catch (e) {
+      toast.error("Erro ao excluir");
     } finally {
       setBusyId(null);
-      setIsUpdating(false);
     }
   };
 
@@ -199,7 +312,7 @@ export default function PrioridadesPage() {
     const fabricaDestino = fabricaSelect === 'OUTROS' ? customFabrica : fabricaSelect;
     const previsao = formData.get('previsao') as string;
 
-    setIsUpdating(true);
+    setBusyId('creating');
     try {
       await addPriorityRequest({
         id: crypto.randomUUID(),
@@ -216,7 +329,7 @@ export default function PrioridadesPage() {
       setSelectedContainer("");
       setNivelSelect("NORMAL");
     } finally {
-      setIsUpdating(false);
+      setBusyId(null);
     }
   };
 
@@ -230,7 +343,7 @@ export default function PrioridadesPage() {
             <Button 
               variant="outline" 
               size="sm" 
-              disabled={isUpdating}
+              disabled={!!busyId}
               onClick={() => setDataset(prev => ({...prev, priorityRequests: prev.priorityRequests.filter(r => r.status !== 'FINALIZADO')}))} 
               className="text-[10px] h-10 rounded-xl flex-1 sm:flex-none font-semibold"
             >
@@ -239,7 +352,7 @@ export default function PrioridadesPage() {
             {isCliente && (
               <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DialogTrigger asChild>
-                  <Button disabled={isUpdating} className="bg-primary hover:bg-primary/90 font-bold h-10 text-xs rounded-xl flex-1 sm:flex-none shadow-lg shadow-primary/20">
+                  <Button disabled={!!busyId} className="bg-primary hover:bg-primary/90 font-bold h-10 text-xs rounded-xl flex-1 sm:flex-none shadow-lg shadow-primary/20">
                     <Plus className="h-4 w-4 mr-2" /> SOLICITAR
                   </Button>
                 </DialogTrigger>
@@ -344,7 +457,7 @@ export default function PrioridadesPage() {
                       {fabricaSelect === 'OUTROS' && <Input placeholder="Nome da fábrica" value={customFabrica} onChange={(e) => setCustomFabrica(e.target.value)} className="h-12 rounded-xl border-2 font-semibold" />}
                       <Input name="observacao" placeholder="Observações adicionais (opcional)" className="h-12 rounded-xl border-2 font-semibold" />
                     </div>
-                    <DialogFooter><Button type="submit" disabled={isUpdating} className="w-full h-14 font-bold text-base rounded-2xl shadow-xl shadow-primary/20">ENVIAR PRIORIDADE</Button></DialogFooter>
+                    <DialogFooter><Button type="submit" disabled={!!busyId} className="w-full h-14 font-bold text-base rounded-2xl shadow-xl shadow-primary/20">ENVIAR PRIORIDADE</Button></DialogFooter>
                   </form>
                 </DialogContent>
               </Dialog>
@@ -380,105 +493,16 @@ export default function PrioridadesPage() {
               <p className="text-sm font-semibold uppercase tracking-widest">Nenhuma solicitação ativa na fila</p>
             </div>
           ) : (
-            sortedRequests.map(req => {
-              const isBusy = busyId === req.id;
-              const disabled = isUpdating || isBusy;
-
-              return (
-                <div 
-                  key={req.id}
-                  className={cn(
-                    "flex flex-col md:flex-row md:items-center gap-4 px-5 md:px-7 py-6 border border-border rounded-2xl transition-all duration-300 bg-card shadow-sm",
-                    req.status === 'FINALIZADO' && "opacity-60 bg-muted/10",
-                    isBusy && "bg-primary/5 ring-2 ring-primary/20",
-                    !isBusy && "hover:shadow-md hover:border-primary/20"
-                  )}
-                >
-                  <div className="flex items-center justify-between md:justify-start gap-4">
-                    <div className={cn(
-                      "h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
-                      req.nivel === 'CRITICA' ? "bg-destructive text-white" :
-                      req.nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
-                    )}>
-                      <Zap className="h-5 w-5" />
-                    </div>
-
-                    <div className="flex-1 md:w-48 shrink-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base font-bold tracking-tight">{req.conteiner}</span>
-                        {req.details?.conteinerDePara && (
-                          <span className="text-[10px] bg-info/10 text-info px-2 py-0.5 rounded-full font-bold border border-info/20 uppercase">
-                            {req.details.conteinerDePara}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 mt-1.5">
-                        <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
-                          <Factory className="h-3 w-3" />
-                          {req.fabricaDestino}
-                        </div>
-                        <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
-                          <Calendar className="h-3 w-3" />
-                          {req.previsaoFabrica ? new Date(req.previsaoFabrica).toLocaleDateString('pt-BR') : "—"}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="md:hidden">
-                      <StatusStepperLine currentStatus={req.status} />
-                    </div>
-                  </div>
-
-                  <div className="hidden md:flex flex-1 items-center justify-center px-8">
-                    <StatusStepperLine currentStatus={req.status} />
-                  </div>
-
-                  <div className="flex items-center justify-between md:justify-end gap-4 mt-2 md:mt-0">
-                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-semibold uppercase">
-                      <Clock className="h-4 w-4" />
-                      {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {isTransportadora && req.status !== 'FINALIZADO' && (
-                        <Button 
-                          type="button"
-                          size="sm" 
-                          disabled={disabled}
-                          onClick={() => handleUpdateStatus(req.id, req.status, req.conteiner)} 
-                          className={cn(
-                            "h-10 px-5 text-[11px] font-bold rounded-xl shadow-lg transition-all",
-                            req.status === 'PENDENTE' && "bg-destructive hover:bg-destructive/90 text-white shadow-destructive/20",
-                            req.status === 'CARREGANDO' && "bg-warning hover:bg-warning/90 text-warning-foreground shadow-warning/20",
-                            req.status === 'DESPACHADO' && "bg-success hover:bg-success/90 text-white shadow-success/20"
-                          )}
-                        >
-                          {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-                            req.status === 'PENDENTE' ? "CARREGAR" :
-                            req.status === 'CARREGANDO' ? "SAÍDA PÁTIO" : "FINALIZAR"
-                          )}
-                        </Button>
-                      )}
-                      {req.status === 'FINALIZADO' && (
-                        <div className="text-success flex items-center gap-1.5 text-[10px] font-bold px-4 py-2 bg-success/10 rounded-full border border-success/20 uppercase">
-                          <PackageCheck className="h-4 w-4" /> CONCLUÍDO
-                        </div>
-                      )}
-                      <Button 
-                        type="button"
-                        variant="ghost" 
-                        size="icon" 
-                        disabled={disabled}
-                        onClick={() => handleDeleteRequest(req.id, req.conteiner)} 
-                        className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+            sortedRequests.map(req => (
+              <PriorityRow 
+                key={req.id} 
+                req={req} 
+                isTransportadora={isTransportadora}
+                onUpdate={handleUpdateStatus}
+                onDelete={handleDeleteRequest}
+                isBusy={busyId === req.id}
+              />
+            ))
           )}
         </div>
       </div>
