@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { 
   Zap, 
   Plus, 
@@ -54,8 +54,8 @@ import { toast } from "sonner";
 import { PriorityLevel, RequestStatus } from '@/lib/types';
 import { cn } from "@/lib/utils";
 
-// Componente de linha estabilizado com controle de clique individual
-function RequestRow({ 
+// Componente de linha memoizado para evitar re-renderizações instáveis e garantir que o clique seja preciso
+const RequestRow = memo(({ 
   req, 
   isTransportadora, 
   onUpdateStatus, 
@@ -65,7 +65,7 @@ function RequestRow({
   isTransportadora: boolean; 
   onUpdateStatus: (id: string, status: RequestStatus) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-}) {
+}) => {
   const [isBusy, setIsBusy] = useState(false);
 
   const handleAction = async (e: React.MouseEvent, action: () => Promise<void>) => {
@@ -76,6 +76,8 @@ function RequestRow({
     setIsBusy(true);
     try {
       await action();
+    } catch (err) {
+      console.error("Erro na ação:", err);
     } finally {
       setIsBusy(false);
     }
@@ -180,7 +182,9 @@ function RequestRow({
       </div>
     </div>
   );
-}
+});
+
+RequestRow.displayName = "RequestRow";
 
 function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) {
   const steps = [
@@ -264,18 +268,27 @@ export default function PrioridadesPage() {
 
   const sortedRequests = useMemo(() => {
     const weight: Record<string, number> = { 'CRITICA': 3, 'ALTA': 2, 'NORMAL': 1 };
+    const statusWeight: Record<RequestStatus, number> = { 'PENDENTE': 4, 'CARREGANDO': 3, 'DESPACHADO': 2, 'FINALIZADO': 1 };
+
     return ds.priorityRequests.map(req => ({
       ...req,
       details: ds.cheios.find(c => c.conteiner === req.conteiner)
     })).sort((a, b) => {
-      const statusWeight: Record<RequestStatus, number> = { 'PENDENTE': 4, 'CARREGANDO': 3, 'DESPACHADO': 2, 'FINALIZADO': 1 };
+      // 1. Status (Fila primeiro)
       if (statusWeight[a.status] !== statusWeight[b.status]) {
         return statusWeight[b.status] - statusWeight[a.status];
       }
+      // 2. Urgência (Crítica primeiro)
       if (weight[a.nivel] !== weight[b.nivel]) {
         return weight[b.nivel] - weight[a.nivel];
       }
-      return new Date(b.solicitadoEm).getTime() - new Date(a.solicitadoEm).getTime();
+      // 3. Data (Mais recente primeiro)
+      const timeA = new Date(a.solicitadoEm).getTime();
+      const timeB = new Date(b.solicitadoEm).getTime();
+      if (timeA !== timeB) return timeB - timeA;
+      
+      // 4. ID como tie-breaker final para garantir que a ordem NUNCA mude aleatoriamente
+      return a.id.localeCompare(b.id);
     });
   }, [ds.priorityRequests, ds.cheios]);
 
