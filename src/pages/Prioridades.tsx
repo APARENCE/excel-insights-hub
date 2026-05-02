@@ -10,7 +10,8 @@ import {
   Eraser,
   Factory,
   PackageCheck,
-  Calendar
+  Calendar,
+  Search as SearchIcon
 } from 'lucide-react';
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -49,21 +50,18 @@ import { toast } from "sonner";
 import { PriorityLevel, RequestStatus } from '@/lib/types';
 import { cn } from "@/lib/utils";
 
-/**
- * Sinaleiro com Rótulos de Texto
- */
 function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) {
   const steps = [
     { id: 'PENDENTE', label: 'FILA', color: 'bg-destructive' },
-    { id: 'CARREGANDO', label: 'CARREGADO', color: 'bg-warning' },
-    { id: 'DESPACHADO', label: 'SAÍDA PÁTIO', color: 'bg-success' },
-    { id: 'FINALIZADO', label: 'FINALIZADO', color: 'bg-info' },
+    { id: 'CARREGANDO', label: 'CARGA', color: 'bg-warning' },
+    { id: 'DESPACHADO', label: 'SAÍDA', color: 'bg-success' },
+    { id: 'FINALIZADO', label: 'OK', color: 'bg-info' },
   ];
 
   const currentIndex = steps.findIndex(s => s.id === currentStatus);
 
   return (
-    <div className="flex flex-col gap-1 w-48">
+    <div className="flex flex-col gap-1.5 w-full max-w-[200px]">
       <div className="flex items-center gap-1">
         {steps.map((step, idx) => {
           const isPast = idx < currentIndex;
@@ -73,9 +71,9 @@ function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) 
             <div 
               key={step.id}
               className={cn(
-                "h-1.5 flex-1 rounded-full transition-all duration-500",
+                "h-2 flex-1 rounded-full transition-all duration-500",
                 isPast ? step.color : 
-                isCurrent ? `${step.color} animate-pulse ring-1 ring-offset-1 ring-foreground/20` : 
+                isCurrent ? `${step.color} animate-pulse ring-2 ring-offset-1 ring-foreground/10` : 
                 "bg-muted"
               )} 
             />
@@ -90,9 +88,9 @@ function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) 
             <span 
               key={step.id} 
               className={cn(
-                "text-[7px] font-bold tracking-tighter",
+                "text-[8px] font-black tracking-tighter uppercase",
                 isCurrent ? "text-foreground scale-110 transition-transform" : 
-                isPast ? "text-muted-foreground/70" : "text-muted-foreground/40"
+                isPast ? "text-muted-foreground/60" : "text-muted-foreground/30"
               )}
             >
               {step.label}
@@ -177,71 +175,79 @@ export default function PrioridadesPage() {
 
   const RequestRow = ({ req }: { req: any }) => (
     <div className={cn(
-      "flex items-center gap-4 px-4 py-2 border-b border-border hover:bg-muted/30 transition-colors",
-      req.status === 'FINALIZADO' && "opacity-50 bg-muted/10"
+      "flex flex-col md:flex-row md:items-center gap-4 px-4 md:px-6 py-4 border-b border-border hover:bg-muted/30 transition-all duration-200",
+      req.status === 'FINALIZADO' && "opacity-60 bg-muted/10"
     )}>
-      <div className={cn(
-        "h-5 w-5 rounded flex items-center justify-center shrink-0",
-        req.nivel === 'CRITICA' ? "bg-destructive text-white" :
-        req.nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
-      )}>
-        <Zap className="h-3 w-3" />
-      </div>
+      <div className="flex items-center justify-between md:justify-start gap-4">
+        <div className={cn(
+          "h-8 w-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
+          req.nivel === 'CRITICA' ? "bg-destructive text-white" :
+          req.nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
+        )}>
+          <Zap className="h-4 w-4" />
+        </div>
 
-      <div className="w-36 shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold">{req.conteiner}</span>
-          {req.details?.conteinerDePara && (
-            <span className="text-[8px] bg-info/10 text-info px-1 rounded font-bold border border-info/20">
-              {req.details.conteinerDePara}
-            </span>
-          )}
+        <div className="flex-1 md:w-44 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-black tracking-tight">{req.conteiner}</span>
+            {req.details?.conteinerDePara && (
+              <span className="text-[9px] bg-info/10 text-info px-2 py-0.5 rounded-full font-black border border-info/20 uppercase">
+                {req.details.conteinerDePara}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 mt-1">
+            <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground uppercase">
+              <Factory className="h-3 w-3" />
+              {req.fabricaDestino}
+            </div>
+            <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground uppercase">
+              <Calendar className="h-3 w-3" />
+              {req.previsaoFabrica ? new Date(req.previsaoFabrica).toLocaleDateString('pt-BR') : "—"}
+            </div>
+          </div>
+        </div>
+
+        <div className="md:hidden">
+          <StatusStepperLine currentStatus={req.status} />
         </div>
       </div>
 
-      <div className="w-20 shrink-0 flex items-center gap-1 text-[10px] font-medium">
-        <Factory className="h-3 w-3 text-muted-foreground" />
-        {req.fabricaDestino}
-      </div>
-
-      <div className="w-24 shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground">
-        <Calendar className="h-3 w-3 text-primary/60" />
-        {req.previsaoFabrica ? new Date(req.previsaoFabrica).toLocaleDateString('pt-BR') : "—"}
-      </div>
-
-      <div className="w-16 shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground">
-        <Clock className="h-3 w-3" />
-        {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-      </div>
-
-      <div className="flex-1 flex items-center justify-center">
+      <div className="hidden md:flex flex-1 items-center justify-center">
         <StatusStepperLine currentStatus={req.status} />
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
-        {isTransportadora && req.status === 'PENDENTE' && (
-          <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'CARREGANDO')} className="h-6 px-2 text-[9px] bg-destructive hover:bg-destructive/90 text-white font-bold">
-            CARREGAR
+      <div className="flex items-center justify-between md:justify-end gap-3 mt-2 md:mt-0">
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase">
+          <Clock className="h-3.5 w-3.5" />
+          {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {isTransportadora && req.status === 'PENDENTE' && (
+            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'CARREGANDO')} className="h-8 px-4 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-black rounded-xl shadow-lg shadow-destructive/20">
+              CARREGAR
+            </Button>
+          )}
+          {isTransportadora && req.status === 'CARREGANDO' && (
+            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'DESPACHADO')} className="h-8 px-4 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-black rounded-xl shadow-lg shadow-warning/20">
+              SAÍDA PÁTIO
+            </Button>
+          )}
+          {isTransportadora && req.status === 'DESPACHADO' && (
+            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'FINALIZADO')} className="h-8 px-4 text-[10px] bg-success hover:bg-success/90 text-white font-black rounded-xl shadow-lg shadow-success/20">
+              FINALIZAR
+            </Button>
+          )}
+          {req.status === 'FINALIZADO' && (
+            <div className="text-success flex items-center gap-1.5 text-[10px] font-black px-3 py-1 bg-success/10 rounded-full border border-success/20 uppercase">
+              <PackageCheck className="h-3.5 w-3.5" /> CONCLUÍDO
+            </div>
+          )}
+          <Button variant="ghost" size="icon" onClick={() => deletePriorityRequest(req.id)} className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl">
+            <Trash2 className="h-4 w-4" />
           </Button>
-        )}
-        {isTransportadora && req.status === 'CARREGANDO' && (
-          <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'DESPACHADO')} className="h-6 px-2 text-[9px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold">
-            SAÍDA PÁTIO
-          </Button>
-        )}
-        {isTransportadora && req.status === 'DESPACHADO' && (
-          <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'FINALIZADO')} className="h-6 px-2 text-[9px] bg-success hover:bg-success/90 text-white font-bold">
-            FINALIZAR
-          </Button>
-        )}
-        {req.status === 'FINALIZADO' && (
-          <div className="text-success flex items-center gap-1 text-[9px] font-bold px-1">
-            <PackageCheck className="h-3 w-3" /> OK
-          </div>
-        )}
-        <Button variant="ghost" size="icon" onClick={() => deletePriorityRequest(req.id)} className="h-6 w-6 text-muted-foreground hover:text-destructive">
-          <Trash2 className="h-3 w-3" />
-        </Button>
+        </div>
       </div>
     </div>
   );
@@ -252,43 +258,46 @@ export default function PrioridadesPage() {
         title="Prioridades Fábrica" 
         subtitle="Fluxo de Saída em Tempo Real"
         actions={
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setDataset(prev => ({...prev, priorityRequests: prev.priorityRequests.filter(r => r.status !== 'FINALIZADO')}))} className="text-[10px] h-8">
-              <Eraser className="h-3 w-3 mr-1.5" /> Limpar OK
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button variant="outline" size="sm" onClick={() => setDataset(prev => ({...prev, priorityRequests: prev.priorityRequests.filter(r => r.status !== 'FINALIZADO')}))} className="text-[10px] h-10 rounded-xl flex-1 sm:flex-none font-bold">
+              <Eraser className="h-4 w-4 mr-2" /> Limpar OK
             </Button>
             {isCliente && (
               <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-primary hover:bg-primary/90 font-bold h-8 text-xs">
-                    <Plus className="h-3.5 w-3.5 mr-1" /> SOLICITAR
+                  <Button className="bg-primary hover:bg-primary/90 font-black h-10 text-xs rounded-xl flex-1 sm:flex-none shadow-lg shadow-primary/20">
+                    <Plus className="h-4 w-4 mr-2" /> SOLICITAR
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md rounded-3xl">
                   <form onSubmit={handleCreateRequest}>
                     <DialogHeader>
-                      <DialogTitle>Nova Solicitação de Prioridade</DialogTitle>
+                      <DialogTitle className="text-xl font-black">Nova Solicitação</DialogTitle>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Container no Pátio</Label>
+                    <div className="grid gap-5 py-6">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Container no Pátio</Label>
                         <Popover open={searchOpen} onOpenChange={setSearchOpen}>
                           <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full justify-between font-normal h-9 text-sm">
-                              {selectedContainer || "Selecione..."}
+                            <Button variant="outline" className="w-full justify-between font-bold h-12 text-sm rounded-xl border-2">
+                              <div className="flex items-center gap-2">
+                                <SearchIcon className="h-4 w-4 text-muted-foreground" />
+                                {selectedContainer || "Selecione o container..."}
+                              </div>
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-[400px] p-0" align="start">
+                          <PopoverContent className="w-[calc(100vw-2rem)] md:w-[400px] p-0 rounded-2xl shadow-2xl border-2" align="start">
                             <Command>
-                              <CommandInput placeholder="ID ou Dê-para..." />
-                              <CommandList>
-                                <CommandEmpty>Nenhum disponível.</CommandEmpty>
+                              <CommandInput placeholder="Buscar por ID ou Dê-para..." className="h-12" />
+                              <CommandList className="max-h-[300px]">
+                                <CommandEmpty>Nenhum container disponível.</CommandEmpty>
                                 <CommandGroup>
                                   {availableContainers.map((c) => (
-                                    <CommandItem key={c.conteiner} value={`${c.conteiner} ${c.conteinerDePara}`} onSelect={() => { setSelectedContainer(c.conteiner); setSearchOpen(false); }} className="cursor-pointer">
+                                    <CommandItem key={c.conteiner} value={`${c.conteiner} ${c.conteinerDePara}`} onSelect={() => { setSelectedContainer(c.conteiner); setSearchOpen(false); }} className="cursor-pointer p-3">
                                       <div className="flex flex-col">
-                                        <span className="font-bold text-sm">{c.conteiner}</span>
-                                        {c.conteinerDePara && <span className="text-[10px] text-primary">Dê-para: {c.conteinerDePara}</span>}
+                                        <span className="font-black text-sm">{c.conteiner}</span>
+                                        {c.conteinerDePara && <span className="text-[10px] text-primary font-bold uppercase">Dê-para: {c.conteinerDePara}</span>}
                                       </div>
                                     </CommandItem>
                                   ))}
@@ -298,30 +307,30 @@ export default function PrioridadesPage() {
                           </PopoverContent>
                         </Popover>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Destino</Label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Destino</Label>
                           <Select value={fabricaSelect} onValueChange={setFabricaSelect}>
-                            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                            <SelectContent><SelectItem value="CVU">CVU</SelectItem><SelectItem value="CVP">CVP</SelectItem><SelectItem value="OUTROS">Outra...</SelectItem></SelectContent>
+                            <SelectTrigger className="h-12 text-sm rounded-xl border-2 font-bold"><SelectValue /></SelectTrigger>
+                            <SelectContent className="rounded-xl"><SelectItem value="CVU">CVU</SelectItem><SelectItem value="CVP">CVP</SelectItem><SelectItem value="OUTROS">Outra...</SelectItem></SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Urgência</Label>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Urgência</Label>
                           <Select name="nivel" defaultValue="NORMAL">
-                            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                            <SelectContent><SelectItem value="NORMAL">Normal</SelectItem><SelectItem value="ALTA">Alta</SelectItem><SelectItem value="CRITICA">Crítica</SelectItem></SelectContent>
+                            <SelectTrigger className="h-12 text-sm rounded-xl border-2 font-bold"><SelectValue /></SelectTrigger>
+                            <SelectContent className="rounded-xl"><SelectItem value="NORMAL">Normal</SelectItem><SelectItem value="ALTA">Alta</SelectItem><SelectItem value="CRITICA">Crítica</SelectItem></SelectContent>
                           </Select>
                         </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Previsão de Entrega</Label>
-                        <Input type="date" name="previsao" className="h-9 text-sm" />
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Previsão de Entrega</Label>
+                        <Input type="date" name="previsao" className="h-12 text-sm rounded-xl border-2 font-bold" />
                       </div>
-                      {fabricaSelect === 'OUTROS' && <Input placeholder="Nome da fábrica" value={customFabrica} onChange={(e) => setCustomFabrica(e.target.value)} className="h-9" />}
-                      <Input name="observacao" placeholder="Obs (opcional)" className="h-9" />
+                      {fabricaSelect === 'OUTROS' && <Input placeholder="Nome da fábrica" value={customFabrica} onChange={(e) => setCustomFabrica(e.target.value)} className="h-12 rounded-xl border-2 font-bold" />}
+                      <Input name="observacao" placeholder="Observações adicionais (opcional)" className="h-12 rounded-xl border-2 font-bold" />
                     </div>
-                    <DialogFooter><Button type="submit" className="w-full font-bold">ENVIAR PRIORIDADE</Button></DialogFooter>
+                    <DialogFooter><Button type="submit" className="w-full h-14 font-black text-base rounded-2xl shadow-xl shadow-primary/20">ENVIAR PRIORIDADE</Button></DialogFooter>
                   </form>
                 </DialogContent>
               </Dialog>
@@ -330,41 +339,39 @@ export default function PrioridadesPage() {
         }
       />
 
-      <div className="px-6 grid grid-cols-4 gap-2 mb-4">
-        <div className="bg-destructive/5 border border-destructive/20 px-3 py-1.5 rounded flex items-center justify-between">
-          <span className="text-[9px] font-bold text-destructive uppercase tracking-wider">Fila</span>
-          <span className="text-base font-black">{stats.pendentes}</span>
+      <div className="px-4 md:px-8 grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="bg-destructive/5 border border-destructive/20 p-4 rounded-2xl flex flex-col gap-1 shadow-sm">
+          <span className="text-[10px] font-black text-destructive uppercase tracking-widest">Em Fila</span>
+          <span className="text-3xl font-black">{stats.pendentes}</span>
         </div>
-        <div className="bg-warning/5 border border-warning/20 px-3 py-1.5 rounded flex items-center justify-between">
-          <span className="text-[9px] font-bold text-warning-foreground uppercase tracking-wider">Carregado</span>
-          <span className="text-base font-black">{stats.carregando}</span>
+        <div className="bg-warning/5 border border-warning/20 p-4 rounded-2xl flex flex-col gap-1 shadow-sm">
+          <span className="text-[10px] font-black text-warning-foreground uppercase tracking-widest">Carregando</span>
+          <span className="text-3xl font-black">{stats.carregando}</span>
         </div>
-        <div className="bg-success/5 border border-success/20 px-3 py-1.5 rounded flex items-center justify-between">
-          <span className="text-[9px] font-bold text-success uppercase tracking-wider">Saída Pátio</span>
-          <span className="text-base font-black">{stats.despachados}</span>
+        <div className="bg-success/5 border border-success/20 p-4 rounded-2xl flex flex-col gap-1 shadow-sm">
+          <span className="text-[10px] font-black text-success uppercase tracking-widest">Saída Pátio</span>
+          <span className="text-3xl font-black">{stats.despachados}</span>
         </div>
-        <div className="bg-info/5 border border-info/20 px-3 py-1.5 rounded flex items-center justify-between">
-          <span className="text-[9px] font-bold text-info uppercase tracking-wider">Finalizado</span>
-          <span className="text-base font-black">{stats.finalizados}</span>
+        <div className="bg-info/5 border border-info/20 p-4 rounded-2xl flex flex-col gap-1 shadow-sm">
+          <span className="text-[10px] font-black text-info uppercase tracking-widest">Finalizado</span>
+          <span className="text-3xl font-black">{stats.finalizados}</span>
         </div>
       </div>
 
-      <div className="px-6 pb-10">
-        <div className="rounded-lg border border-border bg-card overflow-hidden">
-          <div className="flex items-center gap-4 px-4 py-1.5 bg-muted/50 border-b border-border text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
-            <div className="w-5 shrink-0">Prio</div>
-            <div className="w-36 shrink-0">Container / Dê-para</div>
-            <div className="w-20 shrink-0">Destino</div>
-            <div className="w-24 shrink-0">Previsão</div>
-            <div className="w-16 shrink-0">Hora</div>
+      <div className="px-4 md:px-8 pb-16">
+        <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+          <div className="hidden md:flex items-center gap-4 px-6 py-3 bg-muted/50 border-b border-border text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+            <div className="w-8 shrink-0">Prio</div>
+            <div className="w-44 shrink-0">Container / Dê-para</div>
             <div className="flex-1 text-center">Status Operacional</div>
-            <div className="w-32 shrink-0 text-right">Ações</div>
+            <div className="w-48 shrink-0 text-right">Ações & Horário</div>
           </div>
 
           <div className="divide-y divide-border">
             {sortedRequests.length === 0 ? (
-              <div className="py-10 text-center text-muted-foreground text-[10px] italic">
-                Nenhuma solicitação ativa na fila.
+              <div className="py-20 text-center text-muted-foreground">
+                <Zap className="h-12 w-12 mx-auto mb-4 opacity-10" />
+                <p className="text-sm font-bold uppercase tracking-widest">Nenhuma solicitação ativa na fila</p>
               </div>
             ) : (
               sortedRequests.map(req => <RequestRow key={req.id} req={req} />)
