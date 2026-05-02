@@ -99,11 +99,30 @@ export async function syncFromSupabase() {
   }
 }
 
+// Configuração de Realtime Robusta
 if (typeof window !== 'undefined') {
-  supabase.channel('db-changes')
-    .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-      syncFromSupabase();
-    })
+  supabase.channel('custom-all-channel')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'priority_requests' },
+      () => {
+        syncFromSupabase();
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'containers_cheios' },
+      () => {
+        syncFromSupabase();
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'app_settings' },
+      () => {
+        syncFromSupabase();
+      }
+    )
     .subscribe();
 }
 
@@ -192,8 +211,12 @@ export async function addPriorityRequest(req: PriorityRequest) {
     observacao: req.observacao
   });
 
-  if (error) toast.error("Erro ao salvar prioridade");
-  else syncFromSupabase();
+  if (error) {
+    toast.error("Erro ao salvar prioridade");
+  } else {
+    // Sincronização local imediata para o usuário que criou
+    syncFromSupabase();
+  }
 }
 
 export async function updatePriorityStatus(id: string, status: PriorityRequest["status"]) {
