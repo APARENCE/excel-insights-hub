@@ -63,7 +63,8 @@ const RequestRow = memo(({
   fabricaDestino,
   previsaoFabrica,
   conteinerDePara,
-  isTransportadora, 
+  isTransportadora,
+  isGlobalBusy,
   onUpdateStatus, 
   onDelete 
 }: { 
@@ -75,37 +76,43 @@ const RequestRow = memo(({
   fabricaDestino?: string;
   previsaoFabrica?: string;
   conteinerDePara?: string;
-  isTransportadora: boolean; 
+  isTransportadora: boolean;
+  isGlobalBusy: boolean;
   onUpdateStatus: (id: string, status: RequestStatus) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) => {
-  const [isBusy, setIsBusy] = useState(false);
+  const [localBusy, setLocalBusy] = useState(false);
+  const disabled = isGlobalBusy || localBusy;
 
-  const handleAction = async (e: React.MouseEvent, targetStatus: RequestStatus) => {
+  const handleAction = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isBusy) return;
+    if (disabled) return;
     
-    setIsBusy(true);
+    let nextStatus: RequestStatus = 'PENDENTE';
+    if (status === 'PENDENTE') nextStatus = 'CARREGANDO';
+    else if (status === 'CARREGANDO') nextStatus = 'DESPACHADO';
+    else if (status === 'DESPACHADO') nextStatus = 'FINALIZADO';
+
+    setLocalBusy(true);
     try {
-      await onUpdateStatus(id, targetStatus);
-      // Pequeno delay para evitar que o clique "vaze" para o próximo item que subir na lista
-      setTimeout(() => setIsBusy(false), 800);
-    } catch (err) {
-      setIsBusy(false);
+      await onUpdateStatus(id, nextStatus);
+    } finally {
+      // Mantemos o busy local por um breve momento para evitar cliques fantasmas
+      setTimeout(() => setLocalBusy(false), 500);
     }
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isBusy) return;
+    if (disabled) return;
     
-    setIsBusy(true);
+    setLocalBusy(true);
     try {
       await onDelete(id);
-    } catch (err) {
-      setIsBusy(false);
+    } finally {
+      setLocalBusy(false);
     }
   };
 
@@ -113,7 +120,7 @@ const RequestRow = memo(({
     <div className={cn(
       "flex flex-col md:flex-row md:items-center gap-4 px-4 md:px-6 py-4 border-b border-border hover:bg-muted/30 transition-all duration-300",
       status === 'FINALIZADO' && "opacity-60 bg-muted/10",
-      isBusy && "pointer-events-none"
+      localBusy && "bg-primary/5"
     )}>
       <div className="flex items-center justify-between md:justify-start gap-4">
         <div className={cn(
@@ -161,37 +168,23 @@ const RequestRow = memo(({
         </div>
 
         <div className="flex items-center gap-2">
-          {isTransportadora && status === 'PENDENTE' && (
+          {isTransportadora && status !== 'FINALIZADO' && (
             <Button 
               type="button"
               size="sm" 
-              disabled={isBusy}
-              onClick={(e) => handleAction(e, 'CARREGANDO')} 
-              className="h-8 px-4 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-bold rounded-xl shadow-lg shadow-destructive/20"
+              disabled={disabled}
+              onClick={handleAction} 
+              className={cn(
+                "h-8 px-4 text-[10px] font-bold rounded-xl shadow-lg transition-all",
+                status === 'PENDENTE' && "bg-destructive hover:bg-destructive/90 text-white shadow-destructive/20",
+                status === 'CARREGANDO' && "bg-warning hover:bg-warning/90 text-warning-foreground shadow-warning/20",
+                status === 'DESPACHADO' && "bg-success hover:bg-success/90 text-white shadow-success/20"
+              )}
             >
-              {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : "CARREGAR"}
-            </Button>
-          )}
-          {isTransportadora && status === 'CARREGANDO' && (
-            <Button 
-              type="button"
-              size="sm" 
-              disabled={isBusy}
-              onClick={(e) => handleAction(e, 'DESPACHADO')} 
-              className="h-8 px-4 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold rounded-xl shadow-lg shadow-warning/20"
-            >
-              {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : "SAÍDA PÁTIO"}
-            </Button>
-          )}
-          {isTransportadora && status === 'DESPACHADO' && (
-            <Button 
-              type="button"
-              size="sm" 
-              disabled={isBusy}
-              onClick={(e) => handleAction(e, 'FINALIZADO')} 
-              className="h-8 px-4 text-[10px] bg-success hover:bg-success/90 text-white font-bold rounded-xl shadow-lg shadow-success/20"
-            >
-              {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : "FINALIZAR"}
+              {localBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : (
+                status === 'PENDENTE' ? "CARREGAR" :
+                status === 'CARREGANDO' ? "SAÍDA PÁTIO" : "FINALIZAR"
+              )}
             </Button>
           )}
           {status === 'FINALIZADO' && (
@@ -203,7 +196,7 @@ const RequestRow = memo(({
             type="button"
             variant="ghost" 
             size="icon" 
-            disabled={isBusy}
+            disabled={disabled}
             onClick={handleDelete} 
             className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
           >
@@ -278,6 +271,7 @@ export default function PrioridadesPage() {
   const [fabricaSelect, setFabricaSelect] = useState<string>("CVU");
   const [customFabrica, setCustomFabrica] = useState("");
   const [nivelSelect, setNivelSelect] = useState<PriorityLevel>("NORMAL");
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const isCliente = userRole === "CLIENTE";
   const isTransportadora = userRole === "TRANSPORTADORA";
@@ -318,7 +312,25 @@ export default function PrioridadesPage() {
     });
   }, [ds.priorityRequests, ds.cheios]);
 
-  const handleCreateRequest = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleUpdateStatus = async (id: string, status: RequestStatus) => {
+    setIsUpdating(true);
+    try {
+      await updatePriorityStatus(id, status);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteRequest = async (id: string) => {
+    setIsUpdating(true);
+    try {
+      await deletePriorityRequest(id);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleCreateRequest = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedContainer) {
       toast.error("Selecione um container.");
@@ -328,21 +340,25 @@ export default function PrioridadesPage() {
     const fabricaDestino = fabricaSelect === 'OUTROS' ? customFabrica : fabricaSelect;
     const previsao = formData.get('previsao') as string;
 
-    addPriorityRequest({
-      id: crypto.randomUUID(),
-      conteiner: selectedContainer,
-      nivel: nivelSelect,
-      status: 'PENDENTE',
-      solicitadoEm: new Date().toISOString(),
-      fabricaDestino: fabricaDestino || 'CVU',
-      previsaoFabrica: previsao || undefined,
-      observacao: formData.get('observacao') as string
-    });
-
-    toast.success("Prioridade agendada!");
-    setIsAddOpen(false);
-    setSelectedContainer("");
-    setNivelSelect("NORMAL");
+    setIsUpdating(true);
+    try {
+      await addPriorityRequest({
+        id: crypto.randomUUID(),
+        conteiner: selectedContainer,
+        nivel: nivelSelect,
+        status: 'PENDENTE',
+        solicitadoEm: new Date().toISOString(),
+        fabricaDestino: fabricaDestino || 'CVU',
+        previsaoFabrica: previsao || undefined,
+        observacao: formData.get('observacao') as string
+      });
+      toast.success("Prioridade agendada!");
+      setIsAddOpen(false);
+      setSelectedContainer("");
+      setNivelSelect("NORMAL");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (
@@ -352,13 +368,19 @@ export default function PrioridadesPage() {
         subtitle="Fluxo de Saída em Tempo Real"
         actions={
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button variant="outline" size="sm" onClick={() => setDataset(prev => ({...prev, priorityRequests: prev.priorityRequests.filter(r => r.status !== 'FINALIZADO')}))} className="text-[10px] h-10 rounded-xl flex-1 sm:flex-none font-semibold">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              disabled={isUpdating}
+              onClick={() => setDataset(prev => ({...prev, priorityRequests: prev.priorityRequests.filter(r => r.status !== 'FINALIZADO')}))} 
+              className="text-[10px] h-10 rounded-xl flex-1 sm:flex-none font-semibold"
+            >
               <Eraser className="h-4 w-4 mr-2" /> Limpar OK
             </Button>
             {isCliente && (
               <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-primary hover:bg-primary/90 font-bold h-10 text-xs rounded-xl flex-1 sm:flex-none shadow-lg shadow-primary/20">
+                  <Button disabled={isUpdating} className="bg-primary hover:bg-primary/90 font-bold h-10 text-xs rounded-xl flex-1 sm:flex-none shadow-lg shadow-primary/20">
                     <Plus className="h-4 w-4 mr-2" /> SOLICITAR
                   </Button>
                 </DialogTrigger>
@@ -463,7 +485,7 @@ export default function PrioridadesPage() {
                       {fabricaSelect === 'OUTROS' && <Input placeholder="Nome da fábrica" value={customFabrica} onChange={(e) => setCustomFabrica(e.target.value)} className="h-12 rounded-xl border-2 font-semibold" />}
                       <Input name="observacao" placeholder="Observações adicionais (opcional)" className="h-12 rounded-xl border-2 font-semibold" />
                     </div>
-                    <DialogFooter><Button type="submit" className="w-full h-14 font-bold text-base rounded-2xl shadow-xl shadow-primary/20">ENVIAR PRIORIDADE</Button></DialogFooter>
+                    <DialogFooter><Button type="submit" disabled={isUpdating} className="w-full h-14 font-bold text-base rounded-2xl shadow-xl shadow-primary/20">ENVIAR PRIORIDADE</Button></DialogFooter>
                   </form>
                 </DialogContent>
               </Dialog>
@@ -519,8 +541,9 @@ export default function PrioridadesPage() {
                   previsaoFabrica={req.previsaoFabrica}
                   conteinerDePara={req.details?.conteinerDePara}
                   isTransportadora={isTransportadora}
-                  onUpdateStatus={updatePriorityStatus}
-                  onDelete={deletePriorityRequest}
+                  isGlobalBusy={isUpdating}
+                  onUpdateStatus={handleUpdateStatus}
+                  onDelete={handleDeleteRequest}
                 />
               ))
             )}
