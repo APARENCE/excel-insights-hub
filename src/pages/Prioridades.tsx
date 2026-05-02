@@ -14,7 +14,8 @@ import {
   Search as SearchIcon,
   AlertCircle,
   AlertTriangle,
-  Info
+  Info,
+  Loader2
 } from 'lucide-react';
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,7 @@ import { toast } from "sonner";
 import { PriorityLevel, RequestStatus } from '@/lib/types';
 import { cn } from "@/lib/utils";
 
-// Componente de linha movido para fora para garantir estabilidade no clique
+// Componente de linha estabilizado com controle de clique individual
 function RequestRow({ 
   req, 
   isTransportadora, 
@@ -62,9 +63,24 @@ function RequestRow({
 }: { 
   req: any; 
   isTransportadora: boolean; 
-  onUpdateStatus: (id: string, status: RequestStatus) => void;
-  onDelete: (id: string) => void;
+  onUpdateStatus: (id: string, status: RequestStatus) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }) {
+  const [isBusy, setIsBusy] = useState(false);
+
+  const handleAction = async (e: React.MouseEvent, action: () => Promise<void>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isBusy) return;
+    
+    setIsBusy(true);
+    try {
+      await action();
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
   return (
     <div className={cn(
       "flex flex-col md:flex-row md:items-center gap-4 px-4 md:px-6 py-4 border-b border-border hover:bg-muted/30 transition-all duration-200",
@@ -119,28 +135,31 @@ function RequestRow({
           {isTransportadora && req.status === 'PENDENTE' && (
             <Button 
               size="sm" 
-              onClick={(e) => { e.stopPropagation(); onUpdateStatus(req.id, 'CARREGANDO'); }} 
+              disabled={isBusy}
+              onClick={(e) => handleAction(e, () => onUpdateStatus(req.id, 'CARREGANDO'))} 
               className="h-8 px-4 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-bold rounded-xl shadow-lg shadow-destructive/20"
             >
-              CARREGAR
+              {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : "CARREGAR"}
             </Button>
           )}
           {isTransportadora && req.status === 'CARREGANDO' && (
             <Button 
               size="sm" 
-              onClick={(e) => { e.stopPropagation(); onUpdateStatus(req.id, 'DESPACHADO'); }} 
+              disabled={isBusy}
+              onClick={(e) => handleAction(e, () => onUpdateStatus(req.id, 'DESPACHADO'))} 
               className="h-8 px-4 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold rounded-xl shadow-lg shadow-warning/20"
             >
-              SAÍDA PÁTIO
+              {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : "SAÍDA PÁTIO"}
             </Button>
           )}
           {isTransportadora && req.status === 'DESPACHADO' && (
             <Button 
               size="sm" 
-              onClick={(e) => { e.stopPropagation(); onUpdateStatus(req.id, 'FINALIZADO'); }} 
+              disabled={isBusy}
+              onClick={(e) => handleAction(e, () => onUpdateStatus(req.id, 'FINALIZADO'))} 
               className="h-8 px-4 text-[10px] bg-success hover:bg-success/90 text-white font-bold rounded-xl shadow-lg shadow-success/20"
             >
-              FINALIZAR
+              {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : "FINALIZAR"}
             </Button>
           )}
           {req.status === 'FINALIZADO' && (
@@ -151,7 +170,8 @@ function RequestRow({
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={(e) => { e.stopPropagation(); onDelete(req.id); }} 
+            disabled={isBusy}
+            onClick={(e) => handleAction(e, () => onDelete(req.id))} 
             className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
           >
             <Trash2 className="h-4 w-4" />
