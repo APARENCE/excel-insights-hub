@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { syncFromSupabase, initRealtime } from '@/lib/store';
+import { syncFromSupabase } from '@/lib/store';
 
 interface AuthContextType {
   session: Session | null;
@@ -20,7 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
+    // Get initial session with resilience
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         setSession(session);
@@ -28,6 +28,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session) {
           syncFromSupabase();
         }
+      })
+      .catch((err) => {
+        console.error("Auth initialization error:", err);
       })
       .finally(() => {
         setLoading(false);
@@ -44,13 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    // Inicializa o Realtime Globalmente
-    const cleanupRealtime = initRealtime();
-
-    return () => {
-      subscription.unsubscribe();
-      cleanupRealtime();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const signOut = async () => {
