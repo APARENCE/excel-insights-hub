@@ -32,21 +32,21 @@ export function StatCard({ label, value, hint, icon: Icon, tone = "default", act
   return (
     <div
       className={cn(
-        "rounded-xl border bg-card p-4 flex items-center justify-between gap-3 transition-shadow",
+        "rounded-xl border bg-card p-3 md:p-4 flex items-center justify-between gap-2 md:gap-3 transition-shadow",
         toneMap[tone],
         active && "ring-2 ring-primary/40",
       )}
     >
-      <div className="min-w-0">
-        <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground truncate">
+      <div className="min-w-0 flex-1">
+        <div className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider text-muted-foreground truncate">
           {label}
         </div>
-        <div className="text-2xl font-semibold mt-1">{value}</div>
-        {hint && <div className="text-xs text-muted-foreground mt-0.5 truncate">{hint}</div>}
+        <div className="text-xl md:text-2xl font-black mt-0.5 md:mt-1 truncate">{value}</div>
+        {hint && <div className="text-[10px] md:text-xs text-muted-foreground mt-0.5 truncate font-medium">{hint}</div>}
       </div>
       {Icon && (
-        <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center shrink-0", iconToneMap[tone])}>
-          <Icon className="h-5 w-5" />
+        <div className={cn("h-8 w-8 md:h-10 md:w-10 rounded-lg flex items-center justify-center shrink-0", iconToneMap[tone])}>
+          <Icon className="h-4 w-4 md:h-5 md:w-5" />
         </div>
       )}
     </div>

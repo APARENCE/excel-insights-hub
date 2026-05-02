@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, FileText, CheckCircle2, Clock, ArrowDownToLine, Ship, FileSpreadsheet } from "lucide-react";
+import { Search, CheckCircle2, Clock, ArrowDownToLine, Ship, FileSpreadsheet, Filter } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -54,98 +54,101 @@ export default function EstoquePage() {
         title="Estoque Pátio"
         subtitle="Monitoramento e gestão"
         actions={
-          <>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             <button 
               onClick={handleExport}
-              className="inline-flex items-center gap-2 text-sm border border-border rounded-md px-3 py-1.5 bg-card hover:bg-accent cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 text-xs font-bold border border-border rounded-xl px-4 py-2.5 bg-card hover:bg-accent cursor-pointer flex-1 sm:flex-none transition-all"
             >
-              <FileSpreadsheet className="h-4 w-4 text-success" /> Exportar Excel
+              <FileSpreadsheet className="h-4 w-4 text-success" /> Exportar
             </button>
             <SettingsDialog />
-          </>
+          </div>
         }
       />
 
-      <div className="px-6 grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="px-4 md:px-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatCard label="Em Pátio" value={s.emPatio} hint="No pátio TLOG-SJP" icon={CheckCircle2} tone="success" />
         <StatCard label="Enviado p/ Fábrica" value={s.enviadoFabrica} hint="Saídas registradas" icon={Clock} tone="warning" />
         <StatCard label="Finalizados" value={s.finalizados} hint="Concluídos" icon={ArrowDownToLine} tone="default" active />
       </div>
 
-      <div className="px-6 mt-4 space-y-3">
-        <div className="relative">
+      <div className="px-4 md:px-8 mt-6 flex flex-col md:flex-row gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por ID ou detalhes..."
-            className="w-full bg-card border border-border rounded-md pl-10 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+            placeholder="Buscar container..."
+            className="w-full bg-card border border-border rounded-xl pl-10 pr-3 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
           />
         </div>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="px-2 py-1 rounded border border-border bg-card text-muted-foreground">⏷ Status:</span>
+        <div className="flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-1.5 md:w-64">
+          <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="flex-1 bg-card border border-border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+            className="w-full bg-transparent text-sm outline-none font-medium cursor-pointer"
           >
             <option value="all">Todos os Status</option>
             {statuses.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
+              <option key={s} value={s}>{s}</option>
             ))}
           </select>
         </div>
       </div>
 
-      <div className="px-6 mt-4 pb-8">
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr className="text-left text-xs text-muted-foreground">
-                <th className="px-4 py-3 font-medium">Identificação</th>
-                <th className="px-4 py-3 font-medium">Armador</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Dê-Para</th>
-                <th className="px-4 py-3 font-medium">Data</th>
-                <th className="px-4 py-3 font-medium text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-foreground">
-                    Nenhum container encontrado.
-                  </td>
+      <div className="px-4 md:px-8 mt-4 pb-12">
+        <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+          <div className="overflow-x-auto scrollbar-hide">
+            <table className="w-full text-sm min-w-[700px]">
+              <thead className="bg-muted/50 border-b border-border">
+                <tr className="text-left text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                  <th className="px-6 py-4">Identificação</th>
+                  <th className="px-6 py-4 hidden sm:table-cell">Armador</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 hidden md:table-cell">Dê-Para</th>
+                  <th className="px-6 py-4">Data</th>
                 </tr>
-              )}
-              {rows.slice(0, 200).map((r, i) => (
-                <tr key={r.conteiner + i} className="border-t border-border hover:bg-muted/30">
-                  <td className="px-4 py-3">
-                    <div className="font-medium">{r.conteiner}</div>
-                    <div className="text-[11px] text-muted-foreground">{r.tipo || "—"}</div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5">
-                      <Ship className="h-3 w-3 text-muted-foreground" />
-                      <span className="font-medium">{r.armador || "—"}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge tone={statusTone(r.status)}>{r.status}</StatusBadge>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground font-medium">
-                    {r.conteinerDePara || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {r.dataChegada ? new Date(r.dataChegada).toLocaleDateString("pt-BR") : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">—</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-16 text-center text-sm text-muted-foreground font-bold uppercase tracking-widest opacity-40">
+                      Nenhum container encontrado
+                    </td>
+                  </tr>
+                )}
+                {rows.slice(0, 200).map((r, i) => (
+                  <tr key={r.conteiner + i} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="font-black text-foreground">{r.conteiner}</div>
+                      <div className="text-[10px] text-muted-foreground font-bold uppercase">{r.tipo || "—"}</div>
+                    </td>
+                    <td className="px-6 py-4 hidden sm:table-cell">
+                      <div className="flex items-center gap-2">
+                        <Ship className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="font-bold text-xs">{r.armador || "—"}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <StatusBadge tone={statusTone(r.status)}>{r.status}</StatusBadge>
+                    </td>
+                    <td className="px-6 py-4 hidden md:table-cell text-muted-foreground font-black text-xs">
+                      {r.conteinerDePara || "—"}
+                    </td>
+                    <td className="px-6 py-4 text-muted-foreground font-bold text-xs">
+                      {r.dataChegada ? new Date(r.dataChegada).toLocaleDateString("pt-BR") : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {rows.length > 0 && (
+            <div className="px-6 py-3 bg-muted/20 border-t border-border text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-center">
+              Mostrando {Math.min(rows.length, 200)} de {rows.length} registros
+            </div>
+          )}
         </div>
       </div>
     </AppShell>
