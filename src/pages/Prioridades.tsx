@@ -98,8 +98,7 @@ const RequestRow = memo(({
     try {
       await onUpdateStatus(id, nextStatus);
     } finally {
-      // Mantemos o busy local por um breve momento para evitar cliques fantasmas
-      setTimeout(() => setLocalBusy(false), 500);
+      setLocalBusy(false);
     }
   };
 
@@ -317,7 +316,8 @@ export default function PrioridadesPage() {
     try {
       await updatePriorityStatus(id, status);
     } finally {
-      setIsUpdating(false);
+      // Delay de 300ms para evitar cliques fantasmas após reordenamento
+      setTimeout(() => setIsUpdating(false), 300);
     }
   };
 
@@ -326,7 +326,7 @@ export default function PrioridadesPage() {
     try {
       await deletePriorityRequest(id);
     } finally {
-      setIsUpdating(false);
+      setTimeout(() => setIsUpdating(false), 300);
     }
   };
 
@@ -357,7 +357,7 @@ export default function PrioridadesPage() {
       setSelectedContainer("");
       setNivelSelect("NORMAL");
     } finally {
-      setIsUpdating(false);
+      setTimeout(() => setIsUpdating(false), 300);
     }
   };
 
@@ -514,7 +514,10 @@ export default function PrioridadesPage() {
       </div>
 
       <div className="px-4 md:px-8 pb-16">
-        <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+        <div className={cn(
+          "rounded-2xl border border-border bg-card overflow-hidden shadow-sm transition-all",
+          isUpdating && "pointer-events-none opacity-80"
+        )}>
           <div className="hidden md:flex items-center gap-4 px-6 py-3 bg-muted/50 border-b border-border text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
             <div className="w-8 shrink-0">Prio</div>
             <div className="w-44 shrink-0">Container / Dê-para</div>
