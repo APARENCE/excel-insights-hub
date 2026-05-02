@@ -66,30 +66,30 @@ export default function Dashboard() {
               <div className="text-lg font-bold text-foreground">Capacidade Operacional</div>
               <div className="text-sm text-muted-foreground">Ocupação real do pátio em tempo real</div>
             </div>
-            <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-success/10 text-success text-xs font-black tracking-widest border border-success/20">STATUS: NORMAL</span>
+            <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-success/10 text-success text-[10px] font-bold tracking-widest border border-success/20">STATUS: NORMAL</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 items-center">
             <div className="flex flex-col items-center justify-center">
               <CapacityRing pct={ocupacaoPct} />
             </div>
             <div className="text-center md:text-left">
-              <div className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Vagas Ocupadas</div>
-              <div className="text-4xl font-black text-warning-foreground">{s.ocupacao}</div>
+              <div className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-1">Vagas Ocupadas</div>
+              <div className="text-4xl font-bold text-warning-foreground tracking-tight">{s.ocupacao}</div>
               <div className="text-xs text-muted-foreground font-medium">Limite: {s.capacidadeTotal}</div>
             </div>
             <div className="text-center md:text-left">
-              <div className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Vagas Livres</div>
-              <div className="text-4xl font-black text-success">{livres}</div>
+              <div className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-1">Vagas Livres</div>
+              <div className="text-4xl font-bold text-success tracking-tight">{livres}</div>
               <div className="text-xs text-muted-foreground font-medium">Disponíveis agora</div>
             </div>
             <div className="space-y-2">
-              <div className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Taxa de Utilização</div>
+              <div className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Taxa de Utilização</div>
               <div className="h-3 bg-muted rounded-full overflow-hidden">
                 <div className="h-full bg-success transition-all duration-1000 ease-out" style={{ width: `${Math.min(ocupacaoPct, 100)}%` }} />
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm font-bold text-foreground">{ocupacaoPct}%</span>
-                <span className="text-[10px] text-muted-foreground font-bold uppercase">Eficiência</span>
+                <span className="text-[10px] text-muted-foreground font-semibold uppercase">Eficiência</span>
               </div>
             </div>
           </div>
@@ -109,16 +109,16 @@ export default function Dashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={movement} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="date" fontSize={10} fontWeight="bold" axisLine={false} tickLine={false} />
-                <YAxis fontSize={10} fontWeight="bold" axisLine={false} tickLine={false} />
+                <XAxis dataKey="date" fontSize={10} fontWeight="600" axisLine={false} tickLine={false} />
+                <YAxis fontSize={10} fontWeight="600" axisLine={false} tickLine={false} />
                 <Tooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                   cursor={{ fill: 'var(--muted)', opacity: 0.4 }}
                 />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '12px', fontWeight: 'bold' }} />
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '12px', fontWeight: '600' }} />
                 <Bar dataKey="entradas" fill="#0ea5e9" name="Entradas" radius={[4, 4, 0, 0]} barSize={20} />
                 <Bar dataKey="devolucoes" fill="#16a34a" name="Devoluções" radius={[4, 4, 0, 0]} barSize={20}>
-                  <LabelList dataKey="devolucoes" position="top" fontSize={10} fontWeight="bold" />
+                  <LabelList dataKey="devolucoes" position="top" fontSize={10} fontWeight="600" />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -154,7 +154,7 @@ export default function Dashboard() {
                 <Tooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                 />
-                <Legend iconType="circle" layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingLeft: '20px' }} />
+                <Legend iconType="circle" layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: '11px', fontWeight: '600', paddingLeft: '20px' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -181,8 +181,8 @@ function CapacityRing({ pct }: { pct: number }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="text-2xl font-black text-info">{pct}%</div>
-        <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Ocupado</div>
+        <div className="text-2xl font-bold text-info tracking-tight">{pct}%</div>
+        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Ocupado</div>
       </div>
     </div>
   );

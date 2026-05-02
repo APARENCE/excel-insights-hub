@@ -88,7 +88,7 @@ function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) 
             <span 
               key={step.id} 
               className={cn(
-                "text-[8px] font-black tracking-tighter uppercase",
+                "text-[8px] font-bold tracking-tighter uppercase",
                 isCurrent ? "text-foreground scale-110 transition-transform" : 
                 isPast ? "text-muted-foreground/60" : "text-muted-foreground/30"
               )}
@@ -189,19 +189,19 @@ export default function PrioridadesPage() {
 
         <div className="flex-1 md:w-44 shrink-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-black tracking-tight">{req.conteiner}</span>
+            <span className="text-sm font-bold tracking-tight">{req.conteiner}</span>
             {req.details?.conteinerDePara && (
-              <span className="text-[9px] bg-info/10 text-info px-2 py-0.5 rounded-full font-black border border-info/20 uppercase">
+              <span className="text-[9px] bg-info/10 text-info px-2 py-0.5 rounded-full font-bold border border-info/20 uppercase">
                 {req.details.conteinerDePara}
               </span>
             )}
           </div>
           <div className="flex items-center gap-3 mt-1">
-            <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground uppercase">
+            <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
               <Factory className="h-3 w-3" />
               {req.fabricaDestino}
             </div>
-            <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground uppercase">
+            <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
               <Calendar className="h-3 w-3" />
               {req.previsaoFabrica ? new Date(req.previsaoFabrica).toLocaleDateString('pt-BR') : "—"}
             </div>
@@ -218,29 +218,29 @@ export default function PrioridadesPage() {
       </div>
 
       <div className="flex items-center justify-between md:justify-end gap-3 mt-2 md:mt-0">
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase">
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-semibold uppercase">
           <Clock className="h-3.5 w-3.5" />
           {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
         </div>
 
         <div className="flex items-center gap-2">
           {isTransportadora && req.status === 'PENDENTE' && (
-            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'CARREGANDO')} className="h-8 px-4 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-black rounded-xl shadow-lg shadow-destructive/20">
+            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'CARREGANDO')} className="h-8 px-4 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-bold rounded-xl shadow-lg shadow-destructive/20">
               CARREGAR
             </Button>
           )}
           {isTransportadora && req.status === 'CARREGANDO' && (
-            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'DESPACHADO')} className="h-8 px-4 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-black rounded-xl shadow-lg shadow-warning/20">
+            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'DESPACHADO')} className="h-8 px-4 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold rounded-xl shadow-lg shadow-warning/20">
               SAÍDA PÁTIO
             </Button>
           )}
           {isTransportadora && req.status === 'DESPACHADO' && (
-            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'FINALIZADO')} className="h-8 px-4 text-[10px] bg-success hover:bg-success/90 text-white font-black rounded-xl shadow-lg shadow-success/20">
+            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'FINALIZADO')} className="h-8 px-4 text-[10px] bg-success hover:bg-success/90 text-white font-bold rounded-xl shadow-lg shadow-success/20">
               FINALIZAR
             </Button>
           )}
           {req.status === 'FINALIZADO' && (
-            <div className="text-success flex items-center gap-1.5 text-[10px] font-black px-3 py-1 bg-success/10 rounded-full border border-success/20 uppercase">
+            <div className="text-success flex items-center gap-1.5 text-[10px] font-bold px-3 py-1 bg-success/10 rounded-full border border-success/20 uppercase">
               <PackageCheck className="h-3.5 w-3.5" /> CONCLUÍDO
             </div>
           )}
@@ -259,27 +259,27 @@ export default function PrioridadesPage() {
         subtitle="Fluxo de Saída em Tempo Real"
         actions={
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button variant="outline" size="sm" onClick={() => setDataset(prev => ({...prev, priorityRequests: prev.priorityRequests.filter(r => r.status !== 'FINALIZADO')}))} className="text-[10px] h-10 rounded-xl flex-1 sm:flex-none font-bold">
+            <Button variant="outline" size="sm" onClick={() => setDataset(prev => ({...prev, priorityRequests: prev.priorityRequests.filter(r => r.status !== 'FINALIZADO')}))} className="text-[10px] h-10 rounded-xl flex-1 sm:flex-none font-semibold">
               <Eraser className="h-4 w-4 mr-2" /> Limpar OK
             </Button>
             {isCliente && (
               <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-primary hover:bg-primary/90 font-black h-10 text-xs rounded-xl flex-1 sm:flex-none shadow-lg shadow-primary/20">
+                  <Button className="bg-primary hover:bg-primary/90 font-bold h-10 text-xs rounded-xl flex-1 sm:flex-none shadow-lg shadow-primary/20">
                     <Plus className="h-4 w-4 mr-2" /> SOLICITAR
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-md rounded-3xl">
                   <form onSubmit={handleCreateRequest}>
                     <DialogHeader>
-                      <DialogTitle className="text-xl font-black">Nova Solicitação</DialogTitle>
+                      <DialogTitle className="text-xl font-bold">Nova Solicitação</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-5 py-6">
                       <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Container no Pátio</Label>
+                        <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Container no Pátio</Label>
                         <Popover open={searchOpen} onOpenChange={setSearchOpen}>
                           <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full justify-between font-bold h-12 text-sm rounded-xl border-2">
+                            <Button variant="outline" className="w-full justify-between font-semibold h-12 text-sm rounded-xl border-2">
                               <div className="flex items-center gap-2">
                                 <SearchIcon className="h-4 w-4 text-muted-foreground" />
                                 {selectedContainer || "Selecione o container..."}
@@ -296,8 +296,8 @@ export default function PrioridadesPage() {
                                   {availableContainers.map((c) => (
                                     <CommandItem key={c.conteiner} value={`${c.conteiner} ${c.conteinerDePara}`} onSelect={() => { setSelectedContainer(c.conteiner); setSearchOpen(false); }} className="cursor-pointer p-3">
                                       <div className="flex flex-col">
-                                        <span className="font-black text-sm">{c.conteiner}</span>
-                                        {c.conteinerDePara && <span className="text-[10px] text-primary font-bold uppercase">Dê-para: {c.conteinerDePara}</span>}
+                                        <span className="font-bold text-sm">{c.conteiner}</span>
+                                        {c.conteinerDePara && <span className="text-[10px] text-primary font-semibold uppercase">Dê-para: {c.conteinerDePara}</span>}
                                       </div>
                                     </CommandItem>
                                   ))}
@@ -309,28 +309,28 @@ export default function PrioridadesPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Destino</Label>
+                          <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Destino</Label>
                           <Select value={fabricaSelect} onValueChange={setFabricaSelect}>
-                            <SelectTrigger className="h-12 text-sm rounded-xl border-2 font-bold"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-12 text-sm rounded-xl border-2 font-semibold"><SelectValue /></SelectTrigger>
                             <SelectContent className="rounded-xl"><SelectItem value="CVU">CVU</SelectItem><SelectItem value="CVP">CVP</SelectItem><SelectItem value="OUTROS">Outra...</SelectItem></SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Urgência</Label>
+                          <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Urgência</Label>
                           <Select name="nivel" defaultValue="NORMAL">
-                            <SelectTrigger className="h-12 text-sm rounded-xl border-2 font-bold"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-12 text-sm rounded-xl border-2 font-semibold"><SelectValue /></SelectTrigger>
                             <SelectContent className="rounded-xl"><SelectItem value="NORMAL">Normal</SelectItem><SelectItem value="ALTA">Alta</SelectItem><SelectItem value="CRITICA">Crítica</SelectItem></SelectContent>
                           </Select>
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Previsão de Entrega</Label>
-                        <Input type="date" name="previsao" className="h-12 text-sm rounded-xl border-2 font-bold" />
+                        <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Previsão de Entrega</Label>
+                        <Input type="date" name="previsao" className="h-12 text-sm rounded-xl border-2 font-semibold" />
                       </div>
-                      {fabricaSelect === 'OUTROS' && <Input placeholder="Nome da fábrica" value={customFabrica} onChange={(e) => setCustomFabrica(e.target.value)} className="h-12 rounded-xl border-2 font-bold" />}
-                      <Input name="observacao" placeholder="Observações adicionais (opcional)" className="h-12 rounded-xl border-2 font-bold" />
+                      {fabricaSelect === 'OUTROS' && <Input placeholder="Nome da fábrica" value={customFabrica} onChange={(e) => setCustomFabrica(e.target.value)} className="h-12 rounded-xl border-2 font-semibold" />}
+                      <Input name="observacao" placeholder="Observações adicionais (opcional)" className="h-12 rounded-xl border-2 font-semibold" />
                     </div>
-                    <DialogFooter><Button type="submit" className="w-full h-14 font-black text-base rounded-2xl shadow-xl shadow-primary/20">ENVIAR PRIORIDADE</Button></DialogFooter>
+                    <DialogFooter><Button type="submit" className="w-full h-14 font-bold text-base rounded-2xl shadow-xl shadow-primary/20">ENVIAR PRIORIDADE</Button></DialogFooter>
                   </form>
                 </DialogContent>
               </Dialog>
@@ -341,26 +341,26 @@ export default function PrioridadesPage() {
 
       <div className="px-4 md:px-8 grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <div className="bg-destructive/5 border border-destructive/20 p-4 rounded-2xl flex flex-col gap-1 shadow-sm">
-          <span className="text-[10px] font-black text-destructive uppercase tracking-widest">Em Fila</span>
-          <span className="text-3xl font-black">{stats.pendentes}</span>
+          <span className="text-[10px] font-semibold text-destructive uppercase tracking-widest">Em Fila</span>
+          <span className="text-3xl font-bold tracking-tight">{stats.pendentes}</span>
         </div>
         <div className="bg-warning/5 border border-warning/20 p-4 rounded-2xl flex flex-col gap-1 shadow-sm">
-          <span className="text-[10px] font-black text-warning-foreground uppercase tracking-widest">Carregando</span>
-          <span className="text-3xl font-black">{stats.carregando}</span>
+          <span className="text-[10px] font-semibold text-warning-foreground uppercase tracking-widest">Carregando</span>
+          <span className="text-3xl font-bold tracking-tight">{stats.carregando}</span>
         </div>
         <div className="bg-success/5 border border-success/20 p-4 rounded-2xl flex flex-col gap-1 shadow-sm">
-          <span className="text-[10px] font-black text-success uppercase tracking-widest">Saída Pátio</span>
-          <span className="text-3xl font-black">{stats.despachados}</span>
+          <span className="text-[10px] font-semibold text-success uppercase tracking-widest">Saída Pátio</span>
+          <span className="text-3xl font-bold tracking-tight">{stats.despachados}</span>
         </div>
         <div className="bg-info/5 border border-info/20 p-4 rounded-2xl flex flex-col gap-1 shadow-sm">
-          <span className="text-[10px] font-black text-info uppercase tracking-widest">Finalizado</span>
-          <span className="text-3xl font-black">{stats.finalizados}</span>
+          <span className="text-[10px] font-semibold text-info uppercase tracking-widest">Finalizado</span>
+          <span className="text-3xl font-bold tracking-tight">{stats.finalizados}</span>
         </div>
       </div>
 
       <div className="px-4 md:px-8 pb-16">
         <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
-          <div className="hidden md:flex items-center gap-4 px-6 py-3 bg-muted/50 border-b border-border text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+          <div className="hidden md:flex items-center gap-4 px-6 py-3 bg-muted/50 border-b border-border text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
             <div className="w-8 shrink-0">Prio</div>
             <div className="w-44 shrink-0">Container / Dê-para</div>
             <div className="flex-1 text-center">Status Operacional</div>
@@ -371,7 +371,7 @@ export default function PrioridadesPage() {
             {sortedRequests.length === 0 ? (
               <div className="py-20 text-center text-muted-foreground">
                 <Zap className="h-12 w-12 mx-auto mb-4 opacity-10" />
-                <p className="text-sm font-bold uppercase tracking-widest">Nenhuma solicitação ativa na fila</p>
+                <p className="text-sm font-semibold uppercase tracking-widest">Nenhuma solicitação ativa na fila</p>
               </div>
             ) : (
               sortedRequests.map(req => <RequestRow key={req.id} req={req} />)

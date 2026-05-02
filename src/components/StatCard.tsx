@@ -38,10 +38,10 @@ export function StatCard({ label, value, hint, icon: Icon, tone = "default", act
       )}
     >
       <div className="min-w-0 flex-1">
-        <div className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider text-muted-foreground truncate">
+        <div className="text-[10px] md:text-[11px] font-semibold uppercase tracking-wider text-muted-foreground truncate">
           {label}
         </div>
-        <div className="text-xl md:text-2xl font-black mt-0.5 md:mt-1 truncate">{value}</div>
+        <div className="text-xl md:text-2xl font-bold mt-0.5 md:mt-1 truncate tracking-tight">{value}</div>
         {hint && <div className="text-[10px] md:text-xs text-muted-foreground mt-0.5 truncate font-medium">{hint}</div>}
       </div>
       {Icon && (
