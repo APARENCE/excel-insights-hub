@@ -53,6 +53,115 @@ import { toast } from "sonner";
 import { PriorityLevel, RequestStatus } from '@/lib/types';
 import { cn } from "@/lib/utils";
 
+// Componente de linha movido para fora para garantir estabilidade no clique
+function RequestRow({ 
+  req, 
+  isTransportadora, 
+  onUpdateStatus, 
+  onDelete 
+}: { 
+  req: any; 
+  isTransportadora: boolean; 
+  onUpdateStatus: (id: string, status: RequestStatus) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <div className={cn(
+      "flex flex-col md:flex-row md:items-center gap-4 px-4 md:px-6 py-4 border-b border-border hover:bg-muted/30 transition-all duration-200",
+      req.status === 'FINALIZADO' && "opacity-60 bg-muted/10"
+    )}>
+      <div className="flex items-center justify-between md:justify-start gap-4">
+        <div className={cn(
+          "h-8 w-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
+          req.nivel === 'CRITICA' ? "bg-destructive text-white" :
+          req.nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
+        )}>
+          <Zap className="h-4 w-4" />
+        </div>
+
+        <div className="flex-1 md:w-44 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold tracking-tight">{req.conteiner}</span>
+            {req.details?.conteinerDePara && (
+              <span className="text-[9px] bg-info/10 text-info px-2 py-0.5 rounded-full font-bold border border-info/20 uppercase">
+                {req.details.conteinerDePara}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 mt-1">
+            <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
+              <Factory className="h-3 w-3" />
+              {req.fabricaDestino}
+            </div>
+            <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
+              <Calendar className="h-3 w-3" />
+              {req.previsaoFabrica ? new Date(req.previsaoFabrica).toLocaleDateString('pt-BR') : "—"}
+            </div>
+          </div>
+        </div>
+
+        <div className="md:hidden">
+          <StatusStepperLine currentStatus={req.status} />
+        </div>
+      </div>
+
+      <div className="hidden md:flex flex-1 items-center justify-center">
+        <StatusStepperLine currentStatus={req.status} />
+      </div>
+
+      <div className="flex items-center justify-between md:justify-end gap-3 mt-2 md:mt-0">
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-semibold uppercase">
+          <Clock className="h-3.5 w-3.5" />
+          {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {isTransportadora && req.status === 'PENDENTE' && (
+            <Button 
+              size="sm" 
+              onClick={(e) => { e.stopPropagation(); onUpdateStatus(req.id, 'CARREGANDO'); }} 
+              className="h-8 px-4 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-bold rounded-xl shadow-lg shadow-destructive/20"
+            >
+              CARREGAR
+            </Button>
+          )}
+          {isTransportadora && req.status === 'CARREGANDO' && (
+            <Button 
+              size="sm" 
+              onClick={(e) => { e.stopPropagation(); onUpdateStatus(req.id, 'DESPACHADO'); }} 
+              className="h-8 px-4 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold rounded-xl shadow-lg shadow-warning/20"
+            >
+              SAÍDA PÁTIO
+            </Button>
+          )}
+          {isTransportadora && req.status === 'DESPACHADO' && (
+            <Button 
+              size="sm" 
+              onClick={(e) => { e.stopPropagation(); onUpdateStatus(req.id, 'FINALIZADO'); }} 
+              className="h-8 px-4 text-[10px] bg-success hover:bg-success/90 text-white font-bold rounded-xl shadow-lg shadow-success/20"
+            >
+              FINALIZAR
+            </Button>
+          )}
+          {req.status === 'FINALIZADO' && (
+            <div className="text-success flex items-center gap-1.5 text-[10px] font-bold px-3 py-1 bg-success/10 rounded-full border border-success/20 uppercase">
+              <PackageCheck className="h-3.5 w-3.5" /> CONCLUÍDO
+            </div>
+          )}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={(e) => { e.stopPropagation(); onDelete(req.id); }} 
+            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) {
   const steps = [
     { id: 'PENDENTE', label: 'FILA', color: 'bg-destructive' },
@@ -176,85 +285,6 @@ export default function PrioridadesPage() {
     setSelectedContainer("");
     setNivelSelect("NORMAL");
   };
-
-  const RequestRow = ({ req }: { req: any }) => (
-    <div className={cn(
-      "flex flex-col md:flex-row md:items-center gap-4 px-4 md:px-6 py-4 border-b border-border hover:bg-muted/30 transition-all duration-200",
-      req.status === 'FINALIZADO' && "opacity-60 bg-muted/10"
-    )}>
-      <div className="flex items-center justify-between md:justify-start gap-4">
-        <div className={cn(
-          "h-8 w-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
-          req.nivel === 'CRITICA' ? "bg-destructive text-white" :
-          req.nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
-        )}>
-          <Zap className="h-4 w-4" />
-        </div>
-
-        <div className="flex-1 md:w-44 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold tracking-tight">{req.conteiner}</span>
-            {req.details?.conteinerDePara && (
-              <span className="text-[9px] bg-info/10 text-info px-2 py-0.5 rounded-full font-bold border border-info/20 uppercase">
-                {req.details.conteinerDePara}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3 mt-1">
-            <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
-              <Factory className="h-3 w-3" />
-              {req.fabricaDestino}
-            </div>
-            <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
-              <Calendar className="h-3 w-3" />
-              {req.previsaoFabrica ? new Date(req.previsaoFabrica).toLocaleDateString('pt-BR') : "—"}
-            </div>
-          </div>
-        </div>
-
-        <div className="md:hidden">
-          <StatusStepperLine currentStatus={req.status} />
-        </div>
-      </div>
-
-      <div className="hidden md:flex flex-1 items-center justify-center">
-        <StatusStepperLine currentStatus={req.status} />
-      </div>
-
-      <div className="flex items-center justify-between md:justify-end gap-3 mt-2 md:mt-0">
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-semibold uppercase">
-          <Clock className="h-3.5 w-3.5" />
-          {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isTransportadora && req.status === 'PENDENTE' && (
-            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'CARREGANDO')} className="h-8 px-4 text-[10px] bg-destructive hover:bg-destructive/90 text-white font-bold rounded-xl shadow-lg shadow-destructive/20">
-              CARREGAR
-            </Button>
-          )}
-          {isTransportadora && req.status === 'CARREGANDO' && (
-            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'DESPACHADO')} className="h-8 px-4 text-[10px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold rounded-xl shadow-lg shadow-warning/20">
-              SAÍDA PÁTIO
-            </Button>
-          )}
-          {isTransportadora && req.status === 'DESPACHADO' && (
-            <Button size="sm" onClick={() => updatePriorityStatus(req.id, 'FINALIZADO')} className="h-8 px-4 text-[10px] bg-success hover:bg-success/90 text-white font-bold rounded-xl shadow-lg shadow-success/20">
-              FINALIZAR
-            </Button>
-          )}
-          {req.status === 'FINALIZADO' && (
-            <div className="text-success flex items-center gap-1.5 text-[10px] font-bold px-3 py-1 bg-success/10 rounded-full border border-success/20 uppercase">
-              <PackageCheck className="h-3.5 w-3.5" /> CONCLUÍDO
-            </div>
-          )}
-          <Button variant="ghost" size="icon" onClick={() => deletePriorityRequest(req.id)} className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl">
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <AppShell>
@@ -418,7 +448,15 @@ export default function PrioridadesPage() {
                 <p className="text-sm font-semibold uppercase tracking-widest">Nenhuma solicitação ativa na fila</p>
               </div>
             ) : (
-              sortedRequests.map(req => <RequestRow key={req.id} req={req} />)
+              sortedRequests.map(req => (
+                <RequestRow 
+                  key={req.id} 
+                  req={req} 
+                  isTransportadora={isTransportadora}
+                  onUpdateStatus={updatePriorityStatus}
+                  onDelete={deletePriorityRequest}
+                />
+              ))
             )}
           </div>
         </div>
