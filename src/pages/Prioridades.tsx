@@ -1,21 +1,16 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Zap, 
   Plus, 
-  Clock, 
   Trash2,
   ChevronsUpDown,
   Eraser,
-  Factory,
   PackageCheck,
-  Calendar,
   Search as SearchIcon,
-  AlertCircle,
-  AlertTriangle,
-  Info,
-  Loader2
+  Loader2,
+  Clock
 } from 'lucide-react';
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -24,7 +19,6 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger,
   DialogFooter
 } from "@/components/ui/dialog";
 import { 
@@ -51,8 +45,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useDataset, addPriorityRequest, updatePriorityStatus, deletePriorityRequest, setDataset } from "@/lib/store";
 import { toast } from "sonner";
-import { PriorityLevel, RequestStatus, PriorityRequest } from '@/lib/types';
+import { PriorityLevel, RequestStatus } from '@/lib/types';
 import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/StatusBadge";
 
 export default function PrioridadesPage() {
   const ds = useDataset();
@@ -64,19 +59,15 @@ export default function PrioridadesPage() {
   const [customFabrica, setCustomFabrica] = useState("");
   const [nivelSelect, setNivelSelect] = useState<PriorityLevel>("NORMAL");
   const [isUpdating, setIsUpdating] = useState(false);
-  
-  // Estado para manter a ordem da lista estável enquanto o usuário clica
-  const [stableRequests, setStableRequests] = useState<PriorityRequest[]>([]);
 
   const isCliente = userRole === "CLIENTE";
   const isTransportadora = userRole === "TRANSPORTADORA";
 
-  // Lógica de ordenação original
-  const getSortedRequests = (requests: PriorityRequest[]) => {
+  const sortedRequests = useMemo(() => {
     const weight: Record<string, number> = { 'CRITICA': 3, 'ALTA': 2, 'NORMAL': 1 };
     const statusWeight: Record<RequestStatus, number> = { 'PENDENTE': 4, 'CARREGANDO': 3, 'DESPACHADO': 2, 'FINALIZADO': 1 };
 
-    return [...requests].sort((a, b) => {
+    return [...ds.priorityRequests].sort((a, b) => {
       if (statusWeight[a.status] !== statusWeight[b.status]) {
         return statusWeight[b.status] - statusWeight[a.status];
       }
@@ -85,14 +76,7 @@ export default function PrioridadesPage() {
       }
       return new Date(b.solicitadoEm).getTime() - new Date(a.solicitadoEm).getTime();
     });
-  };
-
-  // Atualiza a lista estável apenas quando não estamos atualizando nada
-  useEffect(() => {
-    if (!isUpdating) {
-      setStableRequests(getSortedRequests(ds.priorityRequests));
-    }
-  }, [ds.priorityRequests, isUpdating]);
+  }, [ds.priorityRequests]);
 
   const availableContainers = useMemo(() => {
     const existingIds = new Set(ds.priorityRequests.filter(r => r.status !== 'FINALIZADO').map(r => r.conteiner));
@@ -102,7 +86,9 @@ export default function PrioridadesPage() {
     );
   }, [ds.cheios, ds.priorityRequests]);
 
-  const handleUpdateStatus = async (id: string, currentStatus: RequestStatus) => {
+  const handleUpdateStatus = async (e: React.MouseEvent, id: string, currentStatus: RequestStatus) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (isUpdating) return;
     
     let nextStatus: RequestStatus = 'PENDENTE';
@@ -113,20 +99,20 @@ export default function PrioridadesPage() {
     setIsUpdating(true);
     try {
       await updatePriorityStatus(id, nextStatus);
-      toast.success("Status atualizado");
     } finally {
-      // Pequeno delay para o usuário ver a mudança antes da lista reordenar
-      setTimeout(() => setIsUpdating(false), 500);
+      setIsUpdating(false);
     }
   };
 
-  const handleDeleteRequest = async (id: string) => {
+  const handleDeleteRequest = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (isUpdating) return;
     setIsUpdating(true);
     try {
       await deletePriorityRequest(id);
     } finally {
-      setTimeout(() => setIsUpdating(false), 300);
+      setIsUpdating(false);
     }
   };
 
@@ -152,7 +138,7 @@ export default function PrioridadesPage() {
       setIsAddOpen(false);
       setSelectedContainer("");
     } finally {
-      setTimeout(() => setIsUpdating(false), 300);
+      setIsUpdating(false);
     }
   };
 
@@ -182,110 +168,109 @@ export default function PrioridadesPage() {
 
       <div className="px-4 md:px-8 pb-20">
         <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
-          <div className="hidden md:flex items-center gap-4 px-6 py-3 bg-muted/50 border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-            <div className="w-12">Prio</div>
-            <div className="w-48">Container</div>
-            <div className="flex-1 text-center">Progresso</div>
-            <div className="w-56 text-right">Ações</div>
-          </div>
-
-          <div className="divide-y divide-border">
-            {stableRequests.length === 0 ? (
-              <div className="py-20 text-center text-muted-foreground font-bold uppercase text-xs tracking-widest opacity-30">
-                Fila de prioridades vazia
-              </div>
-            ) : (
-              stableRequests.map((req) => {
-                const details = ds.cheios.find(c => c.conteiner === req.conteiner);
-                const isFinalizado = req.status === 'FINALIZADO';
-                
-                return (
-                  <div key={req.id} className={cn(
-                    "flex flex-col md:flex-row md:items-center gap-4 px-6 py-4 transition-colors",
-                    isFinalizado ? "bg-muted/20 opacity-60" : "hover:bg-muted/10"
-                  )}>
-                    <div className="flex items-center justify-between md:justify-start gap-4">
-                      <div className={cn(
-                        "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
-                        req.nivel === 'CRITICA' ? "bg-destructive text-white" :
-                        req.nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[800px]">
+              <thead className="bg-muted/50 border-b border-border">
+                <tr className="text-left text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                  <th className="px-6 py-4">Prio</th>
+                  <th className="px-6 py-4">Container</th>
+                  <th className="px-6 py-4">Destino</th>
+                  <th className="px-6 py-4">Status Atual</th>
+                  <th className="px-6 py-4 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {sortedRequests.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-20 text-center text-muted-foreground font-bold uppercase text-xs tracking-widest opacity-30">
+                      Fila de prioridades vazia
+                    </td>
+                  </tr>
+                ) : (
+                  sortedRequests.map((req) => {
+                    const details = ds.cheios.find(c => c.conteiner === req.conteiner);
+                    const isFinalizado = req.status === 'FINALIZADO';
+                    
+                    return (
+                      <tr key={req.id} className={cn(
+                        "hover:bg-muted/10 transition-colors",
+                        isFinalizado && "opacity-60 bg-muted/5"
                       )}>
-                        <Zap className="h-4 w-4" />
-                      </div>
-                      <div className="w-48">
-                        <div className="font-black text-sm">{req.conteiner}</div>
-                        <div className="text-[10px] font-bold text-muted-foreground uppercase">
-                          {details?.conteinerDePara ? `Dê-para: ${details.conteinerDePara}` : (req.fabricaDestino || "CVU")}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex-1 flex items-center justify-center px-4">
-                      <div className="flex items-center gap-1 w-full max-w-[240px]">
-                        {['PENDENTE', 'CARREGANDO', 'DESPACHADO', 'FINALIZADO'].map((s, idx) => {
-                          const statusIdx = ['PENDENTE', 'CARREGANDO', 'DESPACHADO', 'FINALIZADO'].indexOf(req.status);
-                          const active = idx <= statusIdx;
-                          return (
-                            <div key={s} className="flex-1 flex flex-col gap-1">
-                              <div className={cn(
-                                "h-1.5 rounded-full transition-all",
-                                active ? "bg-primary" : "bg-muted"
-                              )} />
-                              <span className={cn(
-                                "text-[7px] font-black uppercase text-center",
-                                active ? "text-primary" : "text-muted-foreground/40"
-                              )}>
-                                {s === 'PENDENTE' ? 'FILA' : s === 'CARREGANDO' ? 'CARGA' : s === 'DESPACHADO' ? 'SAÍDA' : 'OK'}
-                              </span>
+                        <td className="px-6 py-4">
+                          <div className={cn(
+                            "h-7 w-7 rounded-lg flex items-center justify-center",
+                            req.nivel === 'CRITICA' ? "bg-destructive text-white" :
+                            req.nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
+                          )}>
+                            <Zap className="h-3.5 w-3.5" />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-black text-sm">{req.conteiner}</div>
+                          {details?.conteinerDePara && (
+                            <div className="text-[9px] font-bold text-primary uppercase">Dê-para: {details.conteinerDePara}</div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-xs font-bold">{req.fabricaDestino || "CVU"}</div>
+                          <div className="text-[10px] text-muted-foreground">{req.previsaoFabrica ? new Date(req.previsaoFabrica).toLocaleDateString('pt-BR') : "—"}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <StatusBadge tone={
+                            req.status === 'PENDENTE' ? 'destructive' :
+                            req.status === 'CARREGANDO' ? 'warning' :
+                            req.status === 'DESPACHADO' ? 'success' : 'info'
+                          }>
+                            {req.status}
+                          </StatusBadge>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <div className="text-[10px] font-bold text-muted-foreground uppercase mr-2">
+                              {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                             </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                            
+                            {isTransportadora && !isFinalizado && (
+                              <Button 
+                                size="sm"
+                                disabled={isUpdating}
+                                onClick={(e) => handleUpdateStatus(e, req.id, req.status)}
+                                className={cn(
+                                  "h-8 px-4 text-[10px] font-black rounded-lg",
+                                  req.status === 'PENDENTE' ? "bg-destructive hover:bg-destructive/90" :
+                                  req.status === 'CARREGANDO' ? "bg-warning hover:bg-warning/90 text-black" : "bg-success hover:bg-success/90"
+                                )}
+                              >
+                                {isUpdating ? <Loader2 className="h-3 w-3 animate-spin" /> : (
+                                  req.status === 'PENDENTE' ? "CARREGAR" :
+                                  req.status === 'CARREGANDO' ? "SAÍDA PÁTIO" : "FINALIZAR"
+                                )}
+                              </Button>
+                            )}
 
-                    <div className="flex items-center justify-end gap-3">
-                      <div className="text-[10px] font-bold text-muted-foreground uppercase">
-                        {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                      
-                      {isTransportadora && !isFinalizado && (
-                        <Button 
-                          size="sm"
-                          disabled={isUpdating}
-                          onClick={() => handleUpdateStatus(req.id, req.status)}
-                          className={cn(
-                            "h-8 px-4 text-[10px] font-black rounded-lg",
-                            req.status === 'PENDENTE' ? "bg-destructive hover:bg-destructive/90" :
-                            req.status === 'CARREGANDO' ? "bg-warning hover:bg-warning/90 text-black" : "bg-success hover:bg-success/90"
-                          )}
-                        >
-                          {isUpdating ? <Loader2 className="h-3 w-3 animate-spin" /> : (
-                            req.status === 'PENDENTE' ? "CARREGAR" :
-                            req.status === 'CARREGANDO' ? "SAÍDA PÁTIO" : "FINALIZAR"
-                          )}
-                        </Button>
-                      )}
+                            {isFinalizado && (
+                              <div className="h-8 px-3 flex items-center gap-2 bg-success/10 text-success rounded-lg border border-success/20 text-[10px] font-black uppercase">
+                                <PackageCheck className="h-3.5 w-3.5" /> OK
+                              </div>
+                            )}
 
-                      {isFinalizado && (
-                        <div className="h-8 px-3 flex items-center gap-2 bg-success/10 text-success rounded-lg border border-success/20 text-[10px] font-black uppercase">
-                          <PackageCheck className="h-3.5 w-3.5" /> CONCLUÍDO
-                        </div>
-                      )}
-
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        disabled={isUpdating}
-                        onClick={() => handleDeleteRequest(req.id)}
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              disabled={isUpdating}
+                              onClick={(e) => handleDeleteRequest(e, req.id)}
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
