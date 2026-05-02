@@ -14,7 +14,7 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-import { RefreshCw, Car, Repeat, MapPin, CalendarClock, LogOut, ClipboardList } from "lucide-react";
+import { RefreshCw, Car, Repeat, MapPin, CalendarClock, LogOut, ClipboardList, Boxes } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { SettingsDialog } from "@/components/SettingsDialog";
@@ -34,21 +34,23 @@ export default function Dashboard() {
   return (
     <AppShell>
       <PageHeader
-        title="Operação Spot Renault-Terminal Tlog"
-        subtitle="Visão geral em tempo real"
+        title="Operação Spot Renault"
+        subtitle="Terminal Tlog — Visão Geral"
         actions={
-          <>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <SettingsDialog />
             <button 
-              className="inline-flex items-center gap-2 text-sm border border-border rounded-md px-2.5 py-1.5 bg-card hover:bg-accent"
+              className="inline-flex items-center justify-center gap-2 text-sm border border-border rounded-xl px-4 py-2 bg-card hover:bg-accent transition-all duration-200 flex-1 sm:flex-none"
               onClick={() => typeof window !== 'undefined' && window.location.reload()}
             >
               <RefreshCw className="h-4 w-4" />
+              <span className="sm:hidden">Atualizar</span>
             </button>
-          </>
+          </div>
         }
       />
-      <div className="px-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      
+      <div className="px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard label="Ocupação Atual" value={s.ocupacao} hint={`de ${s.capacidadeTotal} vagas`} icon={Car} tone="success" />
         <StatCard label="Programada Entrada" value={s.programadas} hint="Aguardando chegada" icon={ClipboardList} tone="warning" />
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
@@ -57,102 +59,108 @@ export default function Dashboard() {
         <StatCard label="Finalizados" value={s.finalizados} hint="Concluídos" icon={LogOut} />
       </div>
 
-      <section className="px-6 mt-4">
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between mb-3">
+      <section className="px-4 md:px-8 mt-6">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
             <div>
-              <div className="text-primary font-semibold">Capacidade Operacional</div>
-              <div className="text-xs text-muted-foreground">Ocupação real do pátio</div>
+              <div className="text-lg font-bold text-foreground">Capacidade Operacional</div>
+              <div className="text-sm text-muted-foreground">Ocupação real do pátio em tempo real</div>
             </div>
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-success text-success-foreground text-xs font-bold">NORMAL</span>
+            <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-success/10 text-success text-[10px] font-bold tracking-widest border border-success/20">STATUS: NORMAL</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 items-center">
             <div className="flex flex-col items-center justify-center">
               <CapacityRing pct={ocupacaoPct} />
             </div>
-            <div>
-              <div className="text-[11px] uppercase text-muted-foreground">Ocupadas</div>
-              <div className="text-3xl font-bold text-warning-foreground">{s.ocupacao}</div>
-              <div className="text-xs text-muted-foreground">de {s.capacidadeTotal}</div>
+            <div className="text-center md:text-left">
+              <div className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-1">Vagas Ocupadas</div>
+              <div className="text-4xl font-bold text-warning-foreground tracking-tight">{s.ocupacao}</div>
+              <div className="text-xs text-muted-foreground font-medium">Limite: {s.capacidadeTotal}</div>
             </div>
-            <div>
-              <div className="text-[11px] uppercase text-muted-foreground">Livres</div>
-              <div className="text-3xl font-bold text-success">{livres}</div>
-              <div className="text-xs text-muted-foreground">agora</div>
+            <div className="text-center md:text-left">
+              <div className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-1">Vagas Livres</div>
+              <div className="text-4xl font-bold text-success tracking-tight">{livres}</div>
+              <div className="text-xs text-muted-foreground font-medium">Disponíveis agora</div>
             </div>
-            <div>
-              <div className="text-[11px] uppercase text-muted-foreground">Taxa</div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden mt-2">
-                <div className="h-full bg-success" style={{ width: `${Math.min(ocupacaoPct, 100)}%` }} />
+            <div className="space-y-2">
+              <div className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Taxa de Utilização</div>
+              <div className="h-3 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-success transition-all duration-1000 ease-out" style={{ width: `${Math.min(ocupacaoPct, 100)}%` }} />
               </div>
-              <div className="text-xs text-muted-foreground mt-1">{ocupacaoPct}%</div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-bold text-foreground">{ocupacaoPct}%</span>
+                <span className="text-[10px] text-muted-foreground font-semibold uppercase">Eficiência</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="px-6 mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 pb-8">
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="text-info font-semibold flex items-center gap-2">
-            <span>📈</span> Movimentações do Pátio
-          </div>
-          <p className="text-xs text-muted-foreground mb-3">Análise detalhada de entradas e saídas diárias</p>
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div className="rounded-md bg-info/5 border border-info/20 p-2 text-center">
-              <div className="text-[10px] uppercase text-muted-foreground">Ocupação Atual</div>
-              <div className="text-xl font-bold text-info">{s.ocupacao}</div>
+      <section className="px-4 md:px-8 mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="bg-info/10 p-2 rounded-lg">
+              <Repeat className="h-5 w-5 text-info" />
             </div>
-            <div className="rounded-md bg-success/5 border border-success/20 p-2 text-center">
-              <div className="text-[10px] uppercase text-muted-foreground">Devoluções</div>
-              <div className="text-xl font-bold text-success">{s.finalizados}</div>
-            </div>
+            <div className="text-lg font-bold">Movimentações do Pátio</div>
           </div>
-          <div className="h-64">
+          <p className="text-sm text-muted-foreground mb-6">Análise detalhada de entradas e saídas diárias</p>
+          <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={movement}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="date" fontSize={11} angle={-30} textAnchor="end" height={50} />
-                <YAxis fontSize={11} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="entradas" fill="#0ea5e9" name="Entradas (G)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="devolucoes" fill="#16a34a" name="Devoluções" radius={[4, 4, 0, 0]}>
-                  <LabelList dataKey="devolucoes" position="top" fontSize={10} />
+              <BarChart data={movement} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="date" fontSize={10} fontWeight="600" axisLine={false} tickLine={false} />
+                <YAxis fontSize={10} fontWeight="600" axisLine={false} tickLine={false} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                  cursor={{ fill: 'var(--muted)', opacity: 0.4 }}
+                />
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '12px', fontWeight: '600' }} />
+                <Bar dataKey="entradas" fill="#0ea5e9" name="Entradas" radius={[4, 4, 0, 0]} barSize={20} />
+                <Bar dataKey="devolucoes" fill="#16a34a" name="Devoluções" radius={[4, 4, 0, 0]} barSize={20}>
+                  <LabelList dataKey="devolucoes" position="top" fontSize={10} fontWeight="600" />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="text-primary font-semibold flex items-center gap-2">
-            <span>📊</span> Status do Estoque
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="bg-primary/10 p-2 rounded-lg">
+              <Boxes className="h-5 w-5 text-primary" />
+            </div>
+            <div className="text-lg font-bold">Status do Estoque</div>
           </div>
-          <p className="text-xs text-muted-foreground mb-3">Distribuição detalhada do inventário por status</p>
-          <div className="grid grid-cols-3 gap-2 mb-3 text-center">
-            <div>
-              <div className="text-[10px] uppercase text-muted-foreground">Em Pátio TLOG-SJP</div>
-              <div className="text-xl font-bold text-primary">{s.emPatio}</div>
-            </div>
-            <div>
-              <div className="text-[10px] uppercase text-muted-foreground">Agendados</div>
-              <div className="text-xl font-bold text-warning-foreground">{s.programadas}</div>
-            </div>
-            <div>
-              <div className="text-[10px] uppercase text-muted-foreground">Dê-para</div>
-              <div className="text-xl font-bold text-info">{s.dePara}</div>
-            </div>
-          </div>
-          <div className="h-64">
+          <p className="text-sm text-muted-foreground mb-6">Distribuição detalhada do inventário por status</p>
+          <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={dist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} innerRadius={55} paddingAngle={2}>
+                <Pie 
+                  data={dist} 
+                  dataKey="value" 
+                  nameKey="name" 
+                  cx="50%" 
+                  cy="45%" 
+                  outerRadius={100} 
+                  innerRadius={65} 
+                  paddingAngle={4}
+                  stroke="none"
+                >
                   {dist.map((_, i) => (
                     <Cell key={i} fill={STATUS_COLORS[i % STATUS_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                />
+                <Legend 
+                  iconType="circle" 
+                  layout="horizontal" 
+                  align="center" 
+                  verticalAlign="bottom" 
+                  wrapperStyle={{ fontSize: '11px', fontWeight: '600', paddingTop: '20px' }} 
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -163,18 +171,24 @@ export default function Dashboard() {
 }
 
 function CapacityRing({ pct }: { pct: number }) {
-  const r = 38;
+  const r = 40;
   const c = 2 * Math.PI * r;
   const off = c - (Math.min(pct, 100) / 100) * c;
   return (
-    <div className="relative h-28 w-28">
-      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
+    <div className="relative h-36 w-36">
+      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90 drop-shadow-sm">
         <circle cx="50" cy="50" r={r} fill="none" stroke="var(--muted)" strokeWidth="10" />
-        <circle cx="50" cy="50" r={r} fill="none" stroke="var(--info)" strokeWidth="10" strokeDasharray={c} strokeDashoffset={off} strokeLinecap="round" />
+        <circle 
+          cx="50" cy="50" r={r} fill="none" 
+          stroke="var(--info)" strokeWidth="10" 
+          strokeDasharray={c} strokeDashoffset={off} 
+          strokeLinecap="round"
+          className="transition-all duration-1000 ease-out"
+        />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="text-xl font-bold text-info">{pct}%</div>
-        <div className="text-[10px] text-muted-foreground">Ocupado</div>
+        <div className="text-2xl font-bold text-info tracking-tight">{pct}%</div>
+        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Ocupado</div>
       </div>
     </div>
   );

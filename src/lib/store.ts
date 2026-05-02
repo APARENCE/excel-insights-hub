@@ -99,29 +99,18 @@ export async function syncFromSupabase() {
   }
 }
 
-// Configuração de Realtime Robusta
 if (typeof window !== 'undefined') {
-  supabase.channel('custom-all-channel')
+  // Sincronização via Realtime (apenas quando houver mudança no banco)
+  supabase.channel('db-changes')
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'priority_requests' },
-      () => {
-        syncFromSupabase();
-      }
+      () => syncFromSupabase()
     )
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'containers_cheios' },
-      () => {
-        syncFromSupabase();
-      }
-    )
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'app_settings' },
-      () => {
-        syncFromSupabase();
-      }
+      () => syncFromSupabase()
     )
     .subscribe();
 }
@@ -192,7 +181,7 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
         toast.success("Dados sincronizados com sucesso!");
       } catch (e) {
         console.error("Erro detalhado na persistência:", e);
-        toast.error("Erro ao salvar no banco. Verifique o formato dos dados.");
+        toast.error("Erro ao salvar no banco.");
       }
     }
   }
@@ -211,12 +200,8 @@ export async function addPriorityRequest(req: PriorityRequest) {
     observacao: req.observacao
   });
 
-  if (error) {
-    toast.error("Erro ao salvar prioridade");
-  } else {
-    // Sincronização local imediata para o usuário que criou
-    syncFromSupabase();
-  }
+  if (error) toast.error("Erro ao salvar prioridade");
+  else syncFromSupabase();
 }
 
 export async function updatePriorityStatus(id: string, status: PriorityRequest["status"]) {
@@ -228,16 +213,13 @@ export async function updatePriorityStatus(id: string, status: PriorityRequest["
   }
 
   const request = state.priorityRequests.find(r => r.id === id);
-  if (request) {
-    // Se o status for SAÍDA PÁTIO (DESPACHADO) ou FINALIZADO, atualiza o estoque principal
-    if (status === 'DESPACHADO' || status === 'FINALIZADO') {
-      await supabase.from('containers_cheios')
-        .update({ 
-          status: "ENVIADO PARA FABRICA",
-          data_envio_fabrica: new Date().toISOString()
-        })
-        .eq('conteiner', request.conteiner);
-    }
+  if (request && (status === 'DESPACHADO' || status === 'FINALIZADO')) {
+    await supabase.from('containers_cheios')
+      .update({ 
+        status: "ENVIADO PARA FABRICA",
+        data_envio_fabrica: new Date().toISOString()
+      })
+      .eq('conteiner', request.conteiner);
   }
 
   syncFromSupabase();
