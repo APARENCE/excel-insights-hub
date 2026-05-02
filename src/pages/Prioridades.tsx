@@ -11,7 +11,10 @@ import {
   Factory,
   PackageCheck,
   Calendar,
-  Search as SearchIcon
+  Search as SearchIcon,
+  AlertCircle,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -110,6 +113,7 @@ export default function PrioridadesPage() {
   const [selectedContainer, setSelectedContainer] = useState("");
   const [fabricaSelect, setFabricaSelect] = useState<string>("CVU");
   const [customFabrica, setCustomFabrica] = useState("");
+  const [nivelSelect, setNivelSelect] = useState<PriorityLevel>("NORMAL");
 
   const isCliente = userRole === "CLIENTE";
   const isTransportadora = userRole === "TRANSPORTADORA";
@@ -153,14 +157,13 @@ export default function PrioridadesPage() {
       return;
     }
     const formData = new FormData(e.currentTarget);
-    const nivel = formData.get('nivel') as PriorityLevel;
     const fabricaDestino = fabricaSelect === 'OUTROS' ? customFabrica : fabricaSelect;
     const previsao = formData.get('previsao') as string;
 
     addPriorityRequest({
       id: crypto.randomUUID(),
       conteiner: selectedContainer,
-      nivel,
+      nivel: nivelSelect,
       status: 'PENDENTE',
       solicitadoEm: new Date().toISOString(),
       fabricaDestino: fabricaDestino || 'CVU',
@@ -171,6 +174,7 @@ export default function PrioridadesPage() {
     toast.success("Prioridade agendada!");
     setIsAddOpen(false);
     setSelectedContainer("");
+    setNivelSelect("NORMAL");
   };
 
   const RequestRow = ({ req }: { req: any }) => (
@@ -307,6 +311,52 @@ export default function PrioridadesPage() {
                           </PopoverContent>
                         </Popover>
                       </div>
+                      
+                      <div className="space-y-3">
+                        <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Nível de Urgência</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setNivelSelect("NORMAL")}
+                            className={cn(
+                              "flex flex-col items-center justify-center gap-2 p-3 rounded-2xl border-2 transition-all duration-200",
+                              nivelSelect === "NORMAL" 
+                                ? "bg-primary/10 border-primary text-primary shadow-md" 
+                                : "bg-card border-border text-muted-foreground hover:border-primary/40"
+                            )}
+                          >
+                            <Info className="h-5 w-5" />
+                            <span className="text-[10px] font-bold uppercase">Normal</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNivelSelect("ALTA")}
+                            className={cn(
+                              "flex flex-col items-center justify-center gap-2 p-3 rounded-2xl border-2 transition-all duration-200",
+                              nivelSelect === "ALTA" 
+                                ? "bg-warning/10 border-warning text-warning-foreground shadow-md" 
+                                : "bg-card border-border text-muted-foreground hover:border-warning/40"
+                            )}
+                          >
+                            <AlertTriangle className="h-5 w-5" />
+                            <span className="text-[10px] font-bold uppercase">Alta</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNivelSelect("CRITICA")}
+                            className={cn(
+                              "flex flex-col items-center justify-center gap-2 p-3 rounded-2xl border-2 transition-all duration-200",
+                              nivelSelect === "CRITICA" 
+                                ? "bg-destructive/10 border-destructive text-destructive shadow-md" 
+                                : "bg-card border-border text-muted-foreground hover:border-destructive/40"
+                            )}
+                          >
+                            <AlertCircle className="h-5 w-5" />
+                            <span className="text-[10px] font-bold uppercase">Crítica</span>
+                          </button>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Destino</Label>
@@ -316,17 +366,11 @@ export default function PrioridadesPage() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Urgência</Label>
-                          <Select name="nivel" defaultValue="NORMAL">
-                            <SelectTrigger className="h-12 text-sm rounded-xl border-2 font-semibold"><SelectValue /></SelectTrigger>
-                            <SelectContent className="rounded-xl"><SelectItem value="NORMAL">Normal</SelectItem><SelectItem value="ALTA">Alta</SelectItem><SelectItem value="CRITICA">Crítica</SelectItem></SelectContent>
-                          </Select>
+                          <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Previsão de Entrega</Label>
+                          <Input type="date" name="previsao" className="h-12 text-sm rounded-xl border-2 font-semibold" />
                         </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Previsão de Entrega</Label>
-                        <Input type="date" name="previsao" className="h-12 text-sm rounded-xl border-2 font-semibold" />
-                      </div>
+                      
                       {fabricaSelect === 'OUTROS' && <Input placeholder="Nome da fábrica" value={customFabrica} onChange={(e) => setCustomFabrica(e.target.value)} className="h-12 rounded-xl border-2 font-semibold" />}
                       <Input name="observacao" placeholder="Observações adicionais (opcional)" className="h-12 rounded-xl border-2 font-semibold" />
                     </div>
