@@ -100,6 +100,7 @@ export async function syncFromSupabase() {
 }
 
 if (typeof window !== 'undefined') {
+  // Sincronização via Realtime (apenas quando houver mudança no banco)
   supabase.channel('db-changes')
     .on(
       'postgres_changes',
