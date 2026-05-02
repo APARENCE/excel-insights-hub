@@ -92,6 +92,7 @@ export default function Login() {
                   onChange={(event) => setEmail(event.target.value)}
                   required
                   autoComplete="email"
+                  autoFocus
                   className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white outline-none transition-all placeholder:text-white/30 focus:border-blue-500/50"
                   placeholder="seu.email@empresa.com"
                 />
