@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Zap, 
   Plus, 
@@ -53,162 +53,6 @@ import { useDataset, addPriorityRequest, updatePriorityStatus, deletePriorityReq
 import { toast } from "sonner";
 import { PriorityLevel, RequestStatus } from '@/lib/types';
 import { cn } from "@/lib/utils";
-
-const RequestRow = memo(({ 
-  id,
-  conteiner,
-  status,
-  nivel,
-  solicitadoEm,
-  fabricaDestino,
-  previsaoFabrica,
-  conteinerDePara,
-  isTransportadora,
-  isGlobalBusy,
-  onUpdateStatus, 
-  onDelete 
-}: { 
-  id: string;
-  conteiner: string;
-  status: RequestStatus;
-  nivel: PriorityLevel;
-  solicitadoEm: string;
-  fabricaDestino?: string;
-  previsaoFabrica?: string;
-  conteinerDePara?: string;
-  isTransportadora: boolean;
-  isGlobalBusy: boolean;
-  onUpdateStatus: (id: string, status: RequestStatus) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
-}) => {
-  const [localBusy, setLocalBusy] = useState(false);
-  const disabled = isGlobalBusy || localBusy;
-
-  const handleAction = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (disabled) return;
-    
-    let nextStatus: RequestStatus = 'PENDENTE';
-    if (status === 'PENDENTE') nextStatus = 'CARREGANDO';
-    else if (status === 'CARREGANDO') nextStatus = 'DESPACHADO';
-    else if (status === 'DESPACHADO') nextStatus = 'FINALIZADO';
-
-    setLocalBusy(true);
-    try {
-      await onUpdateStatus(id, nextStatus);
-    } finally {
-      setLocalBusy(false);
-    }
-  };
-
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (disabled) return;
-    
-    setLocalBusy(true);
-    try {
-      await onDelete(id);
-    } finally {
-      setLocalBusy(false);
-    }
-  };
-
-  return (
-    <div className={cn(
-      "flex flex-col md:flex-row md:items-center gap-4 px-5 md:px-7 py-6 border border-border rounded-2xl transition-all duration-300 bg-card shadow-sm",
-      status === 'FINALIZADO' && "opacity-60 bg-muted/10",
-      localBusy && "bg-primary/5 ring-2 ring-primary/20",
-      !localBusy && "hover:shadow-md hover:border-primary/20"
-    )}>
-      <div className="flex items-center justify-between md:justify-start gap-4">
-        <div className={cn(
-          "h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
-          nivel === 'CRITICA' ? "bg-destructive text-white" :
-          nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
-        )}>
-          <Zap className="h-5 w-5" />
-        </div>
-
-        <div className="flex-1 md:w-48 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-base font-bold tracking-tight">{conteiner}</span>
-            {conteinerDePara && (
-              <span className="text-[10px] bg-info/10 text-info px-2 py-0.5 rounded-full font-bold border border-info/20 uppercase">
-                {conteinerDePara}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3 mt-1.5">
-            <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
-              <Factory className="h-3 w-3" />
-              {fabricaDestino}
-            </div>
-            <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
-              <Calendar className="h-3 w-3" />
-              {previsaoFabrica ? new Date(previsaoFabrica).toLocaleDateString('pt-BR') : "—"}
-            </div>
-          </div>
-        </div>
-
-        <div className="md:hidden">
-          <StatusStepperLine currentStatus={status} />
-        </div>
-      </div>
-
-      <div className="hidden md:flex flex-1 items-center justify-center px-8">
-        <StatusStepperLine currentStatus={status} />
-      </div>
-
-      <div className="flex items-center justify-between md:justify-end gap-4 mt-2 md:mt-0">
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-semibold uppercase">
-          <Clock className="h-4 w-4" />
-          {new Date(solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isTransportadora && status !== 'FINALIZADO' && (
-            <Button 
-              type="button"
-              size="sm" 
-              disabled={disabled}
-              onClick={handleAction} 
-              className={cn(
-                "h-10 px-5 text-[11px] font-bold rounded-xl shadow-lg transition-all",
-                status === 'PENDENTE' && "bg-destructive hover:bg-destructive/90 text-white shadow-destructive/20",
-                status === 'CARREGANDO' && "bg-warning hover:bg-warning/90 text-warning-foreground shadow-warning/20",
-                status === 'DESPACHADO' && "bg-success hover:bg-success/90 text-white shadow-success/20"
-              )}
-            >
-              {localBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-                status === 'PENDENTE' ? "CARREGAR" :
-                status === 'CARREGANDO' ? "SAÍDA PÁTIO" : "FINALIZAR"
-              )}
-            </Button>
-          )}
-          {status === 'FINALIZADO' && (
-            <div className="text-success flex items-center gap-1.5 text-[10px] font-bold px-4 py-2 bg-success/10 rounded-full border border-success/20 uppercase">
-              <PackageCheck className="h-4 w-4" /> CONCLUÍDO
-            </div>
-          )}
-          <Button 
-            type="button"
-            variant="ghost" 
-            size="icon" 
-            disabled={disabled}
-            onClick={handleDelete} 
-            className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
-          >
-            <Trash2 className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-RequestRow.displayName = "RequestRow";
 
 function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) {
   const steps = [
@@ -272,6 +116,7 @@ export default function PrioridadesPage() {
   const [customFabrica, setCustomFabrica] = useState("");
   const [nivelSelect, setNivelSelect] = useState<PriorityLevel>("NORMAL");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const isCliente = userRole === "CLIENTE";
   const isTransportadora = userRole === "TRANSPORTADORA";
@@ -312,21 +157,35 @@ export default function PrioridadesPage() {
     });
   }, [ds.priorityRequests, ds.cheios]);
 
-  const handleUpdateStatus = async (id: string, status: RequestStatus) => {
+  const handleUpdateStatus = async (id: string, currentStatus: RequestStatus, conteiner: string) => {
+    if (isUpdating || busyId) return;
+    
+    let nextStatus: RequestStatus = 'PENDENTE';
+    if (currentStatus === 'PENDENTE') nextStatus = 'CARREGANDO';
+    else if (currentStatus === 'CARREGANDO') nextStatus = 'DESPACHADO';
+    else if (currentStatus === 'DESPACHADO') nextStatus = 'FINALIZADO';
+
+    setBusyId(id);
     setIsUpdating(true);
     try {
-      await updatePriorityStatus(id, status);
+      await updatePriorityStatus(id, nextStatus);
+      toast.success(`${conteiner} atualizado para ${nextStatus}`);
     } finally {
-      setTimeout(() => setIsUpdating(false), 300);
+      setBusyId(null);
+      setIsUpdating(false);
     }
   };
 
-  const handleDeleteRequest = async (id: string) => {
+  const handleDeleteRequest = async (id: string, conteiner: string) => {
+    if (isUpdating || busyId) return;
+    setBusyId(id);
     setIsUpdating(true);
     try {
       await deletePriorityRequest(id);
+      toast.success(`Solicitação de ${conteiner} removida`);
     } finally {
-      setTimeout(() => setIsUpdating(false), 300);
+      setBusyId(null);
+      setIsUpdating(false);
     }
   };
 
@@ -357,7 +216,7 @@ export default function PrioridadesPage() {
       setSelectedContainer("");
       setNivelSelect("NORMAL");
     } finally {
-      setTimeout(() => setIsUpdating(false), 300);
+      setIsUpdating(false);
     }
   };
 
@@ -514,33 +373,112 @@ export default function PrioridadesPage() {
       </div>
 
       <div className="px-4 md:px-8 pb-16">
-        <div className={cn(
-          "flex flex-col gap-4 transition-all",
-          isUpdating && "pointer-events-none opacity-80"
-        )}>
+        <div className="flex flex-col gap-4">
           {sortedRequests.length === 0 ? (
             <div className="py-20 text-center text-muted-foreground bg-card rounded-2xl border border-dashed border-border">
               <Zap className="h-12 w-12 mx-auto mb-4 opacity-10" />
               <p className="text-sm font-semibold uppercase tracking-widest">Nenhuma solicitação ativa na fila</p>
             </div>
           ) : (
-            sortedRequests.map(req => (
-              <RequestRow 
-                key={req.id} 
-                id={req.id}
-                conteiner={req.conteiner}
-                status={req.status}
-                nivel={req.nivel}
-                solicitadoEm={req.solicitadoEm}
-                fabricaDestino={req.fabricaDestino}
-                previsaoFabrica={req.previsaoFabrica}
-                conteinerDePara={req.details?.conteinerDePara}
-                isTransportadora={isTransportadora}
-                isGlobalBusy={isUpdating}
-                onUpdateStatus={handleUpdateStatus}
-                onDelete={handleDeleteRequest}
-              />
-            ))
+            sortedRequests.map(req => {
+              const isBusy = busyId === req.id;
+              const disabled = isUpdating || isBusy;
+
+              return (
+                <div 
+                  key={req.id}
+                  className={cn(
+                    "flex flex-col md:flex-row md:items-center gap-4 px-5 md:px-7 py-6 border border-border rounded-2xl transition-all duration-300 bg-card shadow-sm",
+                    req.status === 'FINALIZADO' && "opacity-60 bg-muted/10",
+                    isBusy && "bg-primary/5 ring-2 ring-primary/20",
+                    !isBusy && "hover:shadow-md hover:border-primary/20"
+                  )}
+                >
+                  <div className="flex items-center justify-between md:justify-start gap-4">
+                    <div className={cn(
+                      "h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
+                      req.nivel === 'CRITICA' ? "bg-destructive text-white" :
+                      req.nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
+                    )}>
+                      <Zap className="h-5 w-5" />
+                    </div>
+
+                    <div className="flex-1 md:w-48 shrink-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base font-bold tracking-tight">{req.conteiner}</span>
+                        {req.details?.conteinerDePara && (
+                          <span className="text-[10px] bg-info/10 text-info px-2 py-0.5 rounded-full font-bold border border-info/20 uppercase">
+                            {req.details.conteinerDePara}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
+                          <Factory className="h-3 w-3" />
+                          {req.fabricaDestino}
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
+                          <Calendar className="h-3 w-3" />
+                          {req.previsaoFabrica ? new Date(req.previsaoFabrica).toLocaleDateString('pt-BR') : "—"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="md:hidden">
+                      <StatusStepperLine currentStatus={req.status} />
+                    </div>
+                  </div>
+
+                  <div className="hidden md:flex flex-1 items-center justify-center px-8">
+                    <StatusStepperLine currentStatus={req.status} />
+                  </div>
+
+                  <div className="flex items-center justify-between md:justify-end gap-4 mt-2 md:mt-0">
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-semibold uppercase">
+                      <Clock className="h-4 w-4" />
+                      {new Date(req.solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {isTransportadora && req.status !== 'FINALIZADO' && (
+                        <Button 
+                          type="button"
+                          size="sm" 
+                          disabled={disabled}
+                          onClick={() => handleUpdateStatus(req.id, req.status, req.conteiner)} 
+                          className={cn(
+                            "h-10 px-5 text-[11px] font-bold rounded-xl shadow-lg transition-all",
+                            req.status === 'PENDENTE' && "bg-destructive hover:bg-destructive/90 text-white shadow-destructive/20",
+                            req.status === 'CARREGANDO' && "bg-warning hover:bg-warning/90 text-warning-foreground shadow-warning/20",
+                            req.status === 'DESPACHADO' && "bg-success hover:bg-success/90 text-white shadow-success/20"
+                          )}
+                        >
+                          {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+                            req.status === 'PENDENTE' ? "CARREGAR" :
+                            req.status === 'CARREGANDO' ? "SAÍDA PÁTIO" : "FINALIZAR"
+                          )}
+                        </Button>
+                      )}
+                      {req.status === 'FINALIZADO' && (
+                        <div className="text-success flex items-center gap-1.5 text-[10px] font-bold px-4 py-2 bg-success/10 rounded-full border border-success/20 uppercase">
+                          <PackageCheck className="h-4 w-4" /> CONCLUÍDO
+                        </div>
+                      )}
+                      <Button 
+                        type="button"
+                        variant="ghost" 
+                        size="icon" 
+                        disabled={disabled}
+                        onClick={() => handleDeleteRequest(req.id, req.conteiner)} 
+                        className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       </div>
