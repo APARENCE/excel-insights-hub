@@ -99,9 +99,11 @@ export async function syncFromSupabase() {
   }
 }
 
-if (typeof window !== 'undefined') {
-  // Sincronização via Realtime (apenas quando houver mudança no banco)
-  supabase.channel('db-changes')
+// Função para inicializar o Realtime de forma robusta
+export function initRealtime() {
+  if (typeof window === 'undefined') return () => {};
+
+  const channel = supabase.channel('db-realtime-sync')
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'priority_requests' },
@@ -112,7 +114,20 @@ if (typeof window !== 'undefined') {
       { event: '*', schema: 'public', table: 'containers_cheios' },
       () => syncFromSupabase()
     )
-    .subscribe();
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'app_settings' },
+      () => syncFromSupabase()
+    )
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        syncFromSupabase();
+      }
+    });
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }
 
 export function setUserRole(role: UserRole) {
