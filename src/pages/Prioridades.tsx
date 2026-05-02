@@ -117,29 +117,30 @@ const RequestRow = memo(({
 
   return (
     <div className={cn(
-      "flex flex-col md:flex-row md:items-center gap-4 px-4 md:px-6 py-4 border-b border-border hover:bg-muted/30 transition-all duration-300",
+      "flex flex-col md:flex-row md:items-center gap-4 px-5 md:px-7 py-6 border border-border rounded-2xl transition-all duration-300 bg-card shadow-sm",
       status === 'FINALIZADO' && "opacity-60 bg-muted/10",
-      localBusy && "bg-primary/5"
+      localBusy && "bg-primary/5 ring-2 ring-primary/20",
+      !localBusy && "hover:shadow-md hover:border-primary/20"
     )}>
       <div className="flex items-center justify-between md:justify-start gap-4">
         <div className={cn(
-          "h-8 w-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
+          "h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
           nivel === 'CRITICA' ? "bg-destructive text-white" :
           nivel === 'ALTA' ? "bg-warning text-warning-foreground" : "bg-primary text-white"
         )}>
-          <Zap className="h-4 w-4" />
+          <Zap className="h-5 w-5" />
         </div>
 
-        <div className="flex-1 md:w-44 shrink-0">
+        <div className="flex-1 md:w-48 shrink-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold tracking-tight">{conteiner}</span>
+            <span className="text-base font-bold tracking-tight">{conteiner}</span>
             {conteinerDePara && (
-              <span className="text-[9px] bg-info/10 text-info px-2 py-0.5 rounded-full font-bold border border-info/20 uppercase">
+              <span className="text-[10px] bg-info/10 text-info px-2 py-0.5 rounded-full font-bold border border-info/20 uppercase">
                 {conteinerDePara}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3 mt-1">
+          <div className="flex items-center gap-3 mt-1.5">
             <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase">
               <Factory className="h-3 w-3" />
               {fabricaDestino}
@@ -156,13 +157,13 @@ const RequestRow = memo(({
         </div>
       </div>
 
-      <div className="hidden md:flex flex-1 items-center justify-center">
+      <div className="hidden md:flex flex-1 items-center justify-center px-8">
         <StatusStepperLine currentStatus={status} />
       </div>
 
-      <div className="flex items-center justify-between md:justify-end gap-3 mt-2 md:mt-0">
+      <div className="flex items-center justify-between md:justify-end gap-4 mt-2 md:mt-0">
         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-semibold uppercase">
-          <Clock className="h-3.5 w-3.5" />
+          <Clock className="h-4 w-4" />
           {new Date(solicitadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
         </div>
 
@@ -174,21 +175,21 @@ const RequestRow = memo(({
               disabled={disabled}
               onClick={handleAction} 
               className={cn(
-                "h-8 px-4 text-[10px] font-bold rounded-xl shadow-lg transition-all",
+                "h-10 px-5 text-[11px] font-bold rounded-xl shadow-lg transition-all",
                 status === 'PENDENTE' && "bg-destructive hover:bg-destructive/90 text-white shadow-destructive/20",
                 status === 'CARREGANDO' && "bg-warning hover:bg-warning/90 text-warning-foreground shadow-warning/20",
                 status === 'DESPACHADO' && "bg-success hover:bg-success/90 text-white shadow-success/20"
               )}
             >
-              {localBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : (
+              {localBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : (
                 status === 'PENDENTE' ? "CARREGAR" :
                 status === 'CARREGANDO' ? "SAÍDA PÁTIO" : "FINALIZAR"
               )}
             </Button>
           )}
           {status === 'FINALIZADO' && (
-            <div className="text-success flex items-center gap-1.5 text-[10px] font-bold px-3 py-1 bg-success/10 rounded-full border border-success/20 uppercase">
-              <PackageCheck className="h-3.5 w-3.5" /> CONCLUÍDO
+            <div className="text-success flex items-center gap-1.5 text-[10px] font-bold px-4 py-2 bg-success/10 rounded-full border border-success/20 uppercase">
+              <PackageCheck className="h-4 w-4" /> CONCLUÍDO
             </div>
           )}
           <Button 
@@ -197,9 +198,9 @@ const RequestRow = memo(({
             size="icon" 
             disabled={disabled}
             onClick={handleDelete} 
-            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
+            className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-5 w-5" />
           </Button>
         </div>
       </div>
@@ -220,8 +221,8 @@ function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) 
   const currentIndex = steps.findIndex(s => s.id === currentStatus);
 
   return (
-    <div className="flex flex-col gap-1.5 w-full max-w-[200px]">
-      <div className="flex items-center gap-1">
+    <div className="flex flex-col gap-2 w-full max-w-[240px]">
+      <div className="flex items-center gap-1.5">
         {steps.map((step, idx) => {
           const isPast = idx < currentIndex;
           const isCurrent = idx === currentIndex;
@@ -230,7 +231,7 @@ function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) 
             <div 
               key={step.id}
               className={cn(
-                "h-2 flex-1 rounded-full transition-all duration-500",
+                "h-2.5 flex-1 rounded-full transition-all duration-500",
                 isPast ? step.color : 
                 isCurrent ? `${step.color} animate-pulse ring-2 ring-offset-1 ring-foreground/10` : 
                 "bg-muted"
@@ -247,7 +248,7 @@ function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) 
             <span 
               key={step.id} 
               className={cn(
-                "text-[8px] font-bold tracking-tighter uppercase",
+                "text-[9px] font-bold tracking-tighter uppercase",
                 isCurrent ? "text-foreground scale-110 transition-transform" : 
                 isPast ? "text-muted-foreground/60" : "text-muted-foreground/30"
               )}
@@ -316,7 +317,6 @@ export default function PrioridadesPage() {
     try {
       await updatePriorityStatus(id, status);
     } finally {
-      // Delay de 300ms para evitar cliques fantasmas após reordenamento
       setTimeout(() => setIsUpdating(false), 300);
     }
   };
@@ -515,42 +515,33 @@ export default function PrioridadesPage() {
 
       <div className="px-4 md:px-8 pb-16">
         <div className={cn(
-          "rounded-2xl border border-border bg-card overflow-hidden shadow-sm transition-all",
+          "flex flex-col gap-4 transition-all",
           isUpdating && "pointer-events-none opacity-80"
         )}>
-          <div className="hidden md:flex items-center gap-4 px-6 py-3 bg-muted/50 border-b border-border text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-            <div className="w-8 shrink-0">Prio</div>
-            <div className="w-44 shrink-0">Container / Dê-para</div>
-            <div className="flex-1 text-center">Status Operacional</div>
-            <div className="w-48 shrink-0 text-right">Ações & Horário</div>
-          </div>
-
-          <div className="divide-y divide-border">
-            {sortedRequests.length === 0 ? (
-              <div className="py-20 text-center text-muted-foreground">
-                <Zap className="h-12 w-12 mx-auto mb-4 opacity-10" />
-                <p className="text-sm font-semibold uppercase tracking-widest">Nenhuma solicitação ativa na fila</p>
-              </div>
-            ) : (
-              sortedRequests.map(req => (
-                <RequestRow 
-                  key={req.id} 
-                  id={req.id}
-                  conteiner={req.conteiner}
-                  status={req.status}
-                  nivel={req.nivel}
-                  solicitadoEm={req.solicitadoEm}
-                  fabricaDestino={req.fabricaDestino}
-                  previsaoFabrica={req.previsaoFabrica}
-                  conteinerDePara={req.details?.conteinerDePara}
-                  isTransportadora={isTransportadora}
-                  isGlobalBusy={isUpdating}
-                  onUpdateStatus={handleUpdateStatus}
-                  onDelete={handleDeleteRequest}
-                />
-              ))
-            )}
-          </div>
+          {sortedRequests.length === 0 ? (
+            <div className="py-20 text-center text-muted-foreground bg-card rounded-2xl border border-dashed border-border">
+              <Zap className="h-12 w-12 mx-auto mb-4 opacity-10" />
+              <p className="text-sm font-semibold uppercase tracking-widest">Nenhuma solicitação ativa na fila</p>
+            </div>
+          ) : (
+            sortedRequests.map(req => (
+              <RequestRow 
+                key={req.id} 
+                id={req.id}
+                conteiner={req.conteiner}
+                status={req.status}
+                nivel={req.nivel}
+                solicitadoEm={req.solicitadoEm}
+                fabricaDestino={req.fabricaDestino}
+                previsaoFabrica={req.previsaoFabrica}
+                conteinerDePara={req.details?.conteinerDePara}
+                isTransportadora={isTransportadora}
+                isGlobalBusy={isUpdating}
+                onUpdateStatus={handleUpdateStatus}
+                onDelete={handleDeleteRequest}
+              />
+            ))
+          )}
         </div>
       </div>
     </AppShell>
