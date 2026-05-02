@@ -133,7 +133,7 @@ export default function Dashboard() {
             <div className="text-lg font-bold">Status do Estoque</div>
           </div>
           <p className="text-sm text-muted-foreground mb-6">Distribuição detalhada do inventário por status</p>
-          <div className="h-[300px] w-full">
+          <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie 
@@ -141,7 +141,7 @@ export default function Dashboard() {
                   dataKey="value" 
                   nameKey="name" 
                   cx="50%" 
-                  cy="50%" 
+                  cy="45%" 
                   outerRadius={100} 
                   innerRadius={65} 
                   paddingAngle={4}
@@ -154,7 +154,13 @@ export default function Dashboard() {
                 <Tooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                 />
-                <Legend iconType="circle" layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: '11px', fontWeight: '600', paddingLeft: '20px' }} />
+                <Legend 
+                  iconType="circle" 
+                  layout="horizontal" 
+                  align="center" 
+                  verticalAlign="bottom" 
+                  wrapperStyle={{ fontSize: '11px', fontWeight: '600', paddingTop: '20px' }} 
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
