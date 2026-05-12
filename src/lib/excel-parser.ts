@@ -185,28 +185,25 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
     const colD = col("D");
     const colA = col("A");
     
-    for (let i = 0; i < aoa.length; i++) {
+    // Começa de i=1 para pular o cabeçalho se houver
+    for (let i = 1; i < aoa.length; i++) {
       const r = aoa[i];
       if (!r) continue;
       
       const valD = str(r[colD]);
-      if (!valD) continue;
+      const conteinerId = str(r[colA]);
       
-      const statusD = valD.toUpperCase();
-      
-      if (statusD.includes("LOCADO TLOG") || statusD.includes("LOCADO RENAULT")) {
-        const conteinerId = str(r[colA]);
-        if (conteinerId) {
-          vazioIngesys.push({
-            conteiner: conteinerId,
-            statusD: statusD
-          });
-          
-          // Se o container estiver na lista de cheios, marcamos como FINALIZADO
-          const index = cheios.findIndex(c => c.conteiner === conteinerId);
-          if (index !== -1) {
-            cheios[index].status = "FINALIZADO";
-          }
+      // Se houver qualquer valor na coluna D e um ID de container na coluna A
+      if (valD && conteinerId) {
+        vazioIngesys.push({
+          conteiner: conteinerId,
+          statusD: valD
+        });
+        
+        // Se o container estiver na lista de cheios, marcamos como FINALIZADO
+        const index = cheios.findIndex(c => c.conteiner === conteinerId);
+        if (index !== -1) {
+          cheios[index].status = "FINALIZADO";
         }
       }
     }
