@@ -184,12 +184,22 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
     const aoa = sheetAsAOA(wb, viSheet);
     const colD = col("D");
     const colA = col("A");
-    for (let i = 1; i < aoa.length; i++) {
+    
+    // Começamos do 0 para garantir que não pulamos dados se não houver cabeçalho padrão
+    for (let i = 0; i < aoa.length; i++) {
       const r = aoa[i];
       if (!r) continue;
-      const statusD = (str(r[colD]) || "").toUpperCase();
-      // Verificação insensível a maiúsculas/minúsculas
-      if (statusD.includes("LOCADO TLOG") || statusD.includes("LOCADO RENAULT")) {
+      
+      const valD = str(r[colD]);
+      if (!valD) continue;
+      
+      const statusD = valD.toUpperCase();
+      
+      // Busca mais abrangente: se contém LOCADO e (TLOG ou RENAULT)
+      const isLocado = statusD.includes("LOCADO");
+      const isTarget = statusD.includes("TLOG") || statusD.includes("RENAULT");
+      
+      if (isLocado && isTarget) {
         vazioIngesys.push({
           conteiner: str(r[colA]) || `ROW-${i}`,
           statusD: statusD
