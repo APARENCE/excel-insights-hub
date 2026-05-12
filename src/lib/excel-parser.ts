@@ -179,13 +179,14 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   }
 
   const vazioIngesys: VazioIngesysRow[] = [];
-  const viSheet = findSheet(wb, ["VAZIO INGESYS", "VAZIO_INGESYS", "INGESYS"]);
+  // Adicionado "VAZIOS INGESYS" (plural) na lista de candidatos
+  const viSheet = findSheet(wb, ["VAZIOS INGESYS", "VAZIO INGESYS", "VAZIO_INGESYS", "INGESYS"]);
   if (viSheet) {
     const aoa = sheetAsAOA(wb, viSheet);
     const colD = col("D");
     const colA = col("A");
     
-    // Começamos do 0 para garantir que não pulamos dados se não houver cabeçalho padrão
+    // Percorre todas as linhas (começando da 0 para garantir captura total)
     for (let i = 0; i < aoa.length; i++) {
       const r = aoa[i];
       if (!r) continue;
@@ -195,11 +196,8 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       
       const statusD = valD.toUpperCase();
       
-      // Busca mais abrangente: se contém LOCADO e (TLOG ou RENAULT)
-      const isLocado = statusD.includes("LOCADO");
-      const isTarget = statusD.includes("TLOG") || statusD.includes("RENAULT");
-      
-      if (isLocado && isTarget) {
+      // Filtro específico para "LOCADO TLOG" ou "LOCADO RENAULT"
+      if (statusD.includes("LOCADO TLOG") || statusD.includes("LOCADO RENAULT")) {
         vazioIngesys.push({
           conteiner: str(r[colA]) || `ROW-${i}`,
           statusD: statusD
