@@ -179,7 +179,7 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   }
 
   const vazioIngesys: VazioIngesysRow[] = [];
-  const viSheet = findSheet(wb, ["VAZIO INGESYS"]);
+  const viSheet = findSheet(wb, ["VAZIO INGESYS", "VAZIO_INGESYS", "INGESYS"]);
   if (viSheet) {
     const aoa = sheetAsAOA(wb, viSheet);
     const colD = col("D");

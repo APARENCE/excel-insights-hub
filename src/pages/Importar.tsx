@@ -27,7 +27,7 @@ export default function ImportarPage() {
           throw new Error("Arquivo maior que 10MB.");
         }
         const parsed = await parseExcelFile(file);
-        const itemCount = parsed.cheios.length + parsed.vaziosLocados.length;
+        const itemCount = parsed.cheios.length + parsed.vaziosLocados.length + parsed.vazioIngesys.length;
         const record = {
           id: crypto.randomUUID(),
           fileName: file.name,
@@ -39,6 +39,7 @@ export default function ImportarPage() {
           ...prev,
           cheios: parsed.cheios.length ? parsed.cheios : prev.cheios,
           vaziosLocados: parsed.vaziosLocados.length ? parsed.vaziosLocados : prev.vaziosLocados,
+          vazioIngesys: parsed.vazioIngesys.length ? parsed.vazioIngesys : prev.vazioIngesys,
           imports: [record, ...prev.imports].slice(0, 50),
           lastImportAt: record.importedAt,
         }));
