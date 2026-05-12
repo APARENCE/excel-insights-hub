@@ -187,7 +187,8 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
     for (let i = 1; i < aoa.length; i++) {
       const r = aoa[i];
       if (!r) continue;
-      const statusD = str(r[colD]) || "";
+      const statusD = (str(r[colD]) || "").toUpperCase();
+      // Verificação insensível a maiúsculas/minúsculas
       if (statusD.includes("LOCADO TLOG") || statusD.includes("LOCADO RENAULT")) {
         vazioIngesys.push({
           conteiner: str(r[colA]) || `ROW-${i}`,
