@@ -72,10 +72,10 @@ export async function syncFromSupabase() {
         tipo: v.tipo,
         dataEntrada: v.data_entrada,
         dataDePara: v.data_de_para,
-        cheio_de_para: v.cheio_de_para,
-        status_uso: v.status_uso,
-        status_patio: v.status_patio,
-        dias_no_patio: v.dias_no_patio
+        cheioDePara: v.cheio_de_para,
+        statusUso: v.status_uso,
+        statusPatio: v.status_patio,
+        diasNoPatio: v.dias_no_patio
       })) : state.vaziosLocados,
       vazioIngesys: ingesysRes.data ? ingesysRes.data.map(i => ({
         conteiner: i.conteiner,
@@ -94,8 +94,8 @@ export async function syncFromSupabase() {
         nivel: p.nivel,
         status: p.status,
         solicitadoEm: p.solicitado_em,
-        fabrica_destino: p.fabrica_destino,
-        previsao_fabrica: p.previsao_fabrica,
+        fabricaDestino: p.fabrica_destino,
+        previsaoFabrica: p.previsao_fabrica,
         observacao: p.observacao
       })) : state.priorityRequests,
       settings: settingsRes.data ? { capacidadePatio: settingsRes.data.capacidade_patio } : state.settings
@@ -134,9 +134,12 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
           status: lastImport.status
         });
 
-        await supabase.from('containers_cheios').delete().neq('conteiner', '_none_');
-        await supabase.from('vazios_locados').delete().neq('conteiner', '_none_');
-        await supabase.from('vazio_ingesys').delete().neq('conteiner', '_none_');
+        // Limpa tabelas antes de inserir novos dados
+        await Promise.all([
+          supabase.from('containers_cheios').delete().neq('conteiner', '_none_'),
+          supabase.from('vazios_locados').delete().neq('conteiner', '_none_'),
+          supabase.from('vazio_ingesys').delete().neq('conteiner', '_none_')
+        ]);
 
         if (newState.cheios.length > 0) {
           await supabase.from('containers_cheios').insert(newState.cheios.map(c => ({

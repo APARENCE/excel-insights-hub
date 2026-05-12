@@ -14,7 +14,7 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-import { RefreshCw, Car, Repeat, MapPin, CalendarClock, LogOut, ClipboardList, PackageCheck } from "lucide-react";
+import { RefreshCw, Car, Repeat, MapPin, CalendarClock, LogOut, ClipboardList, PackageCheck, Boxes } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { SettingsDialog } from "@/components/SettingsDialog";
@@ -30,6 +30,9 @@ export default function Dashboard() {
   const movement = dailyMovement(ds.cheios);
   const ocupacaoPct = Math.round((s.ocupacao / s.capacidadeTotal) * 1000) / 10;
   const livres = s.capacidadeTotal - s.ocupacao;
+
+  // Contagem específica solicitada
+  const locadosTlog = ds.vazioIngesys.filter(i => i.statusD.includes("LOCADO TLOG")).length;
 
   return (
     <AppShell>
@@ -53,8 +56,8 @@ export default function Dashboard() {
         <StatCard label="Programada Entrada" value={s.programadas} hint="Aguardando chegada" icon={ClipboardList} tone="warning" />
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
-        <StatCard label="Enviado Fábrica" value={s.enviadoFabrica} hint="Em trânsito p/ fábrica" icon={CalendarClock} />
-        <StatCard label="Locados (Ingesys)" value={s.finalizados} hint="Total Locados TLOG/Renault" icon={PackageCheck} tone="success" />
+        <StatCard label="Locados TLOG" value={locadosTlog} hint="Aba VAZIOS INGESYS" icon={Boxes} tone="destructive" active />
+        <StatCard label="Total Locados" value={s.finalizados} hint="TLOG + RENAULT" icon={PackageCheck} tone="success" />
       </div>
 
       <section className="px-6 mt-4">
