@@ -179,14 +179,12 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   }
 
   const vazioIngesys: VazioIngesysRow[] = [];
-  // Adicionado "VAZIOS INGESYS" (plural) na lista de candidatos
   const viSheet = findSheet(wb, ["VAZIOS INGESYS", "VAZIO INGESYS", "VAZIO_INGESYS", "INGESYS"]);
   if (viSheet) {
     const aoa = sheetAsAOA(wb, viSheet);
     const colD = col("D");
     const colA = col("A");
     
-    // Percorre todas as linhas (começando da 0 para garantir captura total)
     for (let i = 0; i < aoa.length; i++) {
       const r = aoa[i];
       if (!r) continue;
@@ -196,12 +194,20 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       
       const statusD = valD.toUpperCase();
       
-      // Filtro específico para "LOCADO TLOG" ou "LOCADO RENAULT"
       if (statusD.includes("LOCADO TLOG") || statusD.includes("LOCADO RENAULT")) {
-        vazioIngesys.push({
-          conteiner: str(r[colA]) || `ROW-${i}`,
-          statusD: statusD
-        });
+        const conteinerId = str(r[colA]);
+        if (conteinerId) {
+          vazioIngesys.push({
+            conteiner: conteinerId,
+            statusD: statusD
+          });
+          
+          // Se o container estiver na lista de cheios, marcamos como FINALIZADO
+          const index = cheios.findIndex(c => c.conteiner === conteinerId);
+          if (index !== -1) {
+            cheios[index].status = "FINALIZADO";
+          }
+        }
       }
     }
   }

@@ -31,9 +31,6 @@ export default function Dashboard() {
   const ocupacaoPct = Math.round((s.ocupacao / s.capacidadeTotal) * 1000) / 10;
   const livres = s.capacidadeTotal - s.ocupacao;
 
-  // Contagem específica solicitada
-  const locadosTlog = ds.vazioIngesys.filter(i => i.statusD.includes("LOCADO TLOG")).length;
-
   return (
     <AppShell>
       <PageHeader
@@ -51,13 +48,11 @@ export default function Dashboard() {
           </>
         }
       />
-      <div className="px-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="px-6 grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Ocupação Atual" value={s.ocupacao} hint={`de ${s.capacidadeTotal} vagas`} icon={Car} tone="success" />
         <StatCard label="Programada Entrada" value={s.programadas} hint="Aguardando chegada" icon={ClipboardList} tone="warning" />
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
-        <StatCard label="Locados TLOG" value={locadosTlog} hint="Aba VAZIOS INGESYS" icon={Boxes} tone="destructive" active />
-        <StatCard label="Total Locados" value={s.finalizados} hint="TLOG + RENAULT" icon={PackageCheck} tone="success" />
       </div>
 
       <section className="px-6 mt-4">
@@ -100,14 +95,10 @@ export default function Dashboard() {
             <span>📈</span> Movimentações do Pátio
           </div>
           <p className="text-xs text-muted-foreground mb-3">Análise detalhada de entradas e saídas diárias</p>
-          <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="grid grid-cols-1 gap-3 mb-3">
             <div className="rounded-md bg-info/5 border border-info/20 p-2 text-center">
               <div className="text-[10px] uppercase text-muted-foreground">Ocupação Atual</div>
               <div className="text-xl font-bold text-info">{s.ocupacao}</div>
-            </div>
-            <div className="rounded-md bg-success/5 border border-success/20 p-2 text-center">
-              <div className="text-[10px] uppercase text-muted-foreground">Locados (Ingesys)</div>
-              <div className="text-xl font-bold text-success">{s.finalizados}</div>
             </div>
           </div>
           <div className="h-64">
