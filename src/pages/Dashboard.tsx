@@ -14,7 +14,7 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-import { RefreshCw, Car, Repeat, MapPin, CalendarClock, LogOut, ClipboardList, PackageCheck, Boxes } from "lucide-react";
+import { RefreshCw, Car, Repeat, MapPin, ClipboardList, PackageCheck } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { SettingsDialog } from "@/components/SettingsDialog";
@@ -48,11 +48,12 @@ export default function Dashboard() {
           </>
         }
       />
-      <div className="px-6 grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="px-6 grid grid-cols-2 md:grid-cols-5 gap-3">
         <StatCard label="Ocupação Atual" value={s.ocupacao} hint={`de ${s.capacidadeTotal} vagas`} icon={Car} tone="success" />
         <StatCard label="Programada Entrada" value={s.programadas} hint="Aguardando chegada" icon={ClipboardList} tone="warning" />
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
+        <StatCard label="Vazio Ingesys" value={s.finalizados} hint="Locados (Col. D)" icon={PackageCheck} tone="destructive" />
       </div>
 
       <section className="px-6 mt-4">
