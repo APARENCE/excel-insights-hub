@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import type { CheioRow, ContainerStatus, VazioLocadoRow } from "./types";
+import type { CheioRow, ContainerStatus, VazioLocadoRow, VazioIngesysRow } from "./types";
 
 function excelDateToISO(v: unknown): string | undefined {
   if (v == null || v === "") return undefined;
@@ -73,6 +73,7 @@ function sheetAsAOA(wb: XLSX.WorkBook, sheetName: string): unknown[][] {
 export interface ParsedExcel {
   cheios: CheioRow[];
   vaziosLocados: VazioLocadoRow[];
+  vazioIngesys: VazioIngesysRow[];
 }
 
 function col(letter: string): number {
@@ -177,7 +178,26 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
     }
   }
 
-  return { cheios, vaziosLocados };
+  const vazioIngesys: VazioIngesysRow[] = [];
+  const viSheet = findSheet(wb, ["VAZIO INGESYS"]);
+  if (viSheet) {
+    const aoa = sheetAsAOA(wb, viSheet);
+    const colD = col("D");
+    const colA = col("A");
+    for (let i = 1; i < aoa.length; i++) {
+      const r = aoa[i];
+      if (!r) continue;
+      const statusD = str(r[colD]) || "";
+      if (statusD.includes("LOCADO TLOG") || statusD.includes("LOCADO RENAULT")) {
+        vazioIngesys.push({
+          conteiner: str(r[colA]) || `ROW-${i}`,
+          statusD: statusD
+        });
+      }
+    }
+  }
+
+  return { cheios, vaziosLocados, vazioIngesys };
 }
 
 export function exportToExcel(data: any[], fileName: string) {

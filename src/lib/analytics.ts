@@ -1,4 +1,4 @@
-import type { CheioRow, VazioLocadoRow } from "./types";
+import type { CheioRow, VazioLocadoRow, VazioIngesysRow } from "./types";
 
 const MS_DAY = 1000 * 60 * 60 * 24;
 
@@ -103,12 +103,14 @@ export function buildDemurrageRows(cheios: CheioRow[]): DemurrageRow[] {
     .sort((a, b) => (a.diasRestantes ?? 9999) - (b.diasRestantes ?? 9999));
 }
 
-export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[], capacity: number = 600) {
+export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[], capacity: number = 600, ingesys: VazioIngesysRow[] = []) {
   const emPatio = cheios.filter((c) => c.status === "EM PATIO TLOG-SJP").length;
   const dePara = cheios.filter((c) => c.status === "DEPARA EM PATIO TLOG-SJP").length;
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
-  const finalizados = cheios.filter((c) => c.status === "FINALIZADO").length;
   const programadas = cheios.filter((c) => c.status === "PROGRAMADA ENTRADA NO PATIO").length;
+  
+  // O contador de "Finalizados" agora conta os itens da aba VAZIO INGESYS (Locados)
+  const finalizados = ingesys.length;
   
   const ocupacao = emPatio + dePara;
   const vaziosEmPatio = vazios.filter(

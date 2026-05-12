@@ -14,7 +14,7 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-import { RefreshCw, Car, Repeat, MapPin, CalendarClock, LogOut, ClipboardList } from "lucide-react";
+import { RefreshCw, Car, Repeat, MapPin, CalendarClock, LogOut, ClipboardList, PackageCheck } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { SettingsDialog } from "@/components/SettingsDialog";
@@ -25,7 +25,7 @@ const STATUS_COLORS = ["#16a34a", "#94a3b8", "#64748b", "#a855f7", "#0ea5e9", "#
 
 export default function Dashboard() {
   const ds = useDataset();
-  const s = summary(ds.cheios, ds.vaziosLocados, ds.settings.capacidadePatio);
+  const s = summary(ds.cheios, ds.vaziosLocados, ds.settings.capacidadePatio, ds.vazioIngesys);
   const dist = statusDistribution(ds.cheios);
   const movement = dailyMovement(ds.cheios);
   const ocupacaoPct = Math.round((s.ocupacao / s.capacidadeTotal) * 1000) / 10;
@@ -54,7 +54,7 @@ export default function Dashboard() {
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
         <StatCard label="Enviado Fábrica" value={s.enviadoFabrica} hint="Em trânsito p/ fábrica" icon={CalendarClock} />
-        <StatCard label="Finalizados" value={s.finalizados} hint="Concluídos" icon={LogOut} />
+        <StatCard label="Locados (Ingesys)" value={s.finalizados} hint="Total Locados TLOG/Renault" icon={PackageCheck} tone="success" />
       </div>
 
       <section className="px-6 mt-4">
@@ -103,7 +103,7 @@ export default function Dashboard() {
               <div className="text-xl font-bold text-info">{s.ocupacao}</div>
             </div>
             <div className="rounded-md bg-success/5 border border-success/20 p-2 text-center">
-              <div className="text-[10px] uppercase text-muted-foreground">Devoluções</div>
+              <div className="text-[10px] uppercase text-muted-foreground">Locados (Ingesys)</div>
               <div className="text-xl font-bold text-success">{s.finalizados}</div>
             </div>
           </div>

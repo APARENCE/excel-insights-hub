@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { AppDataset, PriorityRequest, CheioRow, VazioLocadoRow, ImportRecord } from "./types";
+import type { AppDataset, PriorityRequest, CheioRow, VazioLocadoRow, VazioIngesysRow, ImportRecord } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -8,6 +8,7 @@ export type UserRole = "CLIENTE" | "TRANSPORTADORA";
 const initial: AppDataset & { userRole: UserRole } = {
   cheios: [],
   vaziosLocados: [],
+  vazioIngesys: [],
   imports: [],
   priorityRequests: [],
   userRole: "CLIENTE",
@@ -32,12 +33,14 @@ export async function syncFromSupabase() {
     const [
       cheiosRes,
       vaziosRes,
+      ingesysRes,
       importsRes,
       prioritiesRes,
       settingsRes
     ] = await Promise.all([
       supabase.from('containers_cheios').select('*'),
       supabase.from('vazios_locados').select('*'),
+      supabase.from('vazio_ingesys').select('*'),
       supabase.from('import_history').select('*').order('imported_at', { ascending: false }).limit(50),
       supabase.from('priority_requests').select('*').order('solicitado_em', { ascending: false }),
       supabase.from('app_settings').select('*').maybeSingle()
@@ -69,11 +72,15 @@ export async function syncFromSupabase() {
         tipo: v.tipo,
         dataEntrada: v.data_entrada,
         dataDePara: v.data_de_para,
-        cheioDePara: v.cheio_de_para,
-        statusUso: v.status_uso,
-        statusPatio: v.status_patio,
-        diasNoPatio: v.dias_no_patio
+        cheio_de_para: v.cheio_de_para,
+        status_uso: v.status_uso,
+        status_patio: v.status_patio,
+        dias_no_patio: v.dias_no_patio
       })) : state.vaziosLocados,
+      vazioIngesys: ingesysRes.data ? ingesysRes.data.map(i => ({
+        conteiner: i.conteiner,
+        statusD: i.status_d
+      })) : state.vazioIngesys,
       imports: importsRes.data ? importsRes.data.map(i => ({
         id: i.id,
         fileName: i.file_name,
@@ -87,8 +94,8 @@ export async function syncFromSupabase() {
         nivel: p.nivel,
         status: p.status,
         solicitadoEm: p.solicitado_em,
-        fabricaDestino: p.fabrica_destino,
-        previsaoFabrica: p.previsao_fabrica,
+        fabrica_destino: p.fabrica_destino,
+        previsao_fabrica: p.previsao_fabrica,
         observacao: p.observacao
       })) : state.priorityRequests,
       settings: settingsRes.data ? { capacidadePatio: settingsRes.data.capacidade_patio } : state.settings
@@ -99,40 +106,18 @@ export async function syncFromSupabase() {
   }
 }
 
-// Configuração de Realtime Robusta
 if (typeof window !== 'undefined') {
   supabase.channel('custom-all-channel')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'priority_requests' },
-      () => {
-        syncFromSupabase();
-      }
-    )
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'containers_cheios' },
-      () => {
-        syncFromSupabase();
-      }
-    )
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'app_settings' },
-      () => {
-        syncFromSupabase();
-      }
-    )
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'priority_requests' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'containers_cheios' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazio_ingesys' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => syncFromSupabase())
     .subscribe();
 }
 
 export function setUserRole(role: UserRole) {
   state = { ...state, userRole: role };
   emit();
-}
-
-export function getDataset() {
-  return state;
 }
 
 export async function setDataset(updater: (prev: AppDataset & { userRole: UserRole }) => AppDataset & { userRole: UserRole }) {
@@ -151,9 +136,10 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
 
         await supabase.from('containers_cheios').delete().neq('conteiner', '_none_');
         await supabase.from('vazios_locados').delete().neq('conteiner', '_none_');
+        await supabase.from('vazio_ingesys').delete().neq('conteiner', '_none_');
 
         if (newState.cheios.length > 0) {
-          const { error: e1 } = await supabase.from('containers_cheios').insert(newState.cheios.map(c => ({
+          await supabase.from('containers_cheios').insert(newState.cheios.map(c => ({
             conteiner: c.conteiner,
             lacre: c.lacre,
             tipo: c.tipo,
@@ -171,11 +157,10 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             data_devolucao_vazio: c.dataDevolucaoVazio,
             coluna_as: c.colunaAS
           })));
-          if (e1) throw e1;
         }
 
         if (newState.vaziosLocados.length > 0) {
-          const { error: e2 } = await supabase.from('vazios_locados').insert(newState.vaziosLocados.map(v => ({
+          await supabase.from('vazios_locados').insert(newState.vaziosLocados.map(v => ({
             conteiner: v.conteiner,
             armador: v.armador,
             tipo: v.tipo,
@@ -186,13 +171,19 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             status_patio: v.statusPatio,
             dias_no_patio: toInt(v.diasNoPatio)
           })));
-          if (e2) throw e2;
+        }
+
+        if (newState.vazioIngesys.length > 0) {
+          await supabase.from('vazio_ingesys').insert(newState.vazioIngesys.map(i => ({
+            conteiner: i.conteiner,
+            status_d: i.statusD
+          })));
         }
         
         toast.success("Dados sincronizados com sucesso!");
       } catch (e) {
-        console.error("Erro detalhado na persistência:", e);
-        toast.error("Erro ao salvar no banco. Verifique o formato dos dados.");
+        console.error("Erro na persistência:", e);
+        toast.error("Erro ao salvar no banco.");
       }
     }
   }
@@ -210,36 +201,22 @@ export async function addPriorityRequest(req: PriorityRequest) {
     previsao_fabrica: req.previsaoFabrica,
     observacao: req.observacao
   });
-
-  if (error) {
-    toast.error("Erro ao salvar prioridade");
-  } else {
-    // Sincronização local imediata para o usuário que criou
-    syncFromSupabase();
-  }
+  if (error) toast.error("Erro ao salvar prioridade");
+  else syncFromSupabase();
 }
 
 export async function updatePriorityStatus(id: string, status: PriorityRequest["status"]) {
   const { error } = await supabase.from('priority_requests').update({ status }).eq('id', id);
-  
   if (error) {
     toast.error("Erro ao atualizar status");
     return;
   }
-
   const request = state.priorityRequests.find(r => r.id === id);
-  if (request) {
-    // Se o status for SAÍDA PÁTIO (DESPACHADO) ou FINALIZADO, atualiza o estoque principal
-    if (status === 'DESPACHADO' || status === 'FINALIZADO') {
-      await supabase.from('containers_cheios')
-        .update({ 
-          status: "ENVIADO PARA FABRICA",
-          data_envio_fabrica: new Date().toISOString()
-        })
-        .eq('conteiner', request.conteiner);
-    }
+  if (request && (status === 'DESPACHADO' || status === 'FINALIZADO')) {
+    await supabase.from('containers_cheios')
+      .update({ status: "ENVIADO PARA FABRICA", data_envio_fabrica: new Date().toISOString() })
+      .eq('conteiner', request.conteiner);
   }
-
   syncFromSupabase();
 }
 
@@ -253,7 +230,6 @@ export async function updateSettings(settings: Partial<AppDataset["settings"]>) 
   const { error } = await supabase.from('app_settings').update({
     capacidade_patio: settings.capacidadePatio
   }).neq('id', '00000000-0000-0000-0000-000000000000');
-
   if (error) toast.error("Erro ao salvar configurações");
   else syncFromSupabase();
 }
