@@ -109,10 +109,10 @@ export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[], capacity: 
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
   const programadas = cheios.filter((c) => c.status === "PROGRAMADA ENTRADA NO PATIO").length;
   
-  // Filtra especificamente pelos termos solicitados, ignorando o status "FINALIZADO" genérico
+  // Contagem robusta: verifica se o status contém LOCADO e (TLOG ou RENAULT)
   const locados = cheios.filter(c => {
     const s = (c.status || "").toUpperCase();
-    return s.includes("LOCADO TLOG") || s.includes("LOCADO RENAULT");
+    return s.includes("LOCADO") && (s.includes("TLOG") || s.includes("RENAULT"));
   }).length;
   
   const ocupacao = emPatio + dePara;
@@ -125,7 +125,7 @@ export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[], capacity: 
     emPatio,
     dePara,
     enviadoFabrica,
-    finalizados: locados, // Usamos a contagem de locados aqui
+    finalizados: locados,
     programadas,
     ocupacao,
     totalVaziosLocados: vazios.length,
@@ -149,7 +149,7 @@ export function dailyMovement(cheios: CheioRow[]) {
       entries.set(k, (entries.get(k) ?? 0) + 1);
     }
     const s = (c.status || "").toUpperCase();
-    if (s.includes("FINALIZADO") || s.includes("VAZIO INGESYS") || s.includes("LOCADO TLOG") || s.includes("LOCADO RENAULT")) {
+    if (s.includes("FINALIZADO") || s.includes("VAZIO INGESYS") || s.includes("LOCADO")) {
       const k = (c.dataDevolucaoVazio || c.dataEnvioFabrica || c.dataChegada || "").slice(0, 10);
       if (k) devolucoes.set(k, (devolucoes.get(k) ?? 0) + 1);
     }

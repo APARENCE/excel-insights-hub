@@ -42,9 +42,9 @@ function normalizeStatus(s?: string): ContainerStatus {
     .replace(/\s+/g, " ")
     .trim();
   
-  // Prioridade para os termos específicos de Locação
-  if (u.includes("LOCADO RENAULT")) return "LOCADO RENAULT";
-  if (u.includes("LOCADO TLOG")) return "LOCADO TLOG";
+  // Busca flexível: se contiver LOCADO e o nome do cliente/terminal
+  if (u.includes("LOCADO") && u.includes("RENAULT")) return "LOCADO RENAULT";
+  if (u.includes("LOCADO") && u.includes("TLOG")) return "LOCADO TLOG";
   if (u.includes("VAZIO INGESYS")) return "VAZIO INGESYS";
   
   if (u.includes("PROGRAMADA") || u.includes("AGENDADO")) return "PROGRAMADA ENTRADA NO PATIO";
