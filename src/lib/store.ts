@@ -31,7 +31,7 @@ const initial: AppDataset & { userRole: UserRole } = {
   settings: {
     capacidadePatio: 600,
   },
-  armadorCounts: { MSC: 0, CMA: 0, MAERSK: 0 }, // Adicionado para resolver o erro
+  armadorCounts: { MSC: 0, CMA: 0, MAERSK: 0 },
 };
 
 let state: AppDataset & { userRole: UserRole } = initial;
@@ -116,7 +116,7 @@ export async function syncFromSupabase() {
         observacao: p.observacao
       })) : state.priorityRequests,
       settings: settingsRes.data ? { capacidadePatio: settingsRes.data.capacidade_patio } : state.settings,
-      armadorCounts: countArmadores(state.cheios) // Inicializar com contagem atual
+      armadorCounts: countArmadores(state.cheios)
     };
     emit();
   } catch (error) {
@@ -156,7 +156,8 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
         await Promise.all([
           supabase.from('containers_cheios').delete().neq('conteiner', '_none_'),
           supabase.from('vazios_locados').delete().neq('conteiner', '_none_'),
-          supabase.from('vazio_ingesys').delete().neq('conteiner', '_none_')
+          supabase.from('vazio_ingesys').delete().neq('conteiner', '_none_'),
+          supabase.from('locados_tlog').delete().neq('conteiner', '_none_')
         ]);
 
         if (newState.cheios.length > 0) {
@@ -178,6 +179,14 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             data_devolucao_vazio: c.dataDevolucaoVazio,
             coluna_as: c.colunaAS
           })));
+
+          // Inserção específica na tabela locados_tlog
+          const locados = newState.cheios.filter(c => c.status === "LOCADO TLOG");
+          if (locados.length > 0) {
+            await supabase.from('locados_tlog').insert(locados.map(l => ({
+              conteiner: l.conteiner
+            })));
+          }
         }
 
         if (newState.vaziosLocados.length > 0) {
@@ -188,8 +197,8 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             data_entrada: v.dataEntrada,
             data_de_para: v.dataDePara,
             cheio_de_para: v.cheioDePara,
-            status_uso: v.statusUso,
-            status_patio: v.statusPatio,
+            status_uso: v.status_uso,
+            status_patio: v.status_patio,
             dias_no_patio: toInt(v.diasNoPatio)
           })));
         }
@@ -266,7 +275,6 @@ export function useDataset() {
   );
 }
 
-// Função auxiliar para contar armadores (MSC, CMA, MAERSK) a partir da lista de cheios
 function countArmadores(cheios: CheioRow[]) {
   const counts: Record<string, number> = { MSC: 0, CMA: 0, MAERSK: 0 };
   for (const c of cheios) {

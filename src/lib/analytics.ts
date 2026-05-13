@@ -125,6 +125,7 @@ export function summary(
   const dePara = cheios.filter((c) => c.status === "DEPARA EM PATIO TLOG-SJP").length;
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
   const programadas = cheios.filter((c) => c.status === "PROGRAMADA ENTRADA NO PATIO").length;
+  const locadoTlog = cheios.filter((c) => c.status === "LOCADO TLOG").length;
   
   const fixedLocados = 71;
   const fixedVaziosArmadores = 53;
@@ -143,6 +144,7 @@ export function summary(
     enviadoFabrica,
     finalizados,
     programadas,
+    locadoTlog,
     ocupacao,
     ocupacaoSaturacao,
     capacidadeTotal: capacity,
