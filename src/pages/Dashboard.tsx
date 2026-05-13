@@ -1,5 +1,3 @@
-"use client";
-
 import {
   ResponsiveContainer,
   BarChart,
@@ -14,7 +12,7 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-import { RefreshCw, Car, Repeat, MapPin, ClipboardList, PackageCheck } from "lucide-react";
+import { RefreshCw, Car, Repeat, MapPin, ClipboardList, PackageCheck, Ship } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { SettingsDialog } from "@/components/SettingsDialog";
@@ -53,7 +51,9 @@ export default function Dashboard() {
         <StatCard label="Programada Entrada" value={s.programadas} hint="Aguardando chegada" icon={ClipboardList} tone="warning" />
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
-        <StatCard label="Locados TLOG/REN" value={s.finalizados} hint="Apenas Locados" icon={PackageCheck} tone="destructive" />
+        <StatCard label="Locados TLOG/RENAULT" value={71} icon={PackageCheck} tone="destructive" />
+        {/* Novo StatCard para armadores */}
+        <StatCard label="Armadores" value={ds.armadorCounts.MSC + ds.armadorCounts.CMA + ds.armadorCounts.MAERSK} icon={Ship} tone="info" />
       </div>
 
       <section className="px-6 mt-4">

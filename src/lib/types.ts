@@ -81,4 +81,5 @@ export interface AppDataset {
   priorityRequests: PriorityRequest[];
   lastImportAt?: string;
   settings: AppSettings;
+  armadorCounts: Record<string, number>; // Adicionado para resolver o erro
 }

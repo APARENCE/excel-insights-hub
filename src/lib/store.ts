@@ -15,6 +15,7 @@ const initial: AppDataset & { userRole: UserRole } = {
   settings: {
     capacidadePatio: 600,
   },
+  armadorCounts: { MSC: 0, CMA: 0, MAERSK: 0 }, // Adicionado para resolver o erro
 };
 
 let state: AppDataset & { userRole: UserRole } = initial;
@@ -98,7 +99,8 @@ export async function syncFromSupabase() {
         previsaoFabrica: p.previsao_fabrica,
         observacao: p.observacao
       })) : state.priorityRequests,
-      settings: settingsRes.data ? { capacidadePatio: settingsRes.data.capacidade_patio } : state.settings
+      settings: settingsRes.data ? { capacidadePatio: settingsRes.data.capacidade_patio } : state.settings,
+      armadorCounts: countArmadores(state.cheios) // Inicializar com contagem atual
     };
     emit();
   } catch (error) {
@@ -245,4 +247,16 @@ export function useDataset() {
     () => state,
     () => initial,
   );
+}
+
+// Função auxiliar para contar armadores (MSC, CMA, MAERSK) a partir da lista de cheios
+function countArmadores(cheios: CheioRow[]) {
+  const counts: Record<string, number> = { MSC: 0, CMA: 0, MAERSK: 0 };
+  for (const c of cheios) {
+    const arm = (c.armador ?? "").toUpperCase();
+    if (arm.includes("MSC")) counts.MSC += 1;
+    if (arm.includes("CMA")) counts.CMA += 1;
+    if (arm.includes("MAERSK")) counts.MAERSK += 1;
+  }
+  return counts;
 }
