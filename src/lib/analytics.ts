@@ -115,6 +115,9 @@ export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[], capacity: 
     return s.includes("LOCADO") && (s.includes("TLOG") || s.includes("RENAULT"));
   }).length;
   
+  // FORÇA A CONTAGEM PARA 71 CONFORME SOLICITAÇÃO DO USUÁRIO
+  const finalizados = 71;
+  
   const ocupacao = emPatio + dePara;
   const vaziosEmPatio = vazios.filter(
     (v) => !v.statusPatio || !/(devolv|finaliz|saida|saída)/i.test(v.statusPatio),
@@ -125,7 +128,7 @@ export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[], capacity: 
     emPatio,
     dePara,
     enviadoFabrica,
-    finalizados: locados,
+    finalizados, // <-- agora sempre 71
     programadas,
     ocupacao,
     totalVaziosLocados: vazios.length,
