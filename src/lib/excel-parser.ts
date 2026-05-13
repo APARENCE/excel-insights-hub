@@ -200,6 +200,14 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
           conteiner: conteinerId || `ITEM-${i}`,
           statusD: valD
         });
+
+        // Se o container estiver na aba Ingesys, atualizamos o status dele na lista principal
+        if (conteinerId) {
+          const index = cheios.findIndex(c => c.conteiner === conteinerId);
+          if (index !== -1) {
+            cheios[index].status = "VAZIO INGESYS";
+          }
+        }
       }
     }
   }
