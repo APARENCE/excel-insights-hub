@@ -42,9 +42,11 @@ function normalizeStatus(s?: string): ContainerStatus {
     .replace(/\s+/g, " ")
     .trim();
   
-  if (u.includes("VAZIO INGESYS")) return "VAZIO INGESYS";
+  // Prioridade para os termos específicos de Locação
   if (u.includes("LOCADO RENAULT")) return "LOCADO RENAULT";
   if (u.includes("LOCADO TLOG")) return "LOCADO TLOG";
+  if (u.includes("VAZIO INGESYS")) return "VAZIO INGESYS";
+  
   if (u.includes("PROGRAMADA") || u.includes("AGENDADO")) return "PROGRAMADA ENTRADA NO PATIO";
   if (u.includes("FINALIZ")) return "FINALIZADO";
   if (u.includes("DEPARA") && u.includes("PATIO")) return "DEPARA EM PATIO TLOG-SJP";
@@ -201,7 +203,6 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
           statusD: valD
         });
 
-        // Se o container estiver na aba Ingesys, atualizamos o status dele na lista principal
         if (conteinerId) {
           const index = cheios.findIndex(c => c.conteiner === conteinerId);
           if (index !== -1) {
