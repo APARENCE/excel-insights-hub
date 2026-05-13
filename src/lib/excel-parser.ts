@@ -42,7 +42,6 @@ function normalizeStatus(s?: string): ContainerStatus {
     .replace(/\s+/g, " ")
     .trim();
   
-  // Busca flexível: se contiver LOCADO e o nome do cliente/terminal
   if (u.includes("LOCADO") && u.includes("RENAULT")) return "LOCADO RENAULT";
   if (u.includes("LOCADO") && u.includes("TLOG")) return "LOCADO TLOG";
   if (u.includes("VAZIO INGESYS")) return "VAZIO INGESYS";
@@ -58,12 +57,20 @@ function normalizeStatus(s?: string): ContainerStatus {
 
 function findSheet(wb: XLSX.WorkBook, candidates: string[]) {
   const names = wb.SheetNames;
+  const normalize = (value: string) =>
+    value
+      .toUpperCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^A-Z0-9]+/g, " ")
+      .trim();
+
   for (const c of candidates) {
-    const found = names.find((n) => n.toUpperCase().trim() === c.toUpperCase().trim());
+    const found = names.find((n) => normalize(n) === normalize(c));
     if (found) return found;
   }
   for (const c of candidates) {
-    const found = names.find((n) => n.toUpperCase().includes(c.toUpperCase().trim()));
+    const found = names.find((n) => normalize(n).includes(normalize(c)));
     if (found) return found;
   }
   return undefined;
@@ -87,14 +94,37 @@ function col(letter: string): number {
   return n - 1;
 }
 
+function cellDisplayValue(ws: XLSX.WorkSheet, row: number, column: number): string | undefined {
+  const cell = ws[XLSX.utils.encode_cell({ r: row, c: column })];
+  if (!cell) return undefined;
+  return str(cell.w ?? cell.v);
+}
+
 export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { cellDates: true });
 
   const cheios: CheioRow[] = [];
+  const vazioIngesys: VazioIngesysRow[] = [];
   const cheiosSheet = findSheet(wb, ["CHEIOS TLOG ATENDIMENTO RENAULT", "CHEIOS TLOG", "CHEIOS"]);
   if (cheiosSheet) {
+    const ws = wb.Sheets[cheiosSheet];
     const aoa = sheetAsAOA(wb, cheiosSheet);
+    const colAA = col("AA");
+    const colA = col("A");
+    const range = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : undefined;
+    if (range) {
+      for (let i = range.s.r + 1; i <= range.e.r; i++) {
+        const valAA = cellDisplayValue(ws, i, colAA);
+        const conteinerId = cellDisplayValue(ws, i, colA);
+        if (valAA) {
+          vazioIngesys.push({
+            conteiner: conteinerId || `ITEM-${i + 1}`,
+            statusD: valAA,
+          });
+        }
+      }
+    }
     const C = {
       conteiner: col("A"),
       lacre: col("B"),
@@ -183,33 +213,33 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
     }
   }
 
-  const vazioIngesys: VazioIngesysRow[] = [];
+  // Aba INGESYS opcional - sobrescreve se houver dados
   const viSheet = findSheet(wb, ["VAZIOS INGESYS", "VAZIO INGESYS", "INGESYS"]);
   if (viSheet) {
-    const aoa = sheetAsAOA(wb, viSheet);
+    const ws = wb.Sheets[viSheet];
     const colD = col("D");
     const colA = col("A");
-    
-    for (let i = 1; i < aoa.length; i++) {
-      const r = aoa[i];
-      if (!r || r.length <= colD) continue;
-      
-      const valD = str(r[colD]);
-      const conteinerId = str(r[colA]);
-      
-      if (valD) {
-        vazioIngesys.push({
-          conteiner: conteinerId || `ITEM-${i}`,
-          statusD: valD
-        });
-
-        if (conteinerId) {
-          const index = cheios.findIndex(c => c.conteiner === conteinerId);
-          if (index !== -1) {
-            cheios[index].status = "VAZIO INGESYS";
+    const range = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : undefined;
+    const fromIngesys: VazioIngesysRow[] = [];
+    if (range) {
+      for (let i = range.s.r; i <= range.e.r; i++) {
+        const valD = cellDisplayValue(ws, i, colD);
+        const conteinerId = cellDisplayValue(ws, i, colA);
+        if (valD) {
+          fromIngesys.push({
+            conteiner: conteinerId || `ITEM-${i + 1}`,
+            statusD: valD,
+          });
+          if (conteinerId) {
+            const index = cheios.findIndex((c) => c.conteiner === conteinerId);
+            if (index !== -1) cheios[index].status = "FINALIZADO";
           }
         }
       }
+    }
+    if (fromIngesys.length > 0) {
+      vazioIngesys.length = 0;
+      vazioIngesys.push(...fromIngesys);
     }
   }
 

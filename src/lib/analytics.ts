@@ -128,12 +128,13 @@ export function summary(
   const dePara = cheios.filter((c) => c.status === "DEPARA EM PATIO TLOG-SJP").length;
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
   const programadas = cheios.filter((c) => c.status === "PROGRAMADA ENTRADA NO PATIO").length;
-  const finalizados = cheios.filter((c) => c.status === "FINALIZADO").length;
-
+  
   const fixedLocados = 71;
   const fixedVaziosArmadores = 53;
   
-  // Ocupação "como estava" (apenas containers do dataset)
+  // A contagem de "Vazio Ingesys" é baseada em todos os valores preenchidos da Coluna D
+  const finalizados = ingesys.length;
+  
   const ocupacao = emPatio + dePara;
   
   // Ocupação para saturação (Soma com os valores fixos solicitados)

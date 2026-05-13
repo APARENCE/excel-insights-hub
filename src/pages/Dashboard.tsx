@@ -27,7 +27,6 @@ export default function Dashboard() {
   const dist = statusDistribution(ds.cheios);
   const movement = dailyMovement(ds.cheios);
   
-  // Usar ocupacaoSaturacao para os cálculos de capacidade operacional
   const ocupacaoPct = Math.round((s.ocupacaoSaturacao / s.capacidadeTotal) * 1000) / 10;
   const livres = s.capacidadeTotal - s.ocupacaoSaturacao;
 
@@ -49,13 +48,11 @@ export default function Dashboard() {
         }
       />
       <div className="px-6 grid grid-cols-2 md:grid-cols-5 gap-3">
-        {/* Card 1: Agora exibe a soma total (ocupacaoSaturacao) */}
         <StatCard label="Ocupação Atual" value={s.ocupacaoSaturacao} hint={`de ${s.capacidadeTotal} vagas`} icon={Car} tone="success" />
         <StatCard label="Programada Entrada" value={s.programadas} hint="Aguardando chegada" icon={ClipboardList} tone="warning" />
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
-        <StatCard label="Locados TLOG/RENAULT" value={71} icon={PackageCheck} tone="destructive" />
-        <StatCard label="VAZIOS ARMADORES EM PATIO" value={53} icon={Ship} tone="info" />
+        <StatCard label="Vazio Ingesys" value={s.finalizados} hint="Coluna D preenchida" icon={PackageCheck} tone="destructive" />
       </div>
 
       <section className="px-6 mt-4">
