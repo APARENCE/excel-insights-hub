@@ -105,16 +105,15 @@ export function buildDemurrageRows(cheios: CheioRow[]): DemurrageRow[] {
 
 /**
  * Contagem de armadores (MSC, CMA, MAERSK) presentes na coluna AA da aba CHEIOS.
- * O parser já traz o conteúdo da coluna AA como `armador` no CheioRow.
- * Esta função agrega essas ocorrências de forma case‑insensitive.
+ * Agora faz a contagem exata dos valores da coluna AA, sem busca por substring.
  */
 function countArmadores(cheios: CheioRow[]) {
   const counts: Record<string, number> = { MSC: 0, CMA: 0, MAERSK: 0 };
   for (const c of cheios) {
-    const arm = (c.armador ?? "").toUpperCase();
-    if (arm.includes("MSC")) counts.MSC += 1;
-    if (arm.includes("CMA")) counts.CMA += 1;
-    if (arm.includes("MAERSK")) counts.MAERSK += 1;
+    const armador = c.armador?.trim().toUpperCase();
+    if (armador === "MSC") counts.MSC += 1;
+    else if (armador === "CMA") counts.CMA += 1;
+    else if (armador === "MAERSK") counts.MAERSK += 1;
   }
   return counts;
 }
