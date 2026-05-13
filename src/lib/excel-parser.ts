@@ -53,10 +53,12 @@ function normalizeStatus(s?: string): ContainerStatus {
 
 function findSheet(wb: XLSX.WorkBook, candidates: string[]) {
   const names = wb.SheetNames;
+  // Busca exata primeiro
   for (const c of candidates) {
     const found = names.find((n) => n.toUpperCase().trim() === c.toUpperCase().trim());
     if (found) return found;
   }
+  // Busca parcial depois
   for (const c of candidates) {
     const found = names.find((n) => n.toUpperCase().includes(c.toUpperCase()));
     if (found) return found;
@@ -87,7 +89,7 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   const wb = XLSX.read(buf, { cellDates: true });
 
   const cheios: CheioRow[] = [];
-  const cheiosSheet = findSheet(wb, ["CHEIOS TLOG ATENDIMENTO RENAULT", "CHEIOS TLOG"]);
+  const cheiosSheet = findSheet(wb, ["CHEIOS TLOG ATENDIMENTO RENAULT", "CHEIOS TLOG", "CHEIOS"]);
   if (cheiosSheet) {
     const aoa = sheetAsAOA(wb, cheiosSheet);
     const C = {
@@ -145,7 +147,7 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   }
 
   const vaziosLocados: VazioLocadoRow[] = [];
-  const vlSheet = findSheet(wb, ["VAZIO LOCADO", "VAZIOS LOCADOS"]);
+  const vlSheet = findSheet(wb, ["VAZIO LOCADO", "VAZIOS LOCADOS", "LOCADOS"]);
   if (vlSheet) {
     const aoa = sheetAsAOA(wb, vlSheet);
     const V = {
@@ -185,7 +187,6 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
     const colD = col("D");
     const colA = col("A");
     
-    // Percorre todas as linhas para encontrar dados na coluna D
     for (let i = 0; i < aoa.length; i++) {
       const r = aoa[i];
       if (!r) continue;
@@ -193,17 +194,17 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       const valD = str(r[colD]);
       const conteinerId = str(r[colA]);
       
-      // Se a linha for o cabeçalho (contém palavras como 'status' ou 'id'), ignoramos
+      // Ignora cabeçalho se contiver palavras chave
       if (i === 0 && valD && /status|id|conteiner|identificacao/i.test(valD)) continue;
 
-      // Se houver qualquer valor na coluna D, nós contamos como um item do Ingesys
+      // Se houver QUALQUER valor na coluna D, contamos
       if (valD) {
         vazioIngesys.push({
-          conteiner: conteinerId || `ITEM-${i}`, // Usa o ID se houver, senão um placeholder
+          conteiner: conteinerId || `ITEM-${i}`,
           statusD: valD
         });
         
-        // Se houver um ID de container e ele estiver na lista de cheios, marcamos como FINALIZADO
+        // Se o container estiver na lista de cheios, marca como FINALIZADO
         if (conteinerId) {
           const index = cheios.findIndex(c => c.conteiner === conteinerId);
           if (index !== -1) {
