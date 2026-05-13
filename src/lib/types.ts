@@ -6,6 +6,7 @@ export type ContainerStatus =
   | "PROGRAMADA ENTRADA NO PATIO"
   | "LOCADO RENAULT"
   | "LOCADO TLOG"
+  | "VAZIO INGESYS"
   | "OUTRO";
 
 export type PriorityLevel = "CRITICA" | "ALTA" | "NORMAL";

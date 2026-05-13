@@ -109,9 +109,13 @@ export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[], capacity: 
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
   const programadas = cheios.filter((c) => c.status === "PROGRAMADA ENTRADA NO PATIO").length;
   
-  // Soma os itens da aba Ingesys + os containers com status LOCADO na aba principal
-  const locadosCheios = cheios.filter(c => c.status === "LOCADO RENAULT" || c.status === "LOCADO TLOG").length;
-  const finalizados = ingesys.length + locadosCheios;
+  // Conta containers com status VAZIO INGESYS ou LOCADO na aba principal
+  const finalizados = cheios.filter(c => 
+    c.status === "VAZIO INGESYS" || 
+    c.status === "LOCADO RENAULT" || 
+    c.status === "LOCADO TLOG" ||
+    c.status === "FINALIZADO"
+  ).length;
   
   const ocupacao = emPatio + dePara;
   const vaziosEmPatio = vazios.filter(
@@ -146,7 +150,7 @@ export function dailyMovement(cheios: CheioRow[]) {
       const k = c.dataChegada.slice(0, 10);
       entries.set(k, (entries.get(k) ?? 0) + 1);
     }
-    if (c.status === "FINALIZADO") {
+    if (c.status === "FINALIZADO" || c.status === "VAZIO INGESYS") {
       const k = (c.dataDevolucaoVazio || c.dataEnvioFabrica || c.dataChegada || "").slice(0, 10);
       if (k) devolucoes.set(k, (devolucoes.get(k) ?? 0) + 1);
     }

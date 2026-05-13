@@ -42,6 +42,7 @@ function normalizeStatus(s?: string): ContainerStatus {
     .replace(/\s+/g, " ")
     .trim();
   
+  if (u.includes("VAZIO INGESYS")) return "VAZIO INGESYS";
   if (u.includes("LOCADO RENAULT")) return "LOCADO RENAULT";
   if (u.includes("LOCADO TLOG")) return "LOCADO TLOG";
   if (u.includes("PROGRAMADA") || u.includes("AGENDADO")) return "PROGRAMADA ENTRADA NO PATIO";
@@ -187,7 +188,6 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
     const colD = col("D");
     const colA = col("A");
     
-    // Começa do 1 para pular o cabeçalho
     for (let i = 1; i < aoa.length; i++) {
       const r = aoa[i];
       if (!r || r.length <= colD) continue;
@@ -195,19 +195,11 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       const valD = str(r[colD]);
       const conteinerId = str(r[colA]);
       
-      // Se houver qualquer valor na coluna D, nós contamos
       if (valD) {
         vazioIngesys.push({
           conteiner: conteinerId || `ITEM-${i}`,
           statusD: valD
         });
-        
-        if (conteinerId) {
-          const index = cheios.findIndex(c => c.conteiner === conteinerId);
-          if (index !== -1) {
-            cheios[index].status = "FINALIZADO";
-          }
-        }
       }
     }
   }
