@@ -157,7 +157,8 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
           supabase.from('containers_cheios').delete().neq('conteiner', '_none_'),
           supabase.from('vazios_locados').delete().neq('conteiner', '_none_'),
           supabase.from('vazio_ingesys').delete().neq('conteiner', '_none_'),
-          supabase.from('locados_tlog').delete().neq('conteiner', '_none_')
+          supabase.from('locados_tlog').delete().neq('conteiner', '_none_'),
+          supabase.from('locados_renault').delete().neq('conteiner', '_none_')
         ]);
 
         if (newState.cheios.length > 0) {
@@ -180,10 +181,16 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             coluna_as: c.colunaAS
           })));
 
-          // Inserção específica na tabela locados_tlog
-          const locados = newState.cheios.filter(c => c.status === "LOCADO TLOG");
-          if (locados.length > 0) {
-            await supabase.from('locados_tlog').insert(locados.map(l => ({
+          const locadosTlog = newState.cheios.filter(c => c.status === "LOCADO TLOG");
+          if (locadosTlog.length > 0) {
+            await supabase.from('locados_tlog').insert(locadosTlog.map(l => ({
+              conteiner: l.conteiner
+            })));
+          }
+
+          const locadosRenault = newState.cheios.filter(c => c.status === "LOCADO RENAULT");
+          if (locadosRenault.length > 0) {
+            await supabase.from('locados_renault').insert(locadosRenault.map(l => ({
               conteiner: l.conteiner
             })));
           }
@@ -197,8 +204,8 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             data_entrada: v.dataEntrada,
             data_de_para: v.dataDePara,
             cheio_de_para: v.cheioDePara,
-            status_uso: v.status_uso,
-            status_patio: v.status_patio,
+            status_uso: v.statusUso,
+            status_patio: v.statusPatio,
             dias_no_patio: toInt(v.diasNoPatio)
           })));
         }

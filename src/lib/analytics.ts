@@ -126,6 +126,7 @@ export function summary(
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
   const programadas = cheios.filter((c) => c.status === "PROGRAMADA ENTRADA NO PATIO").length;
   const locadoTlog = cheios.filter((c) => c.status === "LOCADO TLOG").length;
+  const locadoRenault = cheios.filter((c) => c.status === "LOCADO RENAULT").length;
   
   const fixedLocados = 71;
   const fixedVaziosArmadores = 53;
@@ -145,6 +146,7 @@ export function summary(
     finalizados,
     programadas,
     locadoTlog,
+    locadoRenault,
     ocupacao,
     ocupacaoSaturacao,
     capacidadeTotal: capacity,
