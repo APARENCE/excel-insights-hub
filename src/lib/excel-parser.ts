@@ -185,15 +185,18 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
     const colD = col("D");
     const colA = col("A");
     
-    // Começa de i=1 para pular o cabeçalho se houver
-    for (let i = 1; i < aoa.length; i++) {
+    // Começamos da linha 0 e verificamos se é cabeçalho ou dado
+    for (let i = 0; i < aoa.length; i++) {
       const r = aoa[i];
       if (!r) continue;
       
-      const valD = str(r[colD]);
       const conteinerId = str(r[colA]);
+      const valD = str(r[colD]);
       
-      // Se houver qualquer valor na coluna D e um ID de container na coluna A
+      // Se a linha parecer um cabeçalho, pulamos
+      if (i === 0 && conteinerId && /conteiner|identificacao|id/i.test(conteinerId)) continue;
+
+      // Se houver qualquer valor na coluna D e um ID de container na coluna A, contamos
       if (valD && conteinerId) {
         vazioIngesys.push({
           conteiner: conteinerId,
