@@ -109,7 +109,7 @@ export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[], capacity: 
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
   const programadas = cheios.filter((c) => c.status === "PROGRAMADA ENTRADA NO PATIO").length;
   
-  // O contador de "Finalizados" agora conta os itens da aba VAZIO INGESYS (Locados)
+  // A contagem de "Vazio Ingesys" é baseada no tamanho do array ingesys (que agora filtra a Coluna D)
   const finalizados = ingesys.length;
   
   const ocupacao = emPatio + dePara;

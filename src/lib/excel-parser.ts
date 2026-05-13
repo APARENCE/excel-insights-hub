@@ -179,34 +179,36 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   }
 
   const vazioIngesys: VazioIngesysRow[] = [];
-  const viSheet = findSheet(wb, ["VAZIOS INGESYS", "VAZIO INGESYS", "VAZIO_INGESYS", "INGESYS"]);
+  const viSheet = findSheet(wb, ["VAZIOS INGESYS", "VAZIO INGESYS", "VAZIO_INGESYS", "INGESYS", "INGESYS VAZIO"]);
   if (viSheet) {
     const aoa = sheetAsAOA(wb, viSheet);
     const colD = col("D");
     const colA = col("A");
     
-    // Começamos da linha 0 e verificamos se é cabeçalho ou dado
+    // Percorre todas as linhas para encontrar dados na coluna D
     for (let i = 0; i < aoa.length; i++) {
       const r = aoa[i];
       if (!r) continue;
       
-      const conteinerId = str(r[colA]);
       const valD = str(r[colD]);
+      const conteinerId = str(r[colA]);
       
-      // Se a linha parecer um cabeçalho, pulamos
-      if (i === 0 && conteinerId && /conteiner|identificacao|id/i.test(conteinerId)) continue;
+      // Se a linha for o cabeçalho (contém palavras como 'status' ou 'id'), ignoramos
+      if (i === 0 && valD && /status|id|conteiner|identificacao/i.test(valD)) continue;
 
-      // Se houver qualquer valor na coluna D e um ID de container na coluna A, contamos
-      if (valD && conteinerId) {
+      // Se houver qualquer valor na coluna D, nós contamos como um item do Ingesys
+      if (valD) {
         vazioIngesys.push({
-          conteiner: conteinerId,
+          conteiner: conteinerId || `ITEM-${i}`, // Usa o ID se houver, senão um placeholder
           statusD: valD
         });
         
-        // Se o container estiver na lista de cheios, marcamos como FINALIZADO
-        const index = cheios.findIndex(c => c.conteiner === conteinerId);
-        if (index !== -1) {
-          cheios[index].status = "FINALIZADO";
+        // Se houver um ID de container e ele estiver na lista de cheios, marcamos como FINALIZADO
+        if (conteinerId) {
+          const index = cheios.findIndex(c => c.conteiner === conteinerId);
+          if (index !== -1) {
+            cheios[index].status = "FINALIZADO";
+          }
         }
       }
     }
