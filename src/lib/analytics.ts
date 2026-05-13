@@ -128,12 +128,16 @@ export function summary(
   const dePara = cheios.filter((c) => c.status === "DEPARA EM PATIO TLOG-SJP").length;
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
   const programadas = cheios.filter((c) => c.status === "PROGRAMADA ENTRADA NO PATIO").length;
+  const finalizados = cheios.filter((c) => c.status === "FINALIZADO").length;
 
   const fixedLocados = 71;
   const fixedVaziosArmadores = 53;
   
-  // Ocupação agora soma os containers em pátio + os valores fixos solicitados
-  const ocupacao = emPatio + dePara + fixedLocados + fixedVaziosArmadores;
+  // Ocupação "como estava" (apenas containers do dataset)
+  const ocupacao = emPatio + dePara;
+  
+  // Ocupação para saturação (Soma com os valores fixos solicitados)
+  const ocupacaoSaturacao = emPatio + dePara + fixedLocados + fixedVaziosArmadores;
   
   const armadorCounts = countArmadores(cheios);
   const totalArmadores = armadorCounts.MSC + armadorCounts.CMA + armadorCounts.MAERSK + armadorCounts.ONE;
@@ -143,9 +147,10 @@ export function summary(
     emPatio,
     dePara,
     enviadoFabrica,
-    finalizados: fixedLocados, // Mantendo a consistência com o card
+    finalizados,
     programadas,
     ocupacao,
+    ocupacaoSaturacao,
     capacidadeTotal: capacity,
     armadorCounts,
     totalArmadores,

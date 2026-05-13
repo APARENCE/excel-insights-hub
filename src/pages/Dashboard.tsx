@@ -26,8 +26,10 @@ export default function Dashboard() {
   const s = summary(ds.cheios, ds.vaziosLocados, ds.settings.capacidadePatio, ds.vazioIngesys);
   const dist = statusDistribution(ds.cheios);
   const movement = dailyMovement(ds.cheios);
-  const ocupacaoPct = Math.round((s.ocupacao / s.capacidadeTotal) * 1000) / 10;
-  const livres = s.capacidadeTotal - s.ocupacao;
+  
+  // Usar ocupacaoSaturacao para os cálculos de capacidade operacional
+  const ocupacaoPct = Math.round((s.ocupacaoSaturacao / s.capacidadeTotal) * 1000) / 10;
+  const livres = s.capacidadeTotal - s.ocupacaoSaturacao;
 
   return (
     <AppShell>
@@ -47,12 +49,12 @@ export default function Dashboard() {
         }
       />
       <div className="px-6 grid grid-cols-2 md:grid-cols-5 gap-3">
+        {/* Card 1: Mantém a contagem original (ocupacao) */}
         <StatCard label="Ocupação Atual" value={s.ocupacao} hint={`de ${s.capacidadeTotal} vagas`} icon={Car} tone="success" />
         <StatCard label="Programada Entrada" value={s.programadas} hint="Aguardando chegada" icon={ClipboardList} tone="warning" />
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
         <StatCard label="Locados TLOG/RENAULT" value={71} icon={PackageCheck} tone="destructive" />
-        {/* Rótulo alterado conforme solicitado */}
         <StatCard label="VAZIOS ARMADORES EM PATIO" value={53} icon={Ship} tone="info" />
       </div>
 
@@ -61,7 +63,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <div className="text-primary font-semibold">Capacidade Operacional</div>
-              <div className="text-xs text-muted-foreground">Ocupação real do pátio</div>
+              <div className="text-xs text-muted-foreground">Ocupação real do pátio (incluindo fixos)</div>
             </div>
             <span className="inline-flex items-center px-3 py-1 rounded-full bg-success text-success-foreground text-xs font-bold">NORMAL</span>
           </div>
@@ -71,7 +73,8 @@ export default function Dashboard() {
             </div>
             <div>
               <div className="text-[11px] uppercase text-muted-foreground">Ocupadas</div>
-              <div className="text-3xl font-bold text-warning-foreground">{s.ocupacao}</div>
+              {/* Valor atualizado com a soma dos fixos */}
+              <div className="text-3xl font-bold text-warning-foreground">{s.ocupacaoSaturacao}</div>
               <div className="text-xs text-muted-foreground">de {s.capacidadeTotal}</div>
             </div>
             <div>
