@@ -187,14 +187,16 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
     const colD = col("D");
     const colA = col("A");
     
-    for (let i = 0; i < aoa.length; i++) {
+    // Começa do 1 para pular o cabeçalho
+    for (let i = 1; i < aoa.length; i++) {
       const r = aoa[i];
       if (!r || r.length <= colD) continue;
       
       const valD = str(r[colD]);
       const conteinerId = str(r[colA]);
       
-      if (valD && !/status|id|conteiner|identificacao|data/i.test(valD)) {
+      // Se houver qualquer valor na coluna D, nós contamos
+      if (valD) {
         vazioIngesys.push({
           conteiner: conteinerId || `ITEM-${i}`,
           statusD: valD
