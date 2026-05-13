@@ -109,12 +109,10 @@ export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[], capacity: 
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
   const programadas = cheios.filter((c) => c.status === "PROGRAMADA ENTRADA NO PATIO").length;
   
-  // Conta containers com status LOCADO TLOG, LOCADO RENAULT ou VAZIO INGESYS
+  // Conta ESTRITAMENTE containers com status LOCADO TLOG ou LOCADO RENAULT
   const finalizados = cheios.filter(c => 
     c.status === "LOCADO TLOG" || 
-    c.status === "LOCADO RENAULT" || 
-    c.status === "VAZIO INGESYS" ||
-    c.status === "FINALIZADO"
+    c.status === "LOCADO RENAULT"
   ).length;
   
   const ocupacao = emPatio + dePara;
