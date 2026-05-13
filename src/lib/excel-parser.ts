@@ -195,8 +195,11 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       const valD = str(r[colD]);
       const conteinerId = str(r[colA]);
       
-      // Se a coluna D tiver qualquer conteúdo, é um item válido
-      if (valD && !/status|id|conteiner|identificacao|data/i.test(valD)) {
+      // Conta apenas LOCADO TLOG ou LOCADO RENAULT
+      const normalized = valD
+        ? valD.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim()
+        : "";
+      if (valD && (normalized === "LOCADO TLOG" || normalized === "LOCADO RENAULT")) {
         vazioIngesys.push({
           conteiner: conteinerId || `ITEM-${i}`,
           statusD: valD
