@@ -103,9 +103,6 @@ export function buildDemurrageRows(cheios: CheioRow[]): DemurrageRow[] {
     .sort((a, b) => (a.diasRestantes ?? 9999) - (b.diasRestantes ?? 9999));
 }
 
-/**
- * Contagem exata dos armadores solicitados: CMA CGM, MAERSK, MSC e ONE.
- */
 function countArmadores(cheios: CheioRow[]) {
   const counts = { MSC: 0, CMA: 0, MAERSK: 0, ONE: 0 };
   for (const c of cheios) {
@@ -132,12 +129,8 @@ export function summary(
   const fixedLocados = 71;
   const fixedVaziosArmadores = 53;
   
-  // A contagem de "Vazio Ingesys" é baseada em todos os valores preenchidos da Coluna D
   const finalizados = ingesys.length;
-  
   const ocupacao = emPatio + dePara;
-  
-  // Ocupação para saturação (Soma com os valores fixos solicitados)
   const ocupacaoSaturacao = emPatio + dePara + fixedLocados + fixedVaziosArmadores;
   
   const armadorCounts = countArmadores(cheios);

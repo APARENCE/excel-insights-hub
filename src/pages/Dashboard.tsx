@@ -12,7 +12,7 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-import { RefreshCw, Car, Repeat, MapPin, ClipboardList, PackageCheck, Ship } from "lucide-react";
+import { RefreshCw, Car, Repeat, MapPin, ClipboardList, PackageCheck } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { SettingsDialog } from "@/components/SettingsDialog";

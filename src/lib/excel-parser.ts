@@ -105,7 +105,8 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   const wb = XLSX.read(buf, { cellDates: true });
 
   const cheios: CheioRow[] = [];
-  const vazioIngesys: VazioIngesysRow[] = [];
+  const currentVazioIngesys: VazioIngesysRow[] = [];
+  
   const cheiosSheet = findSheet(wb, ["CHEIOS TLOG ATENDIMENTO RENAULT", "CHEIOS TLOG", "CHEIOS"]);
   if (cheiosSheet) {
     const ws = wb.Sheets[cheiosSheet];
@@ -113,18 +114,20 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
     const colAA = col("AA");
     const colA = col("A");
     const range = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : undefined;
+    
     if (range) {
       for (let i = range.s.r + 1; i <= range.e.r; i++) {
         const valAA = cellDisplayValue(ws, i, colAA);
         const conteinerId = cellDisplayValue(ws, i, colA);
         if (valAA) {
-          vazioIngesys.push({
+          currentVazioIngesys.push({
             conteiner: conteinerId || `ITEM-${i + 1}`,
             statusD: valAA,
           });
         }
       }
     }
+
     const C = {
       conteiner: col("A"),
       lacre: col("B"),
@@ -143,6 +146,7 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       dataRetornoLocado: col("AH"),
       infoAS: col("AS"),
     };
+
     for (let i = 1; i < aoa.length; i++) {
       const r = aoa[i];
       if (!r) continue;
@@ -213,7 +217,6 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
     }
   }
 
-  // Aba INGESYS opcional - sobrescreve se houver dados
   const viSheet = findSheet(wb, ["VAZIOS INGESYS", "VAZIO INGESYS", "INGESYS"]);
   if (viSheet) {
     const ws = wb.Sheets[viSheet];
@@ -238,12 +241,12 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       }
     }
     if (fromIngesys.length > 0) {
-      vazioIngesys.length = 0;
-      vazioIngesys.push(...fromIngesys);
+      currentVazioIngesys.length = 0;
+      currentVazioIngesys.push(...fromIngesys);
     }
   }
 
-  return { cheios, vaziosLocados, vazioIngesys };
+  return { cheios, vaziosLocados, vazioIngesys: currentVazioIngesys };
 }
 
 export function exportToExcel(data: any[], fileName: string) {
