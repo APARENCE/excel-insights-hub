@@ -197,29 +197,29 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   // Busca por qualquer aba que contenha "INGESYS"
   const viSheet = findSheet(wb, ["VAZIOS INGESYS", "VAZIO INGESYS", "INGESYS"]);
   if (viSheet) {
-    const aoa = sheetAsAOA(wb, viSheet);
+    const ws = wb.Sheets[viSheet];
     const colD = col("D");
     const colA = col("A");
-    
-    for (let i = 0; i < aoa.length; i++) {
-      const r = aoa[i];
-      if (!r || r.length <= colD) continue;
+    const range = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : undefined;
+
+    if (range) {
+      for (let i = range.s.r; i <= range.e.r; i++) {
+        const valD = cellDisplayValue(ws, i, colD);
+        const conteinerId = cellDisplayValue(ws, i, colA);
       
-      const valD = str(r[colD]);
-      const conteinerId = str(r[colA]);
-      
-      // Conta todos os valores preenchidos na coluna D da aba Vazios Ingesys
-      if (valD) {
-        vazioIngesys.push({
-          conteiner: conteinerId || `ITEM-${i}`,
-          statusD: valD
-        });
-        
-        // Marca como FINALIZADO na lista principal se o ID bater
-        if (conteinerId) {
-          const index = cheios.findIndex(c => c.conteiner === conteinerId);
-          if (index !== -1) {
-            cheios[index].status = "FINALIZADO";
+        // Conta todos os valores preenchidos na coluna D da aba Vazios Ingesys
+        if (valD) {
+          vazioIngesys.push({
+            conteiner: conteinerId || `ITEM-${i + 1}`,
+            statusD: valD
+          });
+          
+          // Marca como FINALIZADO na lista principal se o ID bater
+          if (conteinerId) {
+            const index = cheios.findIndex(c => c.conteiner === conteinerId);
+            if (index !== -1) {
+              cheios[index].status = "FINALIZADO";
+            }
           }
         }
       }
