@@ -129,11 +129,13 @@ export function summary(
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
   const programadas = cheios.filter((c) => c.status === "PROGRAMADA ENTRADA NO PATIO").length;
 
-  const finalizados = 71; // Valor fixo solicitado anteriormente
-  const ocupacao = emPatio + dePara;
+  const fixedLocados = 71;
+  const fixedVaziosArmadores = 53;
+  
+  // Ocupação agora soma os containers em pátio + os valores fixos solicitados
+  const ocupacao = emPatio + dePara + fixedLocados + fixedVaziosArmadores;
   
   const armadorCounts = countArmadores(cheios);
-  // Soma total dos armadores específicos (deve resultar em 53 se os dados estiverem corretos)
   const totalArmadores = armadorCounts.MSC + armadorCounts.CMA + armadorCounts.MAERSK + armadorCounts.ONE;
 
   return {
@@ -141,7 +143,7 @@ export function summary(
     emPatio,
     dePara,
     enviadoFabrica,
-    finalizados,
+    finalizados: fixedLocados, // Mantendo a consistência com o card
     programadas,
     ocupacao,
     capacidadeTotal: capacity,
