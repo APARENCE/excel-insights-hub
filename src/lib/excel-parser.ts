@@ -102,9 +102,26 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   const wb = XLSX.read(buf, { cellDates: true });
 
   const cheios: CheioRow[] = [];
+  const vazioIngesys: VazioIngesysRow[] = [];
   const cheiosSheet = findSheet(wb, ["CHEIOS TLOG ATENDIMENTO RENAULT", "CHEIOS TLOG", "CHEIOS"]);
   if (cheiosSheet) {
+    const ws = wb.Sheets[cheiosSheet];
     const aoa = sheetAsAOA(wb, cheiosSheet);
+    const colAA = col("AA");
+    const colA = col("A");
+    const range = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : undefined;
+    if (range) {
+      for (let i = range.s.r + 1; i <= range.e.r; i++) {
+        const valAA = cellDisplayValue(ws, i, colAA);
+        const conteinerId = cellDisplayValue(ws, i, colA);
+        if (valAA) {
+          vazioIngesys.push({
+            conteiner: conteinerId || `ITEM-${i + 1}`,
+            statusD: valAA,
+          });
+        }
+      }
+    }
     const C = {
       conteiner: col("A"),
       lacre: col("B"),
@@ -193,36 +210,33 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
     }
   }
 
-  const vazioIngesys: VazioIngesysRow[] = [];
-  // Busca por qualquer aba que contenha "INGESYS"
+  // Aba INGESYS opcional - sobrescreve se houver dados
   const viSheet = findSheet(wb, ["VAZIOS INGESYS", "VAZIO INGESYS", "INGESYS"]);
   if (viSheet) {
     const ws = wb.Sheets[viSheet];
     const colD = col("D");
     const colA = col("A");
     const range = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : undefined;
-
+    const fromIngesys: VazioIngesysRow[] = [];
     if (range) {
       for (let i = range.s.r; i <= range.e.r; i++) {
         const valD = cellDisplayValue(ws, i, colD);
         const conteinerId = cellDisplayValue(ws, i, colA);
-      
-        // Conta todos os valores preenchidos na coluna D da aba Vazios Ingesys
         if (valD) {
-          vazioIngesys.push({
+          fromIngesys.push({
             conteiner: conteinerId || `ITEM-${i + 1}`,
-            statusD: valD
+            statusD: valD,
           });
-          
-          // Marca como FINALIZADO na lista principal se o ID bater
           if (conteinerId) {
-            const index = cheios.findIndex(c => c.conteiner === conteinerId);
-            if (index !== -1) {
-              cheios[index].status = "FINALIZADO";
-            }
+            const index = cheios.findIndex((c) => c.conteiner === conteinerId);
+            if (index !== -1) cheios[index].status = "FINALIZADO";
           }
         }
       }
+    }
+    if (fromIngesys.length > 0) {
+      vazioIngesys.length = 0;
+      vazioIngesys.push(...fromIngesys);
     }
   }
 
