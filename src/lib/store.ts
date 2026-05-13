@@ -3,6 +3,22 @@ import type { AppDataset, PriorityRequest, CheioRow, VazioLocadoRow, VazioIngesy
 import { supabase } from "@/integrations/supabase/client";
 import{ toast } from "sonner";
 
+const INGESYS_STORAGE_KEY = "tlog:vazio-ingesys";
+
+function loadLocalVazioIngesys(): VazioIngesysRow[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    return JSON.parse(window.localStorage.getItem(INGESYS_STORAGE_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalVazioIngesys(rows: VazioIngesysRow[]) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(INGESYS_STORAGE_KEY, JSON.stringify(rows));
+}
+
 export type UserRole = "CLIENTE" | "TRANSPORTADORA";
 
 const initial: AppDataset & { userRole: UserRole } = {
@@ -77,7 +93,7 @@ export async function syncFromSupabase() {
         statusPatio: v.status_patio,
         diasNoPatio: v.dias_no_patio
       })) : state.vaziosLocados,
-      vazioIngesys: ingesysRes.data ? ingesysRes.data.map(i => ({
+      vazioIngesys: ingesysRes.error ? loadLocalVazioIngesys() : ingesysRes.data ? ingesysRes.data.map(i => ({
         conteiner: i.conteiner,
         statusD: i.status_d
       })) : state.vazioIngesys,
@@ -127,6 +143,7 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   if (newState.lastImportAt !== oldLastImport) {
     const lastImport = newState.imports[0];
     if (lastImport) {
+      saveLocalVazioIngesys(newState.vazioIngesys);
       try {
         await supabase.from('import_history').insert({
           file_name: lastImport.fileName,
