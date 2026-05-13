@@ -53,12 +53,10 @@ function normalizeStatus(s?: string): ContainerStatus {
 
 function findSheet(wb: XLSX.WorkBook, candidates: string[]) {
   const names = wb.SheetNames;
-  // Busca exata primeiro
   for (const c of candidates) {
     const found = names.find((n) => n.toUpperCase().trim() === c.toUpperCase().trim());
     if (found) return found;
   }
-  // Busca parcial depois
   for (const c of candidates) {
     const found = names.find((n) => n.toUpperCase().includes(c.toUpperCase()));
     if (found) return found;
@@ -189,22 +187,20 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
     
     for (let i = 0; i < aoa.length; i++) {
       const r = aoa[i];
-      if (!r) continue;
+      if (!r || r.length <= colD) continue;
       
       const valD = str(r[colD]);
       const conteinerId = str(r[colA]);
       
-      // Ignora cabeçalho se contiver palavras chave
-      if (i === 0 && valD && /status|id|conteiner|identificacao/i.test(valD)) continue;
+      // Ignora se for o cabeçalho
+      if (valD && /status|id|conteiner|identificacao|data/i.test(valD)) continue;
 
-      // Se houver QUALQUER valor na coluna D, contamos
       if (valD) {
         vazioIngesys.push({
           conteiner: conteinerId || `ITEM-${i}`,
           statusD: valD
         });
         
-        // Se o container estiver na lista de cheios, marca como FINALIZADO
         if (conteinerId) {
           const index = cheios.findIndex(c => c.conteiner === conteinerId);
           if (index !== -1) {

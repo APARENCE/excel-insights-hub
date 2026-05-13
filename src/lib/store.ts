@@ -56,7 +56,7 @@ export async function syncFromSupabase() {
         navio: c.navio,
         dataChegada: c.data_chegada,
         diasNoPatio: c.dias_no_patio,
-        freeTime: c.free_time,
+        free_time: c.free_time,
         demurrageVencimento: c.demurrage_vencimento,
         diasParaVencimento: c.dias_para_vencimento,
         status: c.status,
@@ -134,7 +134,6 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
           status: lastImport.status
         });
 
-        // Limpa tabelas antes de inserir novos dados
         await Promise.all([
           supabase.from('containers_cheios').delete().neq('conteiner', '_none_'),
           supabase.from('vazios_locados').delete().neq('conteiner', '_none_'),
