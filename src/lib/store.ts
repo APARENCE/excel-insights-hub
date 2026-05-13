@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type { AppDataset, PriorityRequest, CheioRow, VazioLocadoRow, VazioIngesysRow, ImportRecord } from "./types";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import{ toast } from "sonner";
 
 export type UserRole = "CLIENTE" | "TRANSPORTADORA";
 
@@ -56,7 +56,7 @@ export async function syncFromSupabase() {
         navio: c.navio,
         dataChegada: c.data_chegada,
         diasNoPatio: c.dias_no_patio,
-        free_time: c.free_time,
+        freeTime: c.free_time,
         demurrageVencimento: c.demurrage_vencimento,
         diasParaVencimento: c.dias_para_vencimento,
         status: c.status,

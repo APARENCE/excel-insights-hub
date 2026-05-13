@@ -53,12 +53,14 @@ function normalizeStatus(s?: string): ContainerStatus {
 
 function findSheet(wb: XLSX.WorkBook, candidates: string[]) {
   const names = wb.SheetNames;
+  // 1. Busca exata
   for (const c of candidates) {
     const found = names.find((n) => n.toUpperCase().trim() === c.toUpperCase().trim());
     if (found) return found;
   }
+  // 2. Busca parcial (contém o nome)
   for (const c of candidates) {
-    const found = names.find((n) => n.toUpperCase().includes(c.toUpperCase()));
+    const found = names.find((n) => n.toUpperCase().includes(c.toUpperCase().trim()));
     if (found) return found;
   }
   return undefined;
@@ -179,7 +181,8 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   }
 
   const vazioIngesys: VazioIngesysRow[] = [];
-  const viSheet = findSheet(wb, ["VAZIOS INGESYS", "VAZIO INGESYS", "VAZIO_INGESYS", "INGESYS", "INGESYS VAZIO"]);
+  // Busca por qualquer aba que contenha "INGESYS"
+  const viSheet = findSheet(wb, ["VAZIOS INGESYS", "VAZIO INGESYS", "INGESYS"]);
   if (viSheet) {
     const aoa = sheetAsAOA(wb, viSheet);
     const colD = col("D");
@@ -192,15 +195,14 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       const valD = str(r[colD]);
       const conteinerId = str(r[colA]);
       
-      // Ignora se for o cabeçalho
-      if (valD && /status|id|conteiner|identificacao|data/i.test(valD)) continue;
-
-      if (valD) {
+      // Se a coluna D tiver qualquer conteúdo, é um item válido
+      if (valD && !/status|id|conteiner|identificacao|data/i.test(valD)) {
         vazioIngesys.push({
           conteiner: conteinerId || `ITEM-${i}`,
           statusD: valD
         });
         
+        // Marca como FINALIZADO na lista principal se o ID bater
         if (conteinerId) {
           const index = cheios.findIndex(c => c.conteiner === conteinerId);
           if (index !== -1) {
