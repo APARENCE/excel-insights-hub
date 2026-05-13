@@ -52,8 +52,8 @@ export default function Dashboard() {
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
         <StatCard label="Locados TLOG/RENAULT" value={71} icon={PackageCheck} tone="destructive" />
-        {/* Exibe o total de 53 armadores (CMA, MAERSK, MSC, ONE) */}
-        <StatCard label="Armadores" value={s.totalArmadores} icon={Ship} tone="info" />
+        {/* Valor fixado em 53 conforme solicitado pelo usuário */}
+        <StatCard label="Armadores" value={53} icon={Ship} tone="info" />
       </div>
 
       <section className="px-6 mt-4">
