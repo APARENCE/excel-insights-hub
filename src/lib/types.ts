@@ -4,6 +4,8 @@ export type ContainerStatus =
   | "ENVIADO PARA FABRICA"
   | "FINALIZADO"
   | "PROGRAMADA ENTRADA NO PATIO"
+  | "LOCADO RENAULT"
+  | "LOCADO TLOG"
   | "OUTRO";
 
 export type PriorityLevel = "CRITICA" | "ALTA" | "NORMAL";

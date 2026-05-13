@@ -109,8 +109,9 @@ export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[], capacity: 
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
   const programadas = cheios.filter((c) => c.status === "PROGRAMADA ENTRADA NO PATIO").length;
   
-  // A contagem de "Vazio Ingesys" é baseada no tamanho do array ingesys (que agora filtra a Coluna D)
-  const finalizados = ingesys.length;
+  // Soma os itens da aba Ingesys + os containers com status LOCADO na aba principal
+  const locadosCheios = cheios.filter(c => c.status === "LOCADO RENAULT" || c.status === "LOCADO TLOG").length;
+  const finalizados = ingesys.length + locadosCheios;
   
   const ocupacao = emPatio + dePara;
   const vaziosEmPatio = vazios.filter(
