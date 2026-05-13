@@ -103,21 +103,34 @@ export function buildDemurrageRows(cheios: CheioRow[]): DemurrageRow[] {
     .sort((a, b) => (a.diasRestantes ?? 9999) - (b.diasRestantes ?? 9999));
 }
 
-export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[], capacity: number = 600, ingesys: VazioIngesysRow[] = []) {
+/**
+ * Gera o resumo de KPIs.
+ *
+ * - `finalizados` agora é calculado dinamicamente a partir dos registros
+ *   sincronizados com o Supabase (status que contenha “LOCADO” e
+ *   “TLOG” ou “RENAULT”).
+ * - Não há mais valor hard‑coded.
+ */
+export function summary(
+  cheios: CheioRow[],
+  vazios: VazioLocadoRow[],
+  capacity: number = 600,
+  ingesys: VazioIngesysRow[] = [],
+) {
   const emPatio = cheios.filter((c) => c.status === "EM PATIO TLOG-SJP").length;
   const dePara = cheios.filter((c) => c.status === "DEPARA EM PATIO TLOG-SJP").length;
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
   const programadas = cheios.filter((c) => c.status === "PROGRAMADA ENTRADA NO PATIO").length;
-  
+
   // Contagem robusta: verifica se o status contém LOCADO e (TLOG ou RENAULT)
-  const locados = cheios.filter(c => {
+  const locados = cheios.filter((c) => {
     const s = (c.status || "").toUpperCase();
     return s.includes("LOCADO") && (s.includes("TLOG") || s.includes("RENAULT"));
   }).length;
-  
-  // FORÇA A CONTAGEM PARA 71 CONFORME SOLICITAÇÃO DO USUÁRIO
-  const finalizados = 71;
-  
+
+  // **Contagem automática** – substitui o valor fixo 71
+  const finalizados = locados;
+
   const ocupacao = emPatio + dePara;
   const vaziosEmPatio = vazios.filter(
     (v) => !v.statusPatio || !/(devolv|finaliz|saida|saída)/i.test(v.statusPatio),
@@ -128,7 +141,7 @@ export function summary(cheios: CheioRow[], vazios: VazioLocadoRow[], capacity: 
     emPatio,
     dePara,
     enviadoFabrica,
-    finalizados, // <-- agora sempre 71
+    finalizados, // agora vem do Supabase
     programadas,
     ocupacao,
     totalVaziosLocados: vazios.length,
