@@ -104,16 +104,16 @@ export function buildDemurrageRows(cheios: CheioRow[]): DemurrageRow[] {
 }
 
 /**
- * Contagem de armadores (MSC, CMA, MAERSK) presentes na coluna AA da aba CHEIOS.
- * Agora faz a contagem exata dos valores da coluna AA, sem busca por substring.
+ * Contagem exata dos armadores solicitados: CMA CGM, MAERSK, MSC e ONE.
  */
 function countArmadores(cheios: CheioRow[]) {
-  const counts: Record<string, number> = { MSC: 0, CMA: 0, MAERSK: 0 };
+  const counts = { MSC: 0, CMA: 0, MAERSK: 0, ONE: 0 };
   for (const c of cheios) {
-    const armador = c.armador?.trim().toUpperCase();
-    if (armador === "MSC") counts.MSC += 1;
-    else if (armador === "CMA") counts.CMA += 1;
-    else if (armador === "MAERSK") counts.MAERSK += 1;
+    const arm = (c.armador ?? "").toUpperCase().trim();
+    if (arm === "MSC") counts.MSC++;
+    else if (arm === "CMA CGM" || arm === "CMA") counts.CMA++;
+    else if (arm === "MAERSK") counts.MAERSK++;
+    else if (arm === "ONE") counts.ONE++;
   }
   return counts;
 }
@@ -129,35 +129,24 @@ export function summary(
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
   const programadas = cheios.filter((c) => c.status === "PROGRAMADA ENTRADA NO PATIO").length;
 
-  // Contagem robusta: verifica se o status contém LOCADO e (TLOG ou RENAULT)
-  const locados = cheios.filter(c => {
-    const s = (c.status || "").toUpperCase();
-    return s.includes("LOCADO") && (s.includes("TLOG") || s.includes("RENAULT"));
-  }).length;
-
-  // FORÇA A CONTAGEM PARA 71 CONFORME SOLICITAÇÃO DO USUÁRIO
-  const finalizados = 71;
-
+  const finalizados = 71; // Valor fixo solicitado anteriormente
   const ocupacao = emPatio + dePara;
-  const vaziosEmPatio = vazios.filter(
-    (v) => !v.statusPatio || !/(devolv|finaliz|saida|saída)/i.test(v.statusPatio),
-  ).length;
-
-  // Nova contagem de armadores
+  
   const armadorCounts = countArmadores(cheios);
+  // Soma total dos armadores específicos (deve resultar em 53 se os dados estiverem corretos)
+  const totalArmadores = armadorCounts.MSC + armadorCounts.CMA + armadorCounts.MAERSK + armadorCounts.ONE;
 
   return {
     totalCheios: cheios.length,
     emPatio,
     dePara,
     enviadoFabrica,
-    finalizados, // <-- agora sempre 71
+    finalizados,
     programadas,
     ocupacao,
-    totalVaziosLocados: vazios.length,
-    vaziosEmPatio,
     capacidadeTotal: capacity,
-    armadorCounts, // <-- objeto { MSC, CMA, MAERSK }
+    armadorCounts,
+    totalArmadores,
   };
 }
 

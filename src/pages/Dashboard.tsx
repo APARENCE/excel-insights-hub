@@ -52,8 +52,8 @@ export default function Dashboard() {
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
         <StatCard label="Locados TLOG/RENAULT" value={71} icon={PackageCheck} tone="destructive" />
-        {/* Novo StatCard para armadores */}
-        <StatCard label="Armadores" value={ds.armadorCounts.MSC + ds.armadorCounts.CMA + ds.armadorCounts.MAERSK} icon={Ship} tone="info" />
+        {/* Exibe o total de 53 armadores (CMA, MAERSK, MSC, ONE) */}
+        <StatCard label="Armadores" value={s.totalArmadores} icon={Ship} tone="info" />
       </div>
 
       <section className="px-6 mt-4">
@@ -96,12 +96,6 @@ export default function Dashboard() {
             <span>📈</span> Movimentações do Pátio
           </div>
           <p className="text-xs text-muted-foreground mb-3">Análise detalhada de entradas e saídas diárias</p>
-          <div className="grid grid-cols-1 gap-3 mb-3">
-            <div className="rounded-md bg-info/5 border border-info/20 p-2 text-center">
-              <div className="text-[10px] uppercase text-muted-foreground">Ocupação Atual</div>
-              <div className="text-xl font-bold text-info">{s.ocupacao}</div>
-            </div>
-          </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={movement}>
@@ -124,20 +118,6 @@ export default function Dashboard() {
             <span>📊</span> Status do Estoque
           </div>
           <p className="text-xs text-muted-foreground mb-3">Distribuição detalhada do inventário por status</p>
-          <div className="grid grid-cols-3 gap-2 mb-3 text-center">
-            <div>
-              <div className="text-[10px] uppercase text-muted-foreground">Em Pátio TLOG-SJP</div>
-              <div className="text-xl font-bold text-primary">{s.emPatio}</div>
-            </div>
-            <div>
-              <div className="text-[10px] uppercase text-muted-foreground">Agendados</div>
-              <div className="text-xl font-bold text-warning-foreground">{s.programadas}</div>
-            </div>
-            <div>
-              <div className="text-[10px] uppercase text-muted-foreground">Dê-para</div>
-              <div className="text-xl font-bold text-info">{s.dePara}</div>
-            </div>
-          </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
