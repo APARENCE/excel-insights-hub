@@ -53,14 +53,21 @@ function normalizeStatus(s?: string): ContainerStatus {
 
 function findSheet(wb: XLSX.WorkBook, candidates: string[]) {
   const names = wb.SheetNames;
+  const normalize = (value: string) =>
+    value
+      .toUpperCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^A-Z0-9]+/g, " ")
+      .trim();
   // 1. Busca exata
   for (const c of candidates) {
-    const found = names.find((n) => n.toUpperCase().trim() === c.toUpperCase().trim());
+    const found = names.find((n) => normalize(n) === normalize(c));
     if (found) return found;
   }
   // 2. Busca parcial (contém o nome)
   for (const c of candidates) {
-    const found = names.find((n) => n.toUpperCase().includes(c.toUpperCase().trim()));
+    const found = names.find((n) => normalize(n).includes(normalize(c)));
     if (found) return found;
   }
   return undefined;
@@ -82,6 +89,12 @@ function col(letter: string): number {
   let n = 0;
   for (const ch of letter.toUpperCase()) n = n * 26 + (ch.charCodeAt(0) - 64);
   return n - 1;
+}
+
+function cellDisplayValue(ws: XLSX.WorkSheet, row: number, column: number): string | undefined {
+  const cell = ws[XLSX.utils.encode_cell({ r: row, c: column })];
+  if (!cell) return undefined;
+  return str(cell.w ?? cell.v);
 }
 
 export async function parseExcelFile(file: File): Promise<ParsedExcel> {
