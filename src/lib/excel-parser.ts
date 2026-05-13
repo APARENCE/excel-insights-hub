@@ -102,9 +102,26 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   const wb = XLSX.read(buf, { cellDates: true });
 
   const cheios: CheioRow[] = [];
+  const vazioIngesys: VazioIngesysRow[] = [];
   const cheiosSheet = findSheet(wb, ["CHEIOS TLOG ATENDIMENTO RENAULT", "CHEIOS TLOG", "CHEIOS"]);
   if (cheiosSheet) {
+    const ws = wb.Sheets[cheiosSheet];
     const aoa = sheetAsAOA(wb, cheiosSheet);
+    const colAA = col("AA");
+    const colA = col("A");
+    const range = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : undefined;
+    if (range) {
+      for (let i = range.s.r + 1; i <= range.e.r; i++) {
+        const valAA = cellDisplayValue(ws, i, colAA);
+        const conteinerId = cellDisplayValue(ws, i, colA);
+        if (valAA) {
+          vazioIngesys.push({
+            conteiner: conteinerId || `ITEM-${i + 1}`,
+            statusD: valAA,
+          });
+        }
+      }
+    }
     const C = {
       conteiner: col("A"),
       lacre: col("B"),
