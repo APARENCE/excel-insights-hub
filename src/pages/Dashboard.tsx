@@ -53,7 +53,7 @@ export default function Dashboard() {
         <StatCard label="Programada Entrada" value={s.programadas} hint="Aguardando chegada" icon={ClipboardList} tone="warning" />
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
-        <StatCard label="Vazio Ingesys" value={s.finalizados} hint="Locados (Col. D)" icon={PackageCheck} tone="destructive" />
+        <StatCard label="Vazio Ingesys" value={s.finalizados} hint="Coluna D preenchida" icon={PackageCheck} tone="destructive" />
       </div>
 
       <section className="px-6 mt-4">

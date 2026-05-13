@@ -195,14 +195,8 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       const valD = str(r[colD]);
       const conteinerId = str(r[colA]);
       
-      // Conta apenas LOCADO TLOG ou LOCADO RENAULT (busca por inclusão)
-      const normalized = valD
-        ? valD.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim()
-        : "";
-      const isLocado =
-        normalized.includes("LOCADO") &&
-        (normalized.includes("TLOG") || normalized.includes("RENAULT"));
-      if (valD && isLocado) {
+      // Conta todos os valores preenchidos na coluna D da aba Vazios Ingesys
+      if (valD) {
         vazioIngesys.push({
           conteiner: conteinerId || `ITEM-${i}`,
           statusD: valD
