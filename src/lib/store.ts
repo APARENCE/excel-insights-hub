@@ -143,6 +143,7 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   if (newState.lastImportAt !== oldLastImport) {
     const lastImport = newState.imports[0];
     if (lastImport) {
+      saveLocalVazioIngesys(newState.vazioIngesys);
       try {
         await supabase.from('import_history').insert({
           file_name: lastImport.fileName,
@@ -190,8 +191,6 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             dias_no_patio: toInt(v.diasNoPatio)
           })));
         }
-
-        saveLocalVazioIngesys(newState.vazioIngesys);
 
         if (newState.vazioIngesys.length > 0) {
           await supabase.from('vazio_ingesys').insert(newState.vazioIngesys.map(i => ({
