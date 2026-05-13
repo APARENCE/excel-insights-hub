@@ -49,8 +49,8 @@ export default function Dashboard() {
         }
       />
       <div className="px-6 grid grid-cols-2 md:grid-cols-5 gap-3">
-        {/* Card 1: Mantém a contagem original (ocupacao) */}
-        <StatCard label="Ocupação Atual" value={s.ocupacao} hint={`de ${s.capacidadeTotal} vagas`} icon={Car} tone="success" />
+        {/* Card 1: Agora exibe a soma total (ocupacaoSaturacao) */}
+        <StatCard label="Ocupação Atual" value={s.ocupacaoSaturacao} hint={`de ${s.capacidadeTotal} vagas`} icon={Car} tone="success" />
         <StatCard label="Programada Entrada" value={s.programadas} hint="Aguardando chegada" icon={ClipboardList} tone="warning" />
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
@@ -73,7 +73,6 @@ export default function Dashboard() {
             </div>
             <div>
               <div className="text-[11px] uppercase text-muted-foreground">Ocupadas</div>
-              {/* Valor atualizado com a soma dos fixos */}
               <div className="text-3xl font-bold text-warning-foreground">{s.ocupacaoSaturacao}</div>
               <div className="text-xs text-muted-foreground">de {s.capacidadeTotal}</div>
             </div>
