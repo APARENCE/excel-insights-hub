@@ -200,7 +200,9 @@ export default function Dashboard() {
                 <YAxis fontSize={11} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="entradas" fill="#0ea5e9" name="Entradas (G)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="entradas" fill="#0ea5e9" name="Entradas (G)" radius={[4, 4, 0, 0]}>
+                  <LabelList dataKey="entradas" position="top" fontSize={10} />
+                </Bar>
                 <Bar dataKey="devolucoes" fill="#16a34a" name="Devoluções" radius={[4, 4, 0, 0]}>
                   <LabelList dataKey="devolucoes" position="top" fontSize={10} />
                 </Bar>
@@ -217,7 +219,17 @@ export default function Dashboard() {
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={dist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} innerRadius={55} paddingAngle={2}>
+                <Pie 
+                  data={dist} 
+                  dataKey="value" 
+                  nameKey="name" 
+                  cx="50%" 
+                  cy="50%" 
+                  outerRadius={80} 
+                  innerRadius={50} 
+                  paddingAngle={2}
+                  label={({ value }) => `${value}`}
+                >
                   {dist.map((_, i) => (
                     <Cell key={i} fill={STATUS_COLORS[i % STATUS_COLORS.length]} />
                   ))}
