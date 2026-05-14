@@ -32,7 +32,6 @@ export default function ImportarPage() {
         const itemCount = 
           parsed.cheios.length + 
           parsed.vaziosLocados.length + 
-          parsed.vazioIngesys.length +
           parsed.vaziosLocadosRenault.length +
           parsed.vaziosLocadosTlog.length +
           parsed.vaziosArmadores.length;
@@ -50,7 +49,6 @@ export default function ImportarPage() {
           ...prev,
           cheios: parsed.cheios.length ? parsed.cheios : prev.cheios,
           vaziosLocados: parsed.vaziosLocados.length ? parsed.vaziosLocados : prev.vaziosLocados,
-          vazioIngesys: parsed.vazioIngesys.length ? parsed.vazioIngesys : prev.vazioIngesys,
           vaziosLocadosRenault: parsed.vaziosLocadosRenault.length ? parsed.vaziosLocadosRenault : prev.vaziosLocadosRenault,
           vaziosLocadosTlog: parsed.vaziosLocadosTlog.length ? parsed.vaziosLocadosTlog : prev.vaziosLocadosTlog,
           vaziosArmadores: parsed.vaziosArmadores.length ? parsed.vaziosArmadores : prev.vaziosArmadores,

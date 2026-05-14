@@ -1,30 +1,13 @@
 import { useSyncExternalStore } from "react";
-import type { AppDataset, PriorityRequest, CheioRow, VazioLocadoRow, VazioIngesysRow, ImportRecord, VazioGenericRow } from "./types";
+import type { AppDataset, PriorityRequest, CheioRow, VazioLocadoRow, ImportRecord, VazioGenericRow } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import{ toast } from "sonner";
-
-const INGESYS_STORAGE_KEY = "tlog:vazio-ingesys";
-
-function loadLocalVazioIngesys(): VazioIngesysRow[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    return JSON.parse(window.localStorage.getItem(INGESYS_STORAGE_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveLocalVazioIngesys(rows: VazioIngesysRow[]) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(INGESYS_STORAGE_KEY, JSON.stringify(rows));
-}
 
 export type UserRole = "CLIENTE" | "TRANSPORTADORA";
 
 const initial: AppDataset & { userRole: UserRole } = {
   cheios: [],
   vaziosLocados: [],
-  vazioIngesys: [],
   vaziosLocadosRenault: [],
   vaziosLocadosTlog: [],
   vaziosArmadores: [],
@@ -50,7 +33,6 @@ const toInt = (val: any) => (val != null && !isNaN(Number(val)) ? Math.round(Num
 function discoverColumnD(data: any[]): string {
   if (!data || data.length === 0) return 'coluna_d';
   const keys = Object.keys(data[0]);
-  // Prioriza 'coluna_d' se existir, senão pega a 4ª chave (índice 3)
   if (keys.includes('coluna_d')) return 'coluna_d';
   return keys[3] || keys[keys.length - 1];
 }
@@ -58,13 +40,10 @@ function discoverColumnD(data: any[]): string {
 export async function syncFromSupabase() {
   if (typeof window === 'undefined') return;
 
-  console.log("[DEBUG] Iniciando sincronização Supabase...");
-
   try {
     const [
       cheiosRes,
       vaziosRes,
-      ingesysRes,
       importsRes,
       prioritiesRes,
       settingsRes,
@@ -74,7 +53,6 @@ export async function syncFromSupabase() {
     ] = await Promise.all([
       supabase.from('containers_cheios').select('*'),
       supabase.from('vazios_locados').select('*'),
-      supabase.from('vazio_ingesys').select('*'),
       supabase.from('import_history').select('*').order('imported_at', { ascending: false }).limit(50),
       supabase.from('priority_requests').select('*').order('solicitado_em', { ascending: false }),
       supabase.from('app_settings').select('*').maybeSingle(),
@@ -83,17 +61,9 @@ export async function syncFromSupabase() {
       supabase.from('vazios_armadores').select('*')
     ]);
 
-    // Logs de Debug para Descoberta de Colunas
     const colRenault = discoverColumnD(vaziosRenaultRes.data || []);
     const colTlog = discoverColumnD(vaziosTlogRes.data || []);
     const colArmadores = discoverColumnD(vaziosArmadoresRes.data || []);
-
-    console.log("[DEBUG] Colunas D detectadas:", { Renault: colRenault, Tlog: colTlog, Armadores: colArmadores });
-    console.log("[DEBUG] Registros retornados:", { 
-      Renault: vaziosRenaultRes.data?.length || 0, 
-      Tlog: vaziosTlogRes.data?.length || 0, 
-      Armadores: vaziosArmadoresRes.data?.length || 0 
-    });
 
     state = {
       ...state,
@@ -126,10 +96,6 @@ export async function syncFromSupabase() {
         statusPatio: v.status_patio,
         diasNoPatio: v.dias_no_patio
       })) : state.vaziosLocados,
-      vazioIngesys: ingesysRes.error ? loadLocalVazioIngesys() : ingesysRes.data ? ingesysRes.data.map(i => ({
-        conteiner: i.conteiner,
-        statusD: i.status_d
-      })) : state.vazioIngesys,
       vaziosLocadosRenault: vaziosRenaultRes.data ? vaziosRenaultRes.data.map(v => ({
         id: v.id,
         conteiner: v.conteiner,
@@ -167,7 +133,7 @@ export async function syncFromSupabase() {
     };
     emit();
   } catch (error) {
-    console.error("[DEBUG] Erro crítico na sincronização:", error);
+    console.error("Erro na sincronização:", error);
   }
 }
 
@@ -175,7 +141,6 @@ if (typeof window !== 'undefined') {
   supabase.channel('custom-all-channel')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'priority_requests' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'containers_cheios' }, () => syncFromSupabase())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazio_ingesys' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_renault' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_tlog' }, () => syncFromSupabase())
@@ -195,7 +160,6 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   if (newState.lastImportAt !== oldLastImport) {
     const lastImport = newState.imports[0];
     if (lastImport) {
-      saveLocalVazioIngesys(newState.vazioIngesys);
       try {
         await supabase.from('import_history').insert({
           file_name: lastImport.fileName,
@@ -203,11 +167,9 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
           status: lastImport.status
         });
 
-        // Limpeza segura (apenas se as tabelas existirem)
         await Promise.all([
           supabase.from('containers_cheios').delete().neq('conteiner', '_none_'),
           supabase.from('vazios_locados').delete().neq('conteiner', '_none_'),
-          supabase.from('vazio_ingesys').delete().neq('conteiner', '_none_'),
           supabase.from('vazios_locados_renault').delete().neq('conteiner', '_none_'),
           supabase.from('vazios_locados_tlog').delete().neq('conteiner', '_none_'),
           supabase.from('vazios_armadores').delete().neq('conteiner', '_none_')
@@ -268,17 +230,10 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             dias_no_patio: toInt(v.diasNoPatio)
           })));
         }
-
-        if (newState.vazioIngesys.length > 0) {
-          await supabase.from('vazio_ingesys').insert(newState.vazioIngesys.map(i => ({
-            conteiner: i.conteiner,
-            status_d: i.statusD
-          })));
-        }
         
         toast.success("Dados sincronizados com sucesso!");
       } catch (e) {
-        console.error("[DEBUG] Erro na persistência:", e);
+        console.error("Erro na persistência:", e);
         toast.error("Erro ao salvar no banco.");
       }
     }

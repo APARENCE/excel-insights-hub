@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import type { CheioRow, ContainerStatus, VazioLocadoRow, VazioIngesysRow, VazioGenericRow } from "./types";
+import type { CheioRow, ContainerStatus, VazioLocadoRow, VazioGenericRow } from "./types";
 
 function excelDateToISO(v: unknown): string | undefined {
   if (v == null || v === "") return undefined;
@@ -85,7 +85,6 @@ function sheetAsAOA(wb: XLSX.WorkBook, sheetName: string): unknown[][] {
 export interface ParsedExcel {
   cheios: CheioRow[];
   vaziosLocados: VazioLocadoRow[];
-  vazioIngesys: VazioIngesysRow[];
   vaziosLocadosRenault: VazioGenericRow[];
   vaziosLocadosTlog: VazioGenericRow[];
   vaziosArmadores: VazioGenericRow[];
@@ -95,12 +94,6 @@ function col(letter: string): number {
   let n = 0;
   for (const ch of letter.toUpperCase()) n = n * 26 + (ch.charCodeAt(0) - 64);
   return n - 1;
-}
-
-function cellDisplayValue(ws: XLSX.WorkSheet, row: number, column: number): string | undefined {
-  const cell = ws[XLSX.utils.encode_cell({ r: row, c: column })];
-  if (!cell) return undefined;
-  return str(cell.w ?? cell.v);
 }
 
 function parseGenericVazios(wb: XLSX.WorkBook, sheetNames: string[]): VazioGenericRow[] {
@@ -130,29 +123,10 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   const wb = XLSX.read(buf, { cellDates: true });
 
   const cheios: CheioRow[] = [];
-  const currentVazioIngesys: VazioIngesysRow[] = [];
   
   const cheiosSheet = findSheet(wb, ["CHEIOS TLOG ATENDIMENTO RENAULT", "CHEIOS TLOG", "CHEIOS"]);
   if (cheiosSheet) {
-    const ws = wb.Sheets[cheiosSheet];
     const aoa = sheetAsAOA(wb, cheiosSheet);
-    const colAA = col("AA");
-    const colA = col("A");
-    const range = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : undefined;
-    
-    if (range) {
-      for (let i = range.s.r + 1; i <= range.e.r; i++) {
-        const valAA = cellDisplayValue(ws, i, colAA);
-        const conteinerId = cellDisplayValue(ws, i, colA);
-        if (valAA) {
-          currentVazioIngesys.push({
-            conteiner: conteinerId || `ITEM-${i + 1}`,
-            statusD: valAA,
-          });
-        }
-      }
-    }
-
     const C = {
       conteiner: col("A"),
       lacre: col("B"),
@@ -245,7 +219,6 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   return { 
     cheios, 
     vaziosLocados, 
-    vazioIngesys: currentVazioIngesys,
     vaziosLocadosRenault: parseGenericVazios(wb, ["Vazios Locados Renault", "VAZIOS LOCADOS RENAULT"]),
     vaziosLocadosTlog: parseGenericVazios(wb, ["Vazios Locados Tlog", "VAZIOS LOCADOS TLOG"]),
     vaziosArmadores: parseGenericVazios(wb, ["Vazios Armadores", "VAZIOS ARMADORES"])

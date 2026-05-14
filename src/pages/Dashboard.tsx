@@ -12,7 +12,7 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-import { RefreshCw, Car, Repeat, MapPin, ClipboardList, PackageCheck, Key, Truck, Package, Boxes } from "lucide-react";
+import { RefreshCw, Car, Repeat, MapPin, ClipboardList, Key, Truck, Package, Boxes } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { SettingsDialog } from "@/components/SettingsDialog";
@@ -24,7 +24,7 @@ const STATUS_COLORS = ["#16a34a", "#94a3b8", "#64748b", "#a855f7", "#0ea5e9", "#
 
 export default function Dashboard() {
   const ds = useDataset();
-  const s = summary(ds.cheios, ds.vaziosLocados, ds.settings.capacidadePatio, ds.vazioIngesys);
+  const s = summary(ds.cheios, ds.vaziosLocados, ds.settings.capacidadePatio);
   const dist = statusDistribution(ds.cheios);
   const movement = dailyMovement(ds.cheios);
   
@@ -36,7 +36,6 @@ export default function Dashboard() {
     const map = new Map<string, number>();
     const valid = ds.vaziosLocadosRenault.filter(v => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
     valid.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
-    console.log("[DEBUG UI] Renault Grouped:", Array.from(map.entries()));
     return Array.from(map.entries());
   }, [ds.vaziosLocadosRenault]);
 
@@ -44,7 +43,6 @@ export default function Dashboard() {
     const map = new Map<string, number>();
     const valid = ds.vaziosLocadosTlog.filter(v => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
     valid.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
-    console.log("[DEBUG UI] Tlog Grouped:", Array.from(map.entries()));
     return Array.from(map.entries());
   }, [ds.vaziosLocadosTlog]);
 
@@ -52,7 +50,6 @@ export default function Dashboard() {
     const map = new Map<string, number>();
     const valid = ds.vaziosArmadores.filter(v => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
     valid.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
-    console.log("[DEBUG UI] Armadores Grouped:", Array.from(map.entries()));
     return Array.from(map.entries());
   }, [ds.vaziosArmadores]);
 
@@ -79,14 +76,13 @@ export default function Dashboard() {
         }
       />
       
-      <div className="px-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
+      <div className="px-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatCard label="Ocupação Atual" value={s.ocupacaoSaturacao} hint={`de ${s.capacidadeTotal} vagas`} icon={Car} tone="success" />
         <StatCard label="Programada Entrada" value={s.programadas} hint="Aguardando chegada" icon={ClipboardList} tone="warning" />
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
         <StatCard label="Locado TLOG" value={s.locadoTlog} hint="Soma Coluna AA" icon={Key} tone="warning" />
         <StatCard label="Locado Renault" value={s.locadoRenault} hint="Soma Coluna AA" icon={Truck} tone="info" />
-        <StatCard label="Vazio Ingesys" value={s.finalizados} hint="Coluna D preenchida" icon={PackageCheck} tone="destructive" />
       </div>
 
       {/* Seção: Gestão de Vazios (Coluna D) */}

@@ -62,11 +62,6 @@ export interface VazioGenericRow {
   colunaD: string;
 }
 
-export interface VazioIngesysRow {
-  conteiner: string;
-  statusD: string;
-}
-
 export interface ImportRecord {
   id: string;
   fileName: string;
@@ -82,7 +77,6 @@ export interface AppSettings {
 export interface AppDataset {
   cheios: CheioRow[];
   vaziosLocados: VazioLocadoRow[];
-  vazioIngesys: VazioIngesysRow[];
   vaziosLocadosRenault: VazioGenericRow[];
   vaziosLocadosTlog: VazioGenericRow[];
   vaziosArmadores: VazioGenericRow[];
