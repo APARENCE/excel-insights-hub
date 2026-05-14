@@ -27,7 +27,16 @@ export default function ImportarPage() {
           throw new Error("Arquivo maior que 10MB.");
         }
         const parsed = await parseExcelFile(file);
-        const itemCount = parsed.cheios.length + parsed.vaziosLocados.length + parsed.vazioIngesys.length;
+        
+        // Soma total de itens importados para o histórico
+        const itemCount = 
+          parsed.cheios.length + 
+          parsed.vaziosLocados.length + 
+          parsed.vazioIngesys.length +
+          parsed.vaziosLocadosRenault.length +
+          parsed.vaziosLocadosTlog.length +
+          parsed.vaziosArmadores.length;
+
         const record = {
           id: crypto.randomUUID(),
           fileName: file.name,
@@ -35,11 +44,16 @@ export default function ImportarPage() {
           itemCount,
           status: "success" as const,
         };
+
+        // Atualiza o dataset global incluindo as novas abas de vazios
         setDataset((prev) => ({
           ...prev,
           cheios: parsed.cheios.length ? parsed.cheios : prev.cheios,
           vaziosLocados: parsed.vaziosLocados.length ? parsed.vaziosLocados : prev.vaziosLocados,
           vazioIngesys: parsed.vazioIngesys.length ? parsed.vazioIngesys : prev.vazioIngesys,
+          vaziosLocadosRenault: parsed.vaziosLocadosRenault.length ? parsed.vaziosLocadosRenault : prev.vaziosLocadosRenault,
+          vaziosLocadosTlog: parsed.vaziosLocadosTlog.length ? parsed.vaziosLocadosTlog : prev.vaziosLocadosTlog,
+          vaziosArmadores: parsed.vaziosArmadores.length ? parsed.vaziosArmadores : prev.vaziosArmadores,
           imports: [record, ...prev.imports].slice(0, 50),
           lastImportAt: record.importedAt,
         }));
