@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { AppDataset, PriorityRequest, CheioRow, VazioLocadoRow, VazioIngesysRow, ImportRecord } from "./types";
+import type { AppDataset, PriorityRequest, CheioRow, VazioLocadoRow, VazioIngesysRow, ImportRecord, VazioGenericRow } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import{ toast } from "sonner";
 
@@ -25,6 +25,9 @@ const initial: AppDataset & { userRole: UserRole } = {
   cheios: [],
   vaziosLocados: [],
   vazioIngesys: [],
+  vaziosLocadosRenault: [],
+  vaziosLocadosTlog: [],
+  vaziosArmadores: [],
   imports: [],
   priorityRequests: [],
   userRole: "CLIENTE",
@@ -53,14 +56,20 @@ export async function syncFromSupabase() {
       ingesysRes,
       importsRes,
       prioritiesRes,
-      settingsRes
+      settingsRes,
+      vaziosRenaultRes,
+      vaziosTlogRes,
+      vaziosArmadoresRes
     ] = await Promise.all([
       supabase.from('containers_cheios').select('*'),
       supabase.from('vazios_locados').select('*'),
       supabase.from('vazio_ingesys').select('*'),
       supabase.from('import_history').select('*').order('imported_at', { ascending: false }).limit(50),
       supabase.from('priority_requests').select('*').order('solicitado_em', { ascending: false }),
-      supabase.from('app_settings').select('*').maybeSingle()
+      supabase.from('app_settings').select('*').maybeSingle(),
+      supabase.from('vazios_locados_renault').select('*'),
+      supabase.from('vazios_locados_tlog').select('*'),
+      supabase.from('vazios_armadores').select('*')
     ]);
 
     state = {
@@ -98,6 +107,21 @@ export async function syncFromSupabase() {
         conteiner: i.conteiner,
         statusD: i.status_d
       })) : state.vazioIngesys,
+      vaziosLocadosRenault: vaziosRenaultRes.data ? vaziosRenaultRes.data.map(v => ({
+        id: v.id,
+        conteiner: v.conteiner,
+        colunaD: v.coluna_d
+      })) : state.vaziosLocadosRenault,
+      vaziosLocadosTlog: vaziosTlogRes.data ? vaziosTlogRes.data.map(v => ({
+        id: v.id,
+        conteiner: v.conteiner,
+        colunaD: v.coluna_d
+      })) : state.vaziosLocadosTlog,
+      vaziosArmadores: vaziosArmadoresRes.data ? vaziosArmadoresRes.data.map(v => ({
+        id: v.id,
+        conteiner: v.conteiner,
+        colunaD: v.coluna_d
+      })) : state.vaziosArmadores,
       imports: importsRes.data ? importsRes.data.map(i => ({
         id: i.id,
         fileName: i.file_name,
@@ -130,6 +154,9 @@ if (typeof window !== 'undefined') {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'containers_cheios' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'vazio_ingesys' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_renault' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_tlog' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_armadores' }, () => syncFromSupabase())
     .subscribe();
 }
 
@@ -158,7 +185,10 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
           supabase.from('vazios_locados').delete().neq('conteiner', '_none_'),
           supabase.from('vazio_ingesys').delete().neq('conteiner', '_none_'),
           supabase.from('locados_tlog').delete().neq('conteiner', '_none_'),
-          supabase.from('locados_renault').delete().neq('conteiner', '_none_')
+          supabase.from('locados_renault').delete().neq('conteiner', '_none_'),
+          supabase.from('vazios_locados_renault').delete().neq('conteiner', '_none_'),
+          supabase.from('vazios_locados_tlog').delete().neq('conteiner', '_none_'),
+          supabase.from('vazios_armadores').delete().neq('conteiner', '_none_')
         ]);
 
         if (newState.cheios.length > 0) {
@@ -194,6 +224,27 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
               conteiner: l.conteiner
             })));
           }
+        }
+
+        if (newState.vaziosLocadosRenault.length > 0) {
+          await supabase.from('vazios_locados_renault').insert(newState.vaziosLocadosRenault.map(v => ({
+            conteiner: v.conteiner,
+            coluna_d: v.colunaD
+          })));
+        }
+
+        if (newState.vaziosLocadosTlog.length > 0) {
+          await supabase.from('vazios_locados_tlog').insert(newState.vaziosLocadosTlog.map(v => ({
+            conteiner: v.conteiner,
+            coluna_d: v.colunaD
+          })));
+        }
+
+        if (newState.vaziosArmadores.length > 0) {
+          await supabase.from('vazios_armadores').insert(newState.vaziosArmadores.map(v => ({
+            conteiner: v.conteiner,
+            coluna_d: v.colunaD
+          })));
         }
 
         if (newState.vaziosLocados.length > 0) {

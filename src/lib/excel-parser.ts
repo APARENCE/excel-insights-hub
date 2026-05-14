@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import type { CheioRow, ContainerStatus, VazioLocadoRow, VazioIngesysRow } from "./types";
+import type { CheioRow, ContainerStatus, VazioLocadoRow, VazioIngesysRow, VazioGenericRow } from "./types";
 
 function excelDateToISO(v: unknown): string | undefined {
   if (v == null || v === "") return undefined;
@@ -86,6 +86,9 @@ export interface ParsedExcel {
   cheios: CheioRow[];
   vaziosLocados: VazioLocadoRow[];
   vazioIngesys: VazioIngesysRow[];
+  vaziosLocadosRenault: VazioGenericRow[];
+  vaziosLocadosTlog: VazioGenericRow[];
+  vaziosArmadores: VazioGenericRow[];
 }
 
 function col(letter: string): number {
@@ -98,6 +101,28 @@ function cellDisplayValue(ws: XLSX.WorkSheet, row: number, column: number): stri
   const cell = ws[XLSX.utils.encode_cell({ r: row, c: column })];
   if (!cell) return undefined;
   return str(cell.w ?? cell.v);
+}
+
+function parseGenericVazios(wb: XLSX.WorkBook, sheetNames: string[]): VazioGenericRow[] {
+  const sheet = findSheet(wb, sheetNames);
+  if (!sheet) return [];
+  const aoa = sheetAsAOA(wb, sheet);
+  const results: VazioGenericRow[] = [];
+  const colA = col("A");
+  const colD = col("D");
+
+  for (let i = 1; i < aoa.length; i++) {
+    const r = aoa[i];
+    if (!r) continue;
+    const conteiner = str(r[colA]);
+    if (!conteiner) continue;
+    results.push({
+      id: crypto.randomUUID(),
+      conteiner,
+      colunaD: str(r[colD]) || "N/A"
+    });
+  }
+  return results;
 }
 
 export async function parseExcelFile(file: File): Promise<ParsedExcel> {
@@ -217,36 +242,14 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
     }
   }
 
-  const viSheet = findSheet(wb, ["VAZIOS INGESYS", "VAZIO INGESYS", "INGESYS"]);
-  if (viSheet) {
-    const ws = wb.Sheets[viSheet];
-    const colD = col("D");
-    const colA = col("A");
-    const range = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : undefined;
-    const fromIngesys: VazioIngesysRow[] = [];
-    if (range) {
-      for (let i = range.s.r; i <= range.e.r; i++) {
-        const valD = cellDisplayValue(ws, i, colD);
-        const conteinerId = cellDisplayValue(ws, i, colA);
-        if (valD) {
-          fromIngesys.push({
-            conteiner: conteinerId || `ITEM-${i + 1}`,
-            statusD: valD,
-          });
-          if (conteinerId) {
-            const index = cheios.findIndex((c) => c.conteiner === conteinerId);
-            if (index !== -1) cheios[index].status = "FINALIZADO";
-          }
-        }
-      }
-    }
-    if (fromIngesys.length > 0) {
-      currentVazioIngesys.length = 0;
-      currentVazioIngesys.push(...fromIngesys);
-    }
-  }
-
-  return { cheios, vaziosLocados, vazioIngesys: currentVazioIngesys };
+  return { 
+    cheios, 
+    vaziosLocados, 
+    vazioIngesys: currentVazioIngesys,
+    vaziosLocadosRenault: parseGenericVazios(wb, ["Vazios Locados Renault", "VAZIOS LOCADOS RENAULT"]),
+    vaziosLocadosTlog: parseGenericVazios(wb, ["Vazios Locados Tlog", "VAZIOS LOCADOS TLOG"]),
+    vaziosArmadores: parseGenericVazios(wb, ["Vazios Armadores", "VAZIOS ARMADORES"])
+  };
 }
 
 export function exportToExcel(data: any[], fileName: string) {

@@ -56,6 +56,12 @@ export interface VazioLocadoRow {
   dataRetorno?: string;
 }
 
+export interface VazioGenericRow {
+  id: string;
+  conteiner: string;
+  colunaD: string;
+}
+
 export interface VazioIngesysRow {
   conteiner: string;
   statusD: string;
@@ -77,9 +83,12 @@ export interface AppDataset {
   cheios: CheioRow[];
   vaziosLocados: VazioLocadoRow[];
   vazioIngesys: VazioIngesysRow[];
+  vaziosLocadosRenault: VazioGenericRow[];
+  vaziosLocadosTlog: VazioGenericRow[];
+  vaziosArmadores: VazioGenericRow[];
   imports: ImportRecord[];
   priorityRequests: PriorityRequest[];
   lastImportAt?: string;
   settings: AppSettings;
-  armadorCounts: Record<string, number>; // Adicionado para resolver o erro
+  armadorCounts: Record<string, number>;
 }
