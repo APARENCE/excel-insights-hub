@@ -12,7 +12,7 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-import { RefreshCw, Car, Repeat, MapPin, ClipboardList, PackageCheck, Key, Truck, Package, Boxes } from "lucide-react";
+import { RefreshCw, Car, Repeat, MapPin, ClipboardList, Boxes, Package } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { SettingsDialog } from "@/components/SettingsDialog";
@@ -79,14 +79,11 @@ export default function Dashboard() {
         }
       />
       
-      <div className="px-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
+      <div className="px-6 grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Ocupação Atual" value={s.ocupacaoSaturacao} hint={`de ${s.capacidadeTotal} vagas`} icon={Car} tone="success" />
         <StatCard label="Programada Entrada" value={s.programadas} hint="Aguardando chegada" icon={ClipboardList} tone="warning" />
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
-        <StatCard label="Locado TLOG" value={s.locadoTlog} hint="Soma Coluna AA" icon={Key} tone="warning" />
-        <StatCard label="Locado Renault" value={s.locadoRenault} hint="Soma Coluna AA" icon={Truck} tone="info" />
-        <StatCard label="Vazio Ingesys" value={s.finalizados} hint="Coluna D preenchida" icon={PackageCheck} tone="destructive" />
       </div>
 
       {/* Seção: Gestão de Vazios (Coluna D) */}
