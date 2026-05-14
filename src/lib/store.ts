@@ -1,50 +1,142 @@
-import { useSyncExternalStore } from "react";
-import type { AppDataset, PriorityRequest, CheioRow, VazioLocadoRow, VazioIngesysRow, ImportRecord } from "./types";
 import { supabase } from "@/integrations/supabase/client";
-import{ toast } from "sonner";
-
-const INGESYS_STORAGE_KEY = "tlog:vazio-ingesys";
+import { toast } from "sonner";
+import type {
+  AppDataset,
+  CheioRow,
+  VazioLocadoRow,
+  VazioIngesysRow,
+  ImportRecord,
+  VazioLocadoTlogRow,
+  VazioLocadoRenaultRow,
+  VazioArmadorRow,
+} from "./types";
+import { countArmadores } from "./analytics";
 
 function loadLocalVazioIngesys(): VazioIngesysRow[] {
-  if (typeof window === 'undefined') return [];
   try {
-    return JSON.parse(window.localStorage.getItem(INGESYS_STORAGE_KEY) || "[]");
+    const raw = localStorage.getItem("@tlog/vazio_ingesys");
+    if (!raw) return [];
+    return JSON.parse(raw);
   } catch {
     return [];
   }
 }
 
-function saveLocalVazioIngesys(rows: VazioIngesysRow[]) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(INGESYS_STORAGE_KEY, JSON.stringify(rows));
-}
-
-export type UserRole = "CLIENTE" | "TRANSPORTADORA";
-
-const initial: AppDataset & { userRole: UserRole } = {
+const DEFAULT_DATASET: AppDataset = {
   cheios: [],
   vaziosLocados: [],
   vazioIngesys: [],
   imports: [],
   priorityRequests: [],
+  settings: { capacidadePatio: 600 },
+  armadorCounts: {},
   userRole: "CLIENTE",
-  settings: {
-    capacidadePatio: 600,
-  },
-  armadorCounts: { MSC: 0, CMA: 0, MAERSK: 0 },
+  vaziosLocadosTlog: [],
+  vaziosLocadosRenault: [],
+  vaziosArmadores: [],
 };
 
-let state: AppDataset & { userRole: UserRole } = initial;
+let state: AppDataset = { ...DEFAULT_DATASET };
 const listeners = new Set<() => void>();
 
 function emit() {
-  for (const l of listeners) l();
+  listeners.forEach((l) => l());
 }
 
-const toInt = (val: any) => (val != null && !isNaN(Number(val)) ? Math.round(Number(val)) : null);
+export function subscribeToDataset(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+export function getSnapshot(): AppDataset {
+  return state;
+}
+
+export function useDataset(): AppDataset {
+  try {
+    const { useSyncExternalStore } = require("react");
+    return useSyncExternalStore(subscribeToDataset, getSnapshot, getSnapshot);
+  } catch {
+    return state;
+  }
+}
+
+export function setDataset(update: AppDataset | ((prev: AppDataset) => AppDataset)) {
+  if (typeof update === "function") {
+    state = update(state);
+  } else {
+    state = update;
+  }
+  try {
+    localStorage.setItem("@tlog/dataset", JSON.stringify(state));
+  } catch {}
+  emit();
+}
+
+export function updateSettings(settings: Partial<AppDataset["settings"]>) {
+  state = { ...state, settings: { ...state.settings, ...settings } };
+  emit();
+}
+
+export function setUserRole(role: "CLIENTE" | "TRANSPORTADORA") {
+  state = { ...state, userRole: role };
+  emit();
+}
+
+export function addPriorityRequest(req: import("./types").PriorityRequest) {
+  state = { ...state, priorityRequests: [req, ...state.priorityRequests] };
+  supabase
+    .from("priority_requests")
+    .insert({
+      id: req.id,
+      conteiner: req.conteiner,
+      nivel: req.nivel,
+      status: req.status,
+      solicitado_em: req.solicitadoEm,
+      fabrica_destino: req.fabricaDestino,
+      previsao_fabrica: req.previsaoFabrica,
+      observacao: req.observacao,
+    })
+    .then(({ error }) => {
+      if (error) toast.error("Erro ao salvar prioridade.");
+    });
+  emit();
+}
+
+export function updatePriorityStatus(id: string, status: import("./types").RequestStatus) {
+  state = {
+    ...state,
+    priorityRequests: state.priorityRequests.map((r) =>
+      r.id === id ? { ...r, status } : r,
+    ),
+  };
+  supabase
+    .from("priority_requests")
+    .update({ status })
+    .eq("id", id)
+    .then(({ error }) => {
+      if (error) toast.error("Erro ao atualizar status.");
+    });
+  emit();
+}
+
+export function deletePriorityRequest(id: string) {
+  state = {
+    ...state,
+    priorityRequests: state.priorityRequests.filter((r) => r.id !== id),
+  };
+  supabase
+    .from("priority_requests")
+    .delete()
+    .eq("id", id)
+    .then(({ error }) => {
+      if (error) toast.error("Erro ao remover prioridade.");
+    });
+  emit();
+}
 
 export async function syncFromSupabase() {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
 
   try {
     const [
@@ -53,242 +145,129 @@ export async function syncFromSupabase() {
       ingesysRes,
       importsRes,
       prioritiesRes,
-      settingsRes
+      settingsRes,
+      vaziosTlogRes,
+      vaziosRenaultRes,
+      vaziosArmadoresRes,
     ] = await Promise.all([
-      supabase.from('containers_cheios').select('*'),
-      supabase.from('vazios_locados').select('*'),
-      supabase.from('vazio_ingesys').select('*'),
-      supabase.from('import_history').select('*').order('imported_at', { ascending: false }).limit(50),
-      supabase.from('priority_requests').select('*').order('solicitado_em', { ascending: false }),
-      supabase.from('app_settings').select('*').maybeSingle()
+      supabase.from("containers_cheios").select("*"),
+      supabase.from("vazios_locados").select("*"),
+      supabase.from("vazio_ingesys").select("*"),
+      supabase
+        .from("import_history")
+        .select("*")
+        .order("imported_at", { ascending: false })
+        .limit(50),
+      supabase
+        .from("priority_requests")
+        .select("*")
+        .order("solicitado_em", { ascending: false }),
+      supabase.from("app_settings").select("*").maybeSingle(),
+      supabase.from("vazios_locados_tlog").select("*"),
+      supabase.from("vazios_locados_renault").select("*"),
+      supabase.from("vazios_armadores").select("*"),
     ]);
 
     state = {
       ...state,
-      cheios: cheiosRes.data ? cheiosRes.data.map(c => ({
-        conteiner: c.conteiner,
-        lacre: c.lacre,
-        tipo: c.tipo,
-        armador: c.armador,
-        navio: c.navio,
-        dataChegada: c.data_chegada,
-        diasNoPatio: c.dias_no_patio,
-        freeTime: c.free_time,
-        demurrageVencimento: c.demurrage_vencimento,
-        diasParaVencimento: c.dias_para_vencimento,
-        status: c.status,
-        fabrica: c.fabrica,
-        dataEnvioFabrica: c.data_envio_fabrica,
-        conteinerDePara: c.conteiner_de_para,
-        dataDevolucaoVazio: c.data_devolucao_vazio,
-        colunaAS: c.coluna_as
-      })) : state.cheios,
-      vaziosLocados: vaziosRes.data ? vaziosRes.data.map(v => ({
-        conteiner: v.conteiner,
-        armador: v.armador,
-        tipo: v.tipo,
-        dataEntrada: v.data_entrada,
-        dataDePara: v.data_de_para,
-        cheioDePara: v.cheio_de_para,
-        statusUso: v.status_uso,
-        statusPatio: v.status_patio,
-        diasNoPatio: v.dias_no_patio
-      })) : state.vaziosLocados,
-      vazioIngesys: ingesysRes.error ? loadLocalVazioIngesys() : ingesysRes.data ? ingesysRes.data.map(i => ({
-        conteiner: i.conteiner,
-        statusD: i.status_d
-      })) : state.vazioIngesys,
-      imports: importsRes.data ? importsRes.data.map(i => ({
-        id: i.id,
-        fileName: i.file_name,
-        importedAt: i.imported_at,
-        itemCount: i.item_count,
-        status: i.status as any
-      })) : state.imports,
-      priorityRequests: prioritiesRes.data ? prioritiesRes.data.map(p => ({
-        id: p.id,
-        conteiner: p.conteiner,
-        nivel: p.nivel,
-        status: p.status,
-        solicitadoEm: p.solicitado_em,
-        fabricaDestino: p.fabrica_destino,
-        previsaoFabrica: p.previsao_fabrica,
-        observacao: p.observacao
-      })) : state.priorityRequests,
-      settings: settingsRes.data ? { capacidadePatio: settingsRes.data.capacidade_patio } : state.settings,
-      armadorCounts: countArmadores(state.cheios)
-    };
-    emit();
-  } catch (error) {
-    console.error("Erro ao sincronizar do Supabase:", error);
-  }
-}
-
-if (typeof window !== 'undefined') {
-  supabase.channel('custom-all-channel')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'priority_requests' }, () => syncFromSupabase())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'containers_cheios' }, () => syncFromSupabase())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazio_ingesys' }, () => syncFromSupabase())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => syncFromSupabase())
-    .subscribe();
-}
-
-export function setUserRole(role: UserRole) {
-  state = { ...state, userRole: role };
-  emit();
-}
-
-export async function setDataset(updater: (prev: AppDataset & { userRole: UserRole }) => AppDataset & { userRole: UserRole }) {
-  const oldLastImport = state.lastImportAt;
-  const newState = updater(state);
-  
-  if (newState.lastImportAt !== oldLastImport) {
-    const lastImport = newState.imports[0];
-    if (lastImport) {
-      saveLocalVazioIngesys(newState.vazioIngesys);
-      try {
-        await supabase.from('import_history').insert({
-          file_name: lastImport.fileName,
-          item_count: lastImport.itemCount,
-          status: lastImport.status
-        });
-
-        await Promise.all([
-          supabase.from('containers_cheios').delete().neq('conteiner', '_none_'),
-          supabase.from('vazios_locados').delete().neq('conteiner', '_none_'),
-          supabase.from('vazio_ingesys').delete().neq('conteiner', '_none_'),
-          supabase.from('locados_tlog').delete().neq('conteiner', '_none_'),
-          supabase.from('locados_renault').delete().neq('conteiner', '_none_')
-        ]);
-
-        if (newState.cheios.length > 0) {
-          await supabase.from('containers_cheios').insert(newState.cheios.map(c => ({
+      cheios: cheiosRes.data
+        ? cheiosRes.data.map((c: any) => ({
             conteiner: c.conteiner,
             lacre: c.lacre,
             tipo: c.tipo,
             armador: c.armador,
             navio: c.navio,
-            data_chegada: c.dataChegada,
-            dias_no_patio: toInt(c.diasNoPatio),
-            free_time: toInt(c.freeTime),
-            demurrage_vencimento: c.demurrageVencimento,
-            dias_para_vencimento: toInt(c.diasParaVencimento),
+            dataChegada: c.data_chegada,
+            diasNoPatio: c.dias_no_patio,
+            freeTime: c.free_time,
+            demurrageVencimento: c.demurrage_vencimento,
+            diasParaVencimento: c.dias_para_vencimento,
             status: c.status,
             fabrica: c.fabrica,
-            data_envio_fabrica: c.dataEnvioFabrica,
-            conteiner_de_para: c.conteinerDePara,
-            data_devolucao_vazio: c.dataDevolucaoVazio,
-            coluna_as: c.colunaAS
-          })));
-
-          const locadosTlog = newState.cheios.filter(c => c.status === "LOCADO TLOG");
-          if (locadosTlog.length > 0) {
-            await supabase.from('locados_tlog').insert(locadosTlog.map(l => ({
-              conteiner: l.conteiner
-            })));
-          }
-
-          const locadosRenault = newState.cheios.filter(c => c.status === "LOCADO RENAULT");
-          if (locadosRenault.length > 0) {
-            await supabase.from('locados_renault').insert(locadosRenault.map(l => ({
-              conteiner: l.conteiner
-            })));
-          }
-        }
-
-        if (newState.vaziosLocados.length > 0) {
-          await supabase.from('vazios_locados').insert(newState.vaziosLocados.map(v => ({
+            dataEnvioFabrica: c.data_envio_fabrica,
+            conteinerDePara: c.conteiner_de_para,
+            dataDevolucaoVazio: c.data_devolucao_vazio,
+            colunaAS: c.coluna_as,
+          }))
+        : state.cheios,
+      vaziosLocados: vaziosRes.data
+        ? vaziosRes.data.map((v: any) => ({
             conteiner: v.conteiner,
             armador: v.armador,
             tipo: v.tipo,
-            data_entrada: v.dataEntrada,
-            data_de_para: v.dataDePara,
-            cheio_de_para: v.cheioDePara,
-            status_uso: v.statusUso,
-            status_patio: v.statusPatio,
-            dias_no_patio: toInt(v.diasNoPatio)
-          })));
-        }
-
-        if (newState.vazioIngesys.length > 0) {
-          await supabase.from('vazio_ingesys').insert(newState.vazioIngesys.map(i => ({
-            conteiner: i.conteiner,
-            status_d: i.statusD
-          })));
-        }
-        
-        toast.success("Dados sincronizados com sucesso!");
-      } catch (e) {
-        console.error("Erro na persistência:", e);
-        toast.error("Erro ao salvar no banco.");
-      }
-    }
+            dataEntrada: v.data_entrada,
+            dataDePara: v.data_de_para,
+            cheioDePara: v.cheio_de_para,
+            statusUso: v.status_uso,
+            statusPatio: v.status_patio,
+            diasNoPatio: v.dias_no_patio,
+          }))
+        : state.vaziosLocados,
+      vazioIngesys: ingesysRes.error
+        ? loadLocalVazioIngesys()
+        : ingesysRes.data
+          ? ingesysRes.data.map((i: any) => ({
+              conteiner: i.conteiner,
+              statusD: i.status_d,
+            }))
+          : state.vazioIngesys,
+      vaziosLocadosTlog: vaziosTlogRes.data
+        ? vaziosTlogRes.data.map((r: any) => ({
+            id: r.id,
+            conteiner: r.conteiner,
+            armador: r.armador,
+            status: r.status,
+            data_entrada: r.data_entrada,
+            status_patio: r.status_patio,
+            dias_no_patio: r.dias_no_patio,
+          }))
+        : [],
+      vaziosLocadosRenault: vaziosRenaultRes.data
+        ? vaziosRenaultRes.data.map((r: any) => ({
+            id: r.id,
+            conteiner: r.conteiner,
+            status: r.status,
+            data_entrada: r.data_entrada,
+            status_patio: r.status_patio,
+          }))
+        : [],
+      vaziosArmadores: vaziosArmadoresRes.data
+        ? vaziosArmadoresRes.data.map((r: any) => ({
+            id: r.id,
+            conteiner: r.conteiner,
+            armador: r.armador,
+            status: r.status,
+          }))
+        : [],
+      imports: importsRes.data
+        ? importsRes.data.map((i: any) => ({
+            id: i.id,
+            fileName: i.file_name,
+            importedAt: i.imported_at,
+            itemCount: i.item_count,
+            status: i.status as any,
+          }))
+        : state.imports,
+      priorityRequests: prioritiesRes.data
+        ? prioritiesRes.data.map((p: any) => ({
+            id: p.id,
+            conteiner: p.conteiner,
+            nivel: p.nivel,
+            status: p.status,
+            solicitadoEm: p.solicitado_em,
+            fabricaDestino: p.fabrica_destino,
+            previsaoFabrica: p.previsao_fabrica,
+            observacao: p.observacao,
+          }))
+        : state.priorityRequests,
+      settings: settingsRes.data
+        ? { capacidadePatio: settingsRes.data.capacidade_patio }
+        : state.settings,
+      armadorCounts: countArmadores(state.cheios),
+    };
+    emit();
+  } catch (error) {
+    console.error("Erro ao sincronizar do Supabase:", error);
+    toast.error("Falha ao sincronizar dados.");
   }
-  
-  state = newState;
-  emit();
-}
-
-export async function addPriorityRequest(req: PriorityRequest) {
-  const { error } = await supabase.from('priority_requests').insert({
-    conteiner: req.conteiner,
-    nivel: req.nivel,
-    status: req.status,
-    fabrica_destino: req.fabricaDestino,
-    previsao_fabrica: req.previsaoFabrica,
-    observacao: req.observacao
-  });
-  if (error) toast.error("Erro ao salvar prioridade");
-  else syncFromSupabase();
-}
-
-export async function updatePriorityStatus(id: string, status: PriorityRequest["status"]) {
-  const { error } = await supabase.from('priority_requests').update({ status }).eq('id', id);
-  if (error) {
-    toast.error("Erro ao atualizar status");
-    return;
-  }
-  const request = state.priorityRequests.find(r => r.id === id);
-  if (request && (status === 'DESPACHADO' || status === 'FINALIZADO')) {
-    await supabase.from('containers_cheios')
-      .update({ status: "ENVIADO PARA FABRICA", data_envio_fabrica: new Date().toISOString() })
-      .eq('conteiner', request.conteiner);
-  }
-  syncFromSupabase();
-}
-
-export async function deletePriorityRequest(id: string) {
-  const { error } = await supabase.from('priority_requests').delete().eq('id', id);
-  if (error) toast.error("Erro ao excluir");
-  else syncFromSupabase();
-}
-
-export async function updateSettings(settings: Partial<AppDataset["settings"]>) {
-  const { error } = await supabase.from('app_settings').update({
-    capacidade_patio: settings.capacidadePatio
-  }).neq('id', '00000000-0000-0000-0000-000000000000');
-  if (error) toast.error("Erro ao salvar configurações");
-  else syncFromSupabase();
-}
-
-export function useDataset() {
-  return useSyncExternalStore(
-    (cb) => {
-      listeners.add(cb);
-      return () => listeners.delete(cb);
-    },
-    () => state,
-    () => initial,
-  );
-}
-
-function countArmadores(cheios: CheioRow[]) {
-  const counts: Record<string, number> = { MSC: 0, CMA: 0, MAERSK: 0 };
-  for (const c of cheios) {
-    const arm = (c.armador ?? "").toUpperCase();
-    if (arm.includes("MSC")) counts.MSC += 1;
-    if (arm.includes("CMA")) counts.CMA += 1;
-    if (arm.includes("MAERSK")) counts.MAERSK += 1;
-  }
-  return counts;
 }
