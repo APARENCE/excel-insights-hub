@@ -1,7 +1,9 @@
+"use client";
+
 import { useSyncExternalStore } from "react";
 import type { AppDataset, PriorityRequest, CheioRow, VazioLocadoRow, VazioIngesysRow, ImportRecord, VazioGenericRow } from "./types";
 import { supabase } from "@/integrations/supabase/client";
-import{ toast } from "sonner";
+import { toast } from "sonner";
 
 const INGESYS_STORAGE_KEY = "tlog:vazio-ingesys";
 
@@ -46,32 +48,20 @@ function emit() {
 
 const toInt = (val: any) => (val != null && !isNaN(Number(val)) ? Math.round(Number(val)) : null);
 
-// Helper para descobrir o nome da coluna D (4ª coluna) dinamicamente
 function discoverColumnD(data: any[]): string {
   if (!data || data.length === 0) return 'coluna_d';
   const keys = Object.keys(data[0]);
-  // Prioriza 'coluna_d' se existir, senão pega a 4ª chave (índice 3)
   if (keys.includes('coluna_d')) return 'coluna_d';
-  return keys[3] || keys[keys.length - 1];
+  return keys[3] || keys[2] || keys[keys.length - 1];
 }
 
 export async function syncFromSupabase() {
   if (typeof window === 'undefined') return;
 
-  console.log("[DEBUG] Iniciando sincronização Supabase...");
+  console.log("[SUPABASE] Iniciando sincronização...");
 
   try {
-    const [
-      cheiosRes,
-      vaziosRes,
-      ingesysRes,
-      importsRes,
-      prioritiesRes,
-      settingsRes,
-      vaziosRenaultRes,
-      vaziosTlogRes,
-      vaziosArmadoresRes
-    ] = await Promise.all([
+    const results = await Promise.allSettled([
       supabase.from('containers_cheios').select('*'),
       supabase.from('vazios_locados').select('*'),
       supabase.from('vazio_ingesys').select('*'),
@@ -83,21 +73,28 @@ export async function syncFromSupabase() {
       supabase.from('vazios_armadores').select('*')
     ]);
 
-    // Logs de Debug para Descoberta de Colunas
-    const colRenault = discoverColumnD(vaziosRenaultRes.data || []);
-    const colTlog = discoverColumnD(vaziosTlogRes.data || []);
-    const colArmadores = discoverColumnD(vaziosArmadoresRes.data || []);
+    const getData = (idx: number) => {
+      const res = results[idx];
+      return res.status === 'fulfilled' ? (res.value as any).data : null;
+    };
 
-    console.log("[DEBUG] Colunas D detectadas:", { Renault: colRenault, Tlog: colTlog, Armadores: colArmadores });
-    console.log("[DEBUG] Registros retornados:", { 
-      Renault: vaziosRenaultRes.data?.length || 0, 
-      Tlog: vaziosTlogRes.data?.length || 0, 
-      Armadores: vaziosArmadoresRes.data?.length || 0 
-    });
+    const cheiosData = getData(0);
+    const vaziosData = getData(1);
+    const ingesysData = getData(2);
+    const importsData = getData(3);
+    const prioritiesData = getData(4);
+    const settingsData = getData(5);
+    const renaultData = getData(6);
+    const tlogData = getData(7);
+    const armadoresData = getData(8);
+
+    const colRenault = discoverColumnD(renaultData || []);
+    const colTlog = discoverColumnD(tlogData || []);
+    const colArmadores = discoverColumnD(armadoresData || []);
 
     state = {
       ...state,
-      cheios: cheiosRes.data ? cheiosRes.data.map(c => ({
+      cheios: cheiosData ? cheiosData.map((c: any) => ({
         conteiner: c.conteiner,
         lacre: c.lacre,
         tipo: c.tipo,
@@ -115,7 +112,7 @@ export async function syncFromSupabase() {
         dataDevolucaoVazio: c.data_devolucao_vazio,
         colunaAS: c.coluna_as
       })) : state.cheios,
-      vaziosLocados: vaziosRes.data ? vaziosRes.data.map(v => ({
+      vaziosLocados: vaziosData ? vaziosData.map((v: any) => ({
         conteiner: v.conteiner,
         armador: v.armador,
         tipo: v.tipo,
@@ -126,33 +123,33 @@ export async function syncFromSupabase() {
         statusPatio: v.status_patio,
         diasNoPatio: v.dias_no_patio
       })) : state.vaziosLocados,
-      vazioIngesys: ingesysRes.error ? loadLocalVazioIngesys() : ingesysRes.data ? ingesysRes.data.map(i => ({
+      vazioIngesys: ingesysData ? ingesysData.map((i: any) => ({
         conteiner: i.conteiner,
         statusD: i.status_d
       })) : state.vazioIngesys,
-      vaziosLocadosRenault: vaziosRenaultRes.data ? vaziosRenaultRes.data.map(v => ({
+      vaziosLocadosRenault: renaultData ? renaultData.map((v: any) => ({
         id: v.id,
         conteiner: v.conteiner,
         colunaD: v[colRenault] || "N/A"
       })) : state.vaziosLocadosRenault,
-      vaziosLocadosTlog: vaziosTlogRes.data ? vaziosTlogRes.data.map(v => ({
+      vaziosLocadosTlog: tlogData ? tlogData.map((v: any) => ({
         id: v.id,
         conteiner: v.conteiner,
         colunaD: v[colTlog] || "N/A"
       })) : state.vaziosLocadosTlog,
-      vaziosArmadores: vaziosArmadoresRes.data ? vaziosArmadoresRes.data.map(v => ({
+      vaziosArmadores: armadoresData ? armadoresData.map((v: any) => ({
         id: v.id,
         conteiner: v.conteiner,
         colunaD: v[colArmadores] || "N/A"
       })) : state.vaziosArmadores,
-      imports: importsRes.data ? importsRes.data.map(i => ({
+      imports: importsData ? importsData.map((i: any) => ({
         id: i.id,
         fileName: i.file_name,
         importedAt: i.imported_at,
         itemCount: i.item_count,
         status: i.status as any
       })) : state.imports,
-      priorityRequests: prioritiesRes.data ? prioritiesRes.data.map(p => ({
+      priorityRequests: prioritiesData ? prioritiesData.map((p: any) => ({
         id: p.id,
         conteiner: p.conteiner,
         nivel: p.nivel,
@@ -162,21 +159,21 @@ export async function syncFromSupabase() {
         previsaoFabrica: p.previsao_fabrica,
         observacao: p.observacao
       })) : state.priorityRequests,
-      settings: settingsRes.data ? { capacidadePatio: settingsRes.data.capacidade_patio } : state.settings,
+      settings: settingsData ? { capacidadePatio: settingsData.capacidade_patio } : state.settings,
       armadorCounts: countArmadores(state.cheios)
     };
     emit();
+    console.log("[SUPABASE] Sincronização concluída com sucesso.");
   } catch (error) {
-    console.error("[DEBUG] Erro crítico na sincronização:", error);
+    console.error("[SUPABASE] Erro na sincronização:", error);
   }
 }
 
 if (typeof window !== 'undefined') {
-  supabase.channel('custom-all-channel')
+  supabase.channel('db-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'priority_requests' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'containers_cheios' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'vazio_ingesys' }, () => syncFromSupabase())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_renault' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_tlog' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_armadores' }, () => syncFromSupabase())
@@ -203,83 +200,47 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
           status: lastImport.status
         });
 
-        // Limpeza segura (apenas se as tabelas existirem)
-        await Promise.all([
-          supabase.from('containers_cheios').delete().neq('conteiner', '_none_'),
-          supabase.from('vazios_locados').delete().neq('conteiner', '_none_'),
-          supabase.from('vazio_ingesys').delete().neq('conteiner', '_none_'),
-          supabase.from('vazios_locados_renault').delete().neq('conteiner', '_none_'),
-          supabase.from('vazios_locados_tlog').delete().neq('conteiner', '_none_'),
-          supabase.from('vazios_armadores').delete().neq('conteiner', '_none_')
-        ]);
+        const tables = [
+          { name: 'containers_cheios', data: newState.cheios, map: (c: any) => ({
+            conteiner: c.conteiner, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
+            data_chegada: c.dataChegada, dias_no_patio: toInt(c.diasNoPatio), free_time: toInt(c.freeTime),
+            demurrage_vencimento: c.demurrageVencimento, dias_para_vencimento: toInt(c.diasParaVencimento),
+            status: c.status, fabrica: c.fabrica, data_envio_fabrica: c.dataEnvioFabrica,
+            conteiner_de_para: c.conteiner_de_para, data_devolucao_vazio: c.dataDevolucaoVazio, coluna_as: c.colunaAS
+          })},
+          { name: 'vazios_locados', data: newState.vaziosLocados, map: (v: any) => ({
+            conteiner: v.conteiner, armador: v.armador, tipo: v.tipo, data_entrada: v.dataEntrada,
+            data_de_para: v.data_de_para, cheio_de_para: v.cheioDePara, status_uso: v.statusUso,
+            status_patio: v.statusPatio, dias_no_patio: toInt(v.diasNoPatio)
+          })},
+          { name: 'vazio_ingesys', data: newState.vazioIngesys, map: (i: any) => ({
+            conteiner: i.conteiner, status_d: i.statusD
+          })},
+          { name: 'vazios_locados_renault', data: newState.vaziosLocadosRenault, map: (v: any) => ({
+            conteiner: v.conteiner, coluna_d: v.colunaD
+          })},
+          { name: 'vazios_locados_tlog', data: newState.vaziosLocadosTlog, map: (v: any) => ({
+            conteiner: v.conteiner, coluna_d: v.colunaD
+          })},
+          { name: 'vazios_armadores', data: newState.vaziosArmadores, map: (v: any) => ({
+            conteiner: v.conteiner, coluna_d: v.colunaD
+          })}
+        ];
 
-        if (newState.cheios.length > 0) {
-          await supabase.from('containers_cheios').insert(newState.cheios.map(c => ({
-            conteiner: c.conteiner,
-            lacre: c.lacre,
-            tipo: c.tipo,
-            armador: c.armador,
-            navio: c.navio,
-            data_chegada: c.dataChegada,
-            dias_no_patio: toInt(c.diasNoPatio),
-            free_time: toInt(c.freeTime),
-            demurrage_vencimento: c.demurrageVencimento,
-            dias_para_vencimento: toInt(c.diasParaVencimento),
-            status: c.status,
-            fabrica: c.fabrica,
-            data_envio_fabrica: c.dataEnvioFabrica,
-            conteiner_de_para: c.conteinerDePara,
-            data_devolucao_vazio: c.dataDevolucaoVazio,
-            coluna_as: c.colunaAS
-          })));
-        }
-
-        if (newState.vaziosLocadosRenault.length > 0) {
-          await supabase.from('vazios_locados_renault').insert(newState.vaziosLocadosRenault.map(v => ({
-            conteiner: v.conteiner,
-            coluna_d: v.colunaD
-          })));
-        }
-
-        if (newState.vaziosLocadosTlog.length > 0) {
-          await supabase.from('vazios_locados_tlog').insert(newState.vaziosLocadosTlog.map(v => ({
-            conteiner: v.conteiner,
-            coluna_d: v.colunaD
-          })));
-        }
-
-        if (newState.vaziosArmadores.length > 0) {
-          await supabase.from('vazios_armadores').insert(newState.vaziosArmadores.map(v => ({
-            conteiner: v.conteiner,
-            coluna_d: v.colunaD
-          })));
-        }
-
-        if (newState.vaziosLocados.length > 0) {
-          await supabase.from('vazios_locados').insert(newState.vaziosLocados.map(v => ({
-            conteiner: v.conteiner,
-            armador: v.armador,
-            tipo: v.tipo,
-            data_entrada: v.dataEntrada,
-            data_de_para: v.dataDePara,
-            cheio_de_para: v.cheioDePara,
-            status_uso: v.statusUso,
-            status_patio: v.statusPatio,
-            dias_no_patio: toInt(v.diasNoPatio)
-          })));
-        }
-
-        if (newState.vazioIngesys.length > 0) {
-          await supabase.from('vazio_ingesys').insert(newState.vazioIngesys.map(i => ({
-            conteiner: i.conteiner,
-            status_d: i.statusD
-          })));
+        for (const table of tables) {
+          if (table.data.length > 0) {
+            console.log(`[SUPABASE] Atualizando tabela: ${table.name}`);
+            await supabase.from(table.name).delete().neq('conteiner', '_none_');
+            // Cast map to any to avoid union type mismatch in dynamic loop
+            const { error } = await supabase.from(table.name).insert((table.data as any[]).map(table.map as (item: any) => any));
+            if (error) console.error(`[SUPABASE] Erro ao inserir em ${table.name}:`, error);
+          }
         }
         
-        toast.success("Dados sincronizados com sucesso!");
+        toast.success("Dados sincronizados com Supabase!");
       } catch (e) {
-        console.error("[DEBUG] Erro na persistência:", e);
-        toast.error("Erro ao salvar no banco.");
+        console.error("[SUPABASE] Erro crítico no salvamento:", e);
+        toast.error("Erro ao salvar no banco de dados.");
       }
     }
   }
