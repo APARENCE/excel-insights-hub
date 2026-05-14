@@ -121,8 +121,11 @@ export function summary(
   capacity: number = 600,
   ingesys: VazioIngesysRow[] = []
 ) {
+  // Ocupação Atual baseada na coluna AA: EM PATIO TLOG-SJP, EM PROCESSO DEPARA, DEPARA EM PATIO TLOG-SJP
   const emPatio = cheios.filter((c) => c.status === "EM PATIO TLOG-SJP").length;
   const dePara = cheios.filter((c) => c.status === "DEPARA EM PATIO TLOG-SJP").length;
+  const emProcessoDepara = cheios.filter((c) => c.status === "EM PROCESSO DEPARA").length;
+  
   const enviadoFabrica = cheios.filter((c) => c.status === "ENVIADO PARA FABRICA").length;
   const programadas = cheios.filter((c) => c.status === "PROGRAMADA ENTRADA NO PATIO").length;
   const locadoTlog = cheios.filter((c) => c.status === "LOCADO TLOG").length;
@@ -132,8 +135,12 @@ export function summary(
   const fixedVaziosArmadores = 53;
   
   const finalizados = ingesys.length;
-  const ocupacao = emPatio + dePara;
-  const ocupacaoSaturacao = emPatio + dePara + fixedLocados + fixedVaziosArmadores;
+  
+  // Soma dos status solicitados para a ocupação real do pátio
+  const ocupacao = emPatio + dePara + emProcessoDepara;
+  
+  // Ocupação total considerando os itens fixos (saturação)
+  const ocupacaoSaturacao = ocupacao + fixedLocados + fixedVaziosArmadores;
   
   const armadorCounts = countArmadores(cheios);
   const totalArmadores = armadorCounts.MSC + armadorCounts.CMA + armadorCounts.MAERSK + armadorCounts.ONE;
@@ -142,6 +149,7 @@ export function summary(
     totalCheios: cheios.length,
     emPatio,
     dePara,
+    emProcessoDepara,
     enviadoFabrica,
     finalizados,
     programadas,

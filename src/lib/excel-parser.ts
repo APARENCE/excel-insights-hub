@@ -48,6 +48,7 @@ function normalizeStatus(s?: string): ContainerStatus {
   
   if (u.includes("PROGRAMADA") || u.includes("AGENDADO")) return "PROGRAMADA ENTRADA NO PATIO";
   if (u.includes("FINALIZ")) return "FINALIZADO";
+  if (u.includes("PROCESSO") && u.includes("DEPARA")) return "EM PROCESSO DEPARA";
   if (u.includes("DEPARA") && u.includes("PATIO")) return "DEPARA EM PATIO TLOG-SJP";
   if (u.includes("ENVIADO") && u.includes("FABRICA")) return "ENVIADO PARA FABRICA";
   if (u.startsWith("EM PATIO")) return "EM PATIO TLOG-SJP";
