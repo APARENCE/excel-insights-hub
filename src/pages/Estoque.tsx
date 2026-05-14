@@ -20,7 +20,13 @@ function statusTone(s: string): "success" | "info" | "warning" | "default" | "pr
 
 export default function EstoquePage() {
   const ds = useDataset();
-  const s = summary(ds.cheios, ds.vaziosLocados, ds.settings.capacidadePatio);
+  const s = summary(
+    ds.cheios, 
+    ds.vaziosLocadosTlog, 
+    ds.vaziosLocadosRenault, 
+    ds.vaziosArmadores, 
+    ds.settings.capacidadePatio
+  );
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
 

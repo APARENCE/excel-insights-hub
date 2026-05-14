@@ -39,17 +39,13 @@ export interface VazioLocadoRow {
   statusUso?: string;
   statusPatio?: string;
   diasNoPatio?: number;
-  /** Nova coluna presente na aba “VAZIOS LOCADOS” */
-  dataRetorno?: string;
 }
 
-/* Existing auxiliary tables */
 export interface VazioIngesysRow {
   conteiner: string;
   statusD: string;
 }
 
-/* New tables – one per new sheet */
 export interface VazioLocadoTlogRow {
   id: string;
   conteiner: string;
@@ -71,11 +67,10 @@ export interface VazioLocadoRenaultRow {
 export interface VazioArmadorRow {
   id: string;
   conteiner: string;
-  armador: string;
+  armador?: string;
   status?: string;
 }
 
-/* Miscellaneous types */
 export interface ImportRecord {
   id: string;
   fileName: string;
@@ -89,7 +84,6 @@ export interface AppSettings {
 }
 
 export type PriorityLevel = "NORMAL" | "ALTA" | "CRITICA";
-
 export type RequestStatus = "PENDENTE" | "CARREGANDO" | "DESPACHADO" | "FINALIZADO";
 
 export interface PriorityRequest {
@@ -103,20 +97,17 @@ export interface PriorityRequest {
   observacao?: string;
 }
 
-/* Global dataset */
 export interface AppDataset {
   cheios: CheioRow[];
   vaziosLocados: VazioLocadoRow[];
   vazioIngesys: VazioIngesysRow[];
+  vaziosLocadosTlog: VazioLocadoTlogRow[];
+  vaziosLocadosRenault: VazioLocadoRenaultRow[];
+  vaziosArmadores: VazioArmadorRow[];
   imports: ImportRecord[];
   priorityRequests: PriorityRequest[];
   lastImportAt?: string;
   settings: AppSettings;
   armadorCounts: Record<string, number>;
   userRole: "CLIENTE" | "TRANSPORTADORA";
-
-  /* New collections */
-  vaziosLocadosTlog: VazioLocadoTlogRow[];
-  vaziosLocadosRenault: VazioLocadoRenaultRow[];
-  vaziosArmadores: VazioArmadorRow[];
 }

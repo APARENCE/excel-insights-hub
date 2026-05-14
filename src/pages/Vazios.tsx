@@ -94,7 +94,7 @@ export default function VaziosPage() {
                       {r.dataEntrada ? new Date(r.dataEntrada).toLocaleDateString("pt-BR") : "—"}
                     </td>
                     <td className="px-4 py-2.5 text-muted-foreground">
-                      {r.dataRetorno ? new Date(r.dataRetorno).toLocaleDateString("pt-BR") : "—"}
+                      {r.dataDePara ? new Date(r.dataDePara).toLocaleDateString("pt-BR") : "—"}
                     </td>
                     <td className="px-4 py-2.5">
                       <StatusBadge tone="info">{r.statusUso || "DÊ PARA REALIZADO"}</StatusBadge>
