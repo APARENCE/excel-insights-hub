@@ -48,13 +48,6 @@ function emit() {
 
 const toInt = (val: any) => (val != null && !isNaN(Number(val)) ? Math.round(Number(val)) : null);
 
-function discoverColumnD(data: any[]): string {
-  if (!data || data.length === 0) return 'coluna_d';
-  const keys = Object.keys(data[0]);
-  if (keys.includes('coluna_d')) return 'coluna_d';
-  return keys[3] || keys[2] || keys[keys.length - 1];
-}
-
 export async function syncFromSupabase() {
   if (typeof window === 'undefined') return;
 
@@ -87,10 +80,6 @@ export async function syncFromSupabase() {
     const renaultData = getData(6);
     const tlogData = getData(7);
     const armadoresData = getData(8);
-
-    const colRenault = discoverColumnD(renaultData || []);
-    const colTlog = discoverColumnD(tlogData || []);
-    const colArmadores = discoverColumnD(armadoresData || []);
 
     state = {
       ...state,
@@ -130,17 +119,17 @@ export async function syncFromSupabase() {
       vaziosLocadosRenault: renaultData ? renaultData.map((v: any) => ({
         id: v.id,
         conteiner: v.conteiner,
-        colunaD: v[colRenault] || "N/A"
+        colunaD: v.coluna_d || "N/A"
       })) : state.vaziosLocadosRenault,
       vaziosLocadosTlog: tlogData ? tlogData.map((v: any) => ({
         id: v.id,
         conteiner: v.conteiner,
-        colunaD: v[colTlog] || "N/A"
+        colunaD: v.coluna_d || "N/A"
       })) : state.vaziosLocadosTlog,
       vaziosArmadores: armadoresData ? armadoresData.map((v: any) => ({
         id: v.id,
         conteiner: v.conteiner,
-        colunaD: v[colArmadores] || "N/A"
+        colunaD: v.coluna_d || "N/A"
       })) : state.vaziosArmadores,
       imports: importsData ? importsData.map((i: any) => ({
         id: i.id,
@@ -201,28 +190,28 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
         });
 
         const tables = [
-          { name: 'containers_cheios', data: newState.cheios, map: (c: any) => ({
+          { name: 'containers_cheios', data: newState.cheios, map: (c: CheioRow) => ({
             conteiner: c.conteiner, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
             data_chegada: c.dataChegada, dias_no_patio: toInt(c.diasNoPatio), free_time: toInt(c.freeTime),
             demurrage_vencimento: c.demurrageVencimento, dias_para_vencimento: toInt(c.diasParaVencimento),
             status: c.status, fabrica: c.fabrica, data_envio_fabrica: c.dataEnvioFabrica,
-            conteiner_de_para: c.conteiner_de_para, data_devolucao_vazio: c.dataDevolucaoVazio, coluna_as: c.colunaAS
+            conteiner_de_para: c.conteinerDePara, data_devolucao_vazio: c.dataDevolucaoVazio, coluna_as: c.colunaAS
           })},
-          { name: 'vazios_locados', data: newState.vaziosLocados, map: (v: any) => ({
+          { name: 'vazios_locados', data: newState.vaziosLocados, map: (v: VazioLocadoRow) => ({
             conteiner: v.conteiner, armador: v.armador, tipo: v.tipo, data_entrada: v.dataEntrada,
-            data_de_para: v.data_de_para, cheio_de_para: v.cheioDePara, status_uso: v.statusUso,
+            data_de_para: v.dataDePara, cheio_de_para: v.cheioDePara, status_uso: v.statusUso,
             status_patio: v.statusPatio, dias_no_patio: toInt(v.diasNoPatio)
           })},
-          { name: 'vazio_ingesys', data: newState.vazioIngesys, map: (i: any) => ({
+          { name: 'vazio_ingesys', data: newState.vazioIngesys, map: (i: VazioIngesysRow) => ({
             conteiner: i.conteiner, status_d: i.statusD
           })},
-          { name: 'vazios_locados_renault', data: newState.vaziosLocadosRenault, map: (v: any) => ({
+          { name: 'vazios_locados_renault', data: newState.vaziosLocadosRenault, map: (v: VazioGenericRow) => ({
             conteiner: v.conteiner, coluna_d: v.colunaD
           })},
-          { name: 'vazios_locados_tlog', data: newState.vaziosLocadosTlog, map: (v: any) => ({
+          { name: 'vazios_locados_tlog', data: newState.vaziosLocadosTlog, map: (v: VazioGenericRow) => ({
             conteiner: v.conteiner, coluna_d: v.colunaD
           })},
-          { name: 'vazios_armadores', data: newState.vaziosArmadores, map: (v: any) => ({
+          { name: 'vazios_armadores', data: newState.vaziosArmadores, map: (v: VazioGenericRow) => ({
             conteiner: v.conteiner, coluna_d: v.colunaD
           })}
         ];
@@ -231,13 +220,14 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
           if (table.data.length > 0) {
             console.log(`[SUPABASE] Atualizando tabela: ${table.name}`);
             await supabase.from(table.name).delete().neq('conteiner', '_none_');
-            // Cast map to any to avoid union type mismatch in dynamic loop
-            const { error } = await supabase.from(table.name).insert((table.data as any[]).map(table.map as (item: any) => any));
+            const { error } = await supabase.from(table.name).insert(table.data.map(table.map as any));
             if (error) console.error(`[SUPABASE] Erro ao inserir em ${table.name}:`, error);
           }
         }
         
         toast.success("Dados sincronizados com Supabase!");
+        // Força uma nova sincronização para garantir que o estado local reflita o banco
+        await syncFromSupabase();
       } catch (e) {
         console.error("[SUPABASE] Erro crítico no salvamento:", e);
         toast.error("Erro ao salvar no banco de dados.");
