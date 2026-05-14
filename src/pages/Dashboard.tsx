@@ -31,24 +31,35 @@ export default function Dashboard() {
   const ocupacaoPct = Math.round((s.ocupacaoSaturacao / s.capacidadeTotal) * 1000) / 10;
   const livres = s.capacidadeTotal - s.ocupacaoSaturacao;
 
-  // Agrupamentos por Coluna D
+  // Lógica de Agrupamento e Contagem da Coluna D (Filtrando vazios/N/A)
   const groupedRenault = useMemo(() => {
     const map = new Map<string, number>();
-    ds.vaziosLocadosRenault.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
+    const valid = ds.vaziosLocadosRenault.filter(v => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
+    valid.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
+    console.log("[DEBUG UI] Renault Grouped:", Array.from(map.entries()));
     return Array.from(map.entries());
   }, [ds.vaziosLocadosRenault]);
 
   const groupedTlog = useMemo(() => {
     const map = new Map<string, number>();
-    ds.vaziosLocadosTlog.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
+    const valid = ds.vaziosLocadosTlog.filter(v => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
+    valid.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
+    console.log("[DEBUG UI] Tlog Grouped:", Array.from(map.entries()));
     return Array.from(map.entries());
   }, [ds.vaziosLocadosTlog]);
 
   const groupedArmadores = useMemo(() => {
     const map = new Map<string, number>();
-    ds.vaziosArmadores.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
+    const valid = ds.vaziosArmadores.filter(v => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
+    valid.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
+    console.log("[DEBUG UI] Armadores Grouped:", Array.from(map.entries()));
     return Array.from(map.entries());
   }, [ds.vaziosArmadores]);
+
+  // Totais baseados na presença de valor na Coluna D
+  const totalRenaultD = groupedRenault.reduce((acc, curr) => acc + curr[1], 0);
+  const totalTlogD = groupedTlog.reduce((acc, curr) => acc + curr[1], 0);
+  const totalArmadoresD = groupedArmadores.reduce((acc, curr) => acc + curr[1], 0);
 
   return (
     <AppShell>
@@ -78,25 +89,25 @@ export default function Dashboard() {
         <StatCard label="Vazio Ingesys" value={s.finalizados} hint="Coluna D preenchida" icon={PackageCheck} tone="destructive" />
       </div>
 
-      {/* Nova Seção: Gestão de Vazios */}
+      {/* Seção: Gestão de Vazios (Coluna D) */}
       <section className="px-6 mt-6">
         <div className="flex items-center gap-2 mb-4">
           <Boxes className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-bold tracking-tight">Gestão de Vazios (Supabase)</h2>
+          <h2 className="text-lg font-bold tracking-tight">Gestão de Vazios (Coluna D)</h2>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <StatCard label="Total Vazios Locados Renault" value={ds.vaziosLocadosRenault.length} icon={Package} tone="info" />
-          <StatCard label="Total Vazios Locados Tlog" value={ds.vaziosLocadosTlog.length} icon={Package} tone="warning" />
-          <StatCard label="Total Vazios Armadores" value={ds.vaziosArmadores.length} icon={Package} tone="primary" />
+          <StatCard label="Total Vazios Renault (D)" value={totalRenaultD} hint={`${ds.vaziosLocadosRenault.length} total registros`} icon={Package} tone="info" />
+          <StatCard label="Total Vazios Tlog (D)" value={totalTlogD} hint={`${ds.vaziosLocadosTlog.length} total registros`} icon={Package} tone="warning" />
+          <StatCard label="Total Vazios Armadores (D)" value={totalArmadoresD} hint={`${ds.vaziosArmadores.length} total registros`} icon={Package} tone="primary" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Detalhes Renault */}
           <div className="space-y-3">
-            <div className="text-xs font-bold uppercase text-muted-foreground px-1">Status Vazios Renault (Coluna D)</div>
+            <div className="text-xs font-bold uppercase text-muted-foreground px-1">Status Vazios Renault</div>
             <div className="grid grid-cols-1 gap-2">
-              {groupedRenault.length === 0 && <div className="text-xs italic text-muted-foreground p-4 border border-dashed rounded-lg">Nenhum dado disponível</div>}
+              {groupedRenault.length === 0 && <div className="text-xs italic text-muted-foreground p-4 border border-dashed rounded-lg">Nenhum dado na Coluna D</div>}
               {groupedRenault.map(([label, count]) => (
                 <StatCard key={label} label={label} value={count} tone="info" />
               ))}
@@ -105,9 +116,9 @@ export default function Dashboard() {
 
           {/* Detalhes Tlog */}
           <div className="space-y-3">
-            <div className="text-xs font-bold uppercase text-muted-foreground px-1">Status Vazios Tlog (Coluna D)</div>
+            <div className="text-xs font-bold uppercase text-muted-foreground px-1">Status Vazios Tlog</div>
             <div className="grid grid-cols-1 gap-2">
-              {groupedTlog.length === 0 && <div className="text-xs italic text-muted-foreground p-4 border border-dashed rounded-lg">Nenhum dado disponível</div>}
+              {groupedTlog.length === 0 && <div className="text-xs italic text-muted-foreground p-4 border border-dashed rounded-lg">Nenhum dado na Coluna D</div>}
               {groupedTlog.map(([label, count]) => (
                 <StatCard key={label} label={label} value={count} tone="warning" />
               ))}
@@ -116,9 +127,9 @@ export default function Dashboard() {
 
           {/* Detalhes Armadores */}
           <div className="space-y-3">
-            <div className="text-xs font-bold uppercase text-muted-foreground px-1">Status Vazios Armadores (Coluna D)</div>
+            <div className="text-xs font-bold uppercase text-muted-foreground px-1">Status Vazios Armadores</div>
             <div className="grid grid-cols-1 gap-2">
-              {groupedArmadores.length === 0 && <div className="text-xs italic text-muted-foreground p-4 border border-dashed rounded-lg">Nenhum dado disponível</div>}
+              {groupedArmadores.length === 0 && <div className="text-xs italic text-muted-foreground p-4 border border-dashed rounded-lg">Nenhum dado na Coluna D</div>}
               {groupedArmadores.map(([label, count]) => (
                 <StatCard key={label} label={label} value={count} tone="primary" />
               ))}

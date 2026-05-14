@@ -46,8 +46,19 @@ function emit() {
 
 const toInt = (val: any) => (val != null && !isNaN(Number(val)) ? Math.round(Number(val)) : null);
 
+// Helper para descobrir o nome da coluna D (4ª coluna) dinamicamente
+function discoverColumnD(data: any[]): string {
+  if (!data || data.length === 0) return 'coluna_d';
+  const keys = Object.keys(data[0]);
+  // Prioriza 'coluna_d' se existir, senão pega a 4ª chave (índice 3)
+  if (keys.includes('coluna_d')) return 'coluna_d';
+  return keys[3] || keys[keys.length - 1];
+}
+
 export async function syncFromSupabase() {
   if (typeof window === 'undefined') return;
+
+  console.log("[DEBUG] Iniciando sincronização Supabase...");
 
   try {
     const [
@@ -71,6 +82,18 @@ export async function syncFromSupabase() {
       supabase.from('vazios_locados_tlog').select('*'),
       supabase.from('vazios_armadores').select('*')
     ]);
+
+    // Logs de Debug para Descoberta de Colunas
+    const colRenault = discoverColumnD(vaziosRenaultRes.data || []);
+    const colTlog = discoverColumnD(vaziosTlogRes.data || []);
+    const colArmadores = discoverColumnD(vaziosArmadoresRes.data || []);
+
+    console.log("[DEBUG] Colunas D detectadas:", { Renault: colRenault, Tlog: colTlog, Armadores: colArmadores });
+    console.log("[DEBUG] Registros retornados:", { 
+      Renault: vaziosRenaultRes.data?.length || 0, 
+      Tlog: vaziosTlogRes.data?.length || 0, 
+      Armadores: vaziosArmadoresRes.data?.length || 0 
+    });
 
     state = {
       ...state,
@@ -110,17 +133,17 @@ export async function syncFromSupabase() {
       vaziosLocadosRenault: vaziosRenaultRes.data ? vaziosRenaultRes.data.map(v => ({
         id: v.id,
         conteiner: v.conteiner,
-        colunaD: v.coluna_d
+        colunaD: v[colRenault] || "N/A"
       })) : state.vaziosLocadosRenault,
       vaziosLocadosTlog: vaziosTlogRes.data ? vaziosTlogRes.data.map(v => ({
         id: v.id,
         conteiner: v.conteiner,
-        colunaD: v.coluna_d
+        colunaD: v[colTlog] || "N/A"
       })) : state.vaziosLocadosTlog,
       vaziosArmadores: vaziosArmadoresRes.data ? vaziosArmadoresRes.data.map(v => ({
         id: v.id,
         conteiner: v.conteiner,
-        colunaD: v.coluna_d
+        colunaD: v[colArmadores] || "N/A"
       })) : state.vaziosArmadores,
       imports: importsRes.data ? importsRes.data.map(i => ({
         id: i.id,
@@ -144,7 +167,7 @@ export async function syncFromSupabase() {
     };
     emit();
   } catch (error) {
-    console.error("Erro ao sincronizar do Supabase:", error);
+    console.error("[DEBUG] Erro crítico na sincronização:", error);
   }
 }
 
@@ -180,12 +203,11 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
           status: lastImport.status
         });
 
+        // Limpeza segura (apenas se as tabelas existirem)
         await Promise.all([
           supabase.from('containers_cheios').delete().neq('conteiner', '_none_'),
           supabase.from('vazios_locados').delete().neq('conteiner', '_none_'),
           supabase.from('vazio_ingesys').delete().neq('conteiner', '_none_'),
-          supabase.from('locados_tlog').delete().neq('conteiner', '_none_'),
-          supabase.from('locados_renault').delete().neq('conteiner', '_none_'),
           supabase.from('vazios_locados_renault').delete().neq('conteiner', '_none_'),
           supabase.from('vazios_locados_tlog').delete().neq('conteiner', '_none_'),
           supabase.from('vazios_armadores').delete().neq('conteiner', '_none_')
@@ -210,20 +232,6 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             data_devolucao_vazio: c.dataDevolucaoVazio,
             coluna_as: c.colunaAS
           })));
-
-          const locadosTlog = newState.cheios.filter(c => c.status === "LOCADO TLOG");
-          if (locadosTlog.length > 0) {
-            await supabase.from('locados_tlog').insert(locadosTlog.map(l => ({
-              conteiner: l.conteiner
-            })));
-          }
-
-          const locadosRenault = newState.cheios.filter(c => c.status === "LOCADO RENAULT");
-          if (locadosRenault.length > 0) {
-            await supabase.from('locados_renault').insert(locadosRenault.map(l => ({
-              conteiner: l.conteiner
-            })));
-          }
         }
 
         if (newState.vaziosLocadosRenault.length > 0) {
@@ -270,7 +278,7 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
         
         toast.success("Dados sincronizados com sucesso!");
       } catch (e) {
-        console.error("Erro na persistência:", e);
+        console.error("[DEBUG] Erro na persistência:", e);
         toast.error("Erro ao salvar no banco.");
       }
     }
