@@ -48,10 +48,14 @@ function normalizeStatus(s?: string): ContainerStatus {
   
   if (u.includes("PROGRAMADA") || u.includes("AGENDADO")) return "PROGRAMADA ENTRADA NO PATIO";
   if (u.includes("FINALIZ")) return "FINALIZADO";
+  
+  // Ordem de precedência para evitar conflitos
   if (u.includes("PROCESSO") && u.includes("DEPARA")) return "EM PROCESSO DEPARA";
   if (u.includes("DEPARA") && u.includes("PATIO")) return "DEPARA EM PATIO TLOG-SJP";
   if (u.includes("ENVIADO") && u.includes("FABRICA")) return "ENVIADO PARA FABRICA";
-  if (u.startsWith("EM PATIO")) return "EM PATIO TLOG-SJP";
+  
+  // Captura genérica de "EM PATIO" para garantir que variações sejam contadas
+  if (u.includes("EM PATIO")) return "EM PATIO TLOG-SJP";
   
   return "OUTRO";
 }
