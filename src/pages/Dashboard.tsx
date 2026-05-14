@@ -85,17 +85,17 @@ export default function Dashboard() {
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
       </div>
 
-      {/* Seção: Gestão de Vazios (Coluna D) */}
+      {/* Seção: Gestão de Vazios */}
       <section className="px-6 mt-6">
         <div className="flex items-center gap-2 mb-4">
           <Boxes className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-bold tracking-tight">Gestão de Vazios (Coluna D)</h2>
+          <h2 className="text-lg font-bold tracking-tight">Gestão de Vazios</h2>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <StatCard label="Total Vazios Renault (D)" value={totalRenaultD} hint={`${ds.vaziosLocadosRenault.length} total registros`} icon={Package} tone="info" />
-          <StatCard label="Total Vazios Tlog (D)" value={totalTlogD} hint={`${ds.vaziosLocadosTlog.length} total registros`} icon={Package} tone="warning" />
-          <StatCard label="Total Vazios Armadores (D)" value={totalArmadoresD} hint={`${ds.vaziosArmadores.length} total registros`} icon={Package} tone="primary" />
+          <StatCard label="Total Vazios Renault" value={totalRenaultD} hint={`${ds.vaziosLocadosRenault.length} total registros`} icon={Package} tone="info" />
+          <StatCard label="Total Vazios Tlog" value={totalTlogD} hint={`${ds.vaziosLocadosTlog.length} total registros`} icon={Package} tone="warning" />
+          <StatCard label="Total Vazios Armadores" value={totalArmadoresD} hint={`${ds.vaziosArmadores.length} total registros`} icon={Package} tone="primary" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -103,7 +103,7 @@ export default function Dashboard() {
           <div className="space-y-3">
             <div className="text-xs font-bold uppercase text-muted-foreground px-1">Status Vazios Renault</div>
             <div className="grid grid-cols-1 gap-2">
-              {groupedRenault.length === 0 && <div className="text-xs italic text-muted-foreground p-4 border border-dashed rounded-lg">Nenhum dado na Coluna D</div>}
+              {groupedRenault.length === 0 && <div className="text-xs italic text-muted-foreground p-4 border border-dashed rounded-lg">Nenhum dado disponível</div>}
               {groupedRenault.map(([label, count]) => (
                 <StatCard key={label} label={label} value={count} tone="info" />
               ))}
@@ -114,7 +114,7 @@ export default function Dashboard() {
           <div className="space-y-3">
             <div className="text-xs font-bold uppercase text-muted-foreground px-1">Status Vazios Tlog</div>
             <div className="grid grid-cols-1 gap-2">
-              {groupedTlog.length === 0 && <div className="text-xs italic text-muted-foreground p-4 border border-dashed rounded-lg">Nenhum dado na Coluna D</div>}
+              {groupedTlog.length === 0 && <div className="text-xs italic text-muted-foreground p-4 border border-dashed rounded-lg">Nenhum dado disponível</div>}
               {groupedTlog.map(([label, count]) => (
                 <StatCard key={label} label={label} value={count} tone="warning" />
               ))}
@@ -125,7 +125,7 @@ export default function Dashboard() {
           <div className="space-y-3">
             <div className="text-xs font-bold uppercase text-muted-foreground px-1">Status Vazios Armadores</div>
             <div className="grid grid-cols-1 gap-2">
-              {groupedArmadores.length === 0 && <div className="text-xs italic text-muted-foreground p-4 border border-dashed rounded-lg">Nenhum dado na Coluna D</div>}
+              {groupedArmadores.length === 0 && <div className="text-xs italic text-muted-foreground p-4 border border-dashed rounded-lg">Nenhum dado disponível</div>}
               {groupedArmadores.map(([label, count]) => (
                 <StatCard key={label} label={label} value={count} tone="primary" />
               ))}
