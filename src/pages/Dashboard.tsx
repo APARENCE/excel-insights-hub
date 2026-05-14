@@ -12,7 +12,7 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-import { RefreshCw, Car, Repeat, MapPin, ClipboardList, Boxes, Package } from "lucide-react";
+import { RefreshCw, Car, Repeat, MapPin, ClipboardList, Boxes, Package, Loader2 } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { SettingsDialog } from "@/components/SettingsDialog";
@@ -81,7 +81,7 @@ export default function Dashboard() {
         }
       />
       
-      <div className="px-6 grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="px-6 grid grid-cols-2 md:grid-cols-5 gap-3">
         <StatCard 
           label="Ocupação Total (Pátio)" 
           value={ocupacaoTotalReal} 
@@ -91,6 +91,7 @@ export default function Dashboard() {
           active
         />
         <StatCard label="Programada Entrada" value={s.programadas} hint="Aguardando chegada" icon={ClipboardList} tone="warning" />
+        <StatCard label="Em Processo Depara" value={s.emProcessoDepara} hint="Aguardando execução" icon={Loader2} tone="destructive" />
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
       </div>
