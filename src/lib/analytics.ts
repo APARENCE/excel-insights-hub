@@ -31,6 +31,7 @@ export function summary(
   const finalizados = cheios.filter((c) => c.status === "FINALIZADO").length;
   
   // Contagem baseada na Coluna D (mapeada para campos específicos no parser)
+  // TLOG: data_entrada | RENAULT: status_patio | ARMADORES: status
   const qtdTlog = vaziosTlog.filter(v => !!v.data_entrada).length;
   const qtdRenault = vaziosRenault.filter(v => !!v.status_patio).length;
   const qtdArmadores = vaziosArmadores.filter(v => !!v.status).length;
