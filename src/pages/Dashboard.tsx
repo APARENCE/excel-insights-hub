@@ -19,6 +19,7 @@ import { SettingsDialog } from "@/components/SettingsDialog";
 import { useDataset } from "@/lib/store";
 import { dailyMovement, statusDistribution, summary } from "@/lib/analytics";
 import { useMemo } from "react";
+import { cn } from "@/lib/utils";
 
 const STATUS_COLORS = ["#16a34a", "#94a3b8", "#64748b", "#a855f7", "#0ea5e9", "#f59e0b", "#ef4444", "#8b5cf6"];
 
@@ -30,13 +31,13 @@ export default function Dashboard() {
   
   const ocupacaoPct = Math.round((s.ocupacaoSaturacao / s.capacidadeTotal) * 1000) / 10;
   const livres = s.capacidadeTotal - s.ocupacaoSaturacao;
+  const isCritical = ocupacaoPct >= 90;
 
   // Lógica de Agrupamento e Contagem da Coluna D (Filtrando vazios/N/A)
   const groupedRenault = useMemo(() => {
     const map = new Map<string, number>();
     const valid = ds.vaziosLocadosRenault.filter(v => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
     valid.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
-    console.log("[DEBUG UI] Renault Grouped:", Array.from(map.entries()));
     return Array.from(map.entries());
   }, [ds.vaziosLocadosRenault]);
 
@@ -44,7 +45,6 @@ export default function Dashboard() {
     const map = new Map<string, number>();
     const valid = ds.vaziosLocadosTlog.filter(v => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
     valid.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
-    console.log("[DEBUG UI] Tlog Grouped:", Array.from(map.entries()));
     return Array.from(map.entries());
   }, [ds.vaziosLocadosTlog]);
 
@@ -52,7 +52,6 @@ export default function Dashboard() {
     const map = new Map<string, number>();
     const valid = ds.vaziosArmadores.filter(v => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
     valid.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
-    console.log("[DEBUG UI] Armadores Grouped:", Array.from(map.entries()));
     return Array.from(map.entries());
   }, [ds.vaziosArmadores]);
 
@@ -136,34 +135,42 @@ export default function Dashboard() {
       </section>
 
       <section className="px-6 mt-6">
-        <div className="rounded-xl border border-border bg-card p-5">
+        <div className={cn(
+          "rounded-xl border p-5 transition-colors",
+          isCritical ? "border-destructive/50 bg-destructive/5" : "border-border bg-card"
+        )}>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <div className="text-primary font-semibold">Capacidade Operacional</div>
+              <div className={cn("font-semibold", isCritical ? "text-destructive" : "text-primary")}>Capacidade Operacional</div>
               <div className="text-xs text-muted-foreground">Ocupação real do pátio (incluindo fixos)</div>
             </div>
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-success text-success-foreground text-xs font-bold">NORMAL</span>
+            <span className={cn(
+              "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold",
+              isCritical ? "bg-destructive text-destructive-foreground animate-pulse" : "bg-success text-success-foreground"
+            )}>
+              {isCritical ? "CRÍTICO" : "NORMAL"}
+            </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
             <div className="flex flex-col items-center justify-center">
-              <CapacityRing pct={ocupacaoPct} />
+              <CapacityRing pct={ocupacaoPct} isCritical={isCritical} />
             </div>
             <div>
               <div className="text-[11px] uppercase text-muted-foreground">Ocupadas</div>
-              <div className="text-3xl font-bold text-warning-foreground">{s.ocupacaoSaturacao}</div>
+              <div className={cn("text-3xl font-bold", isCritical ? "text-destructive" : "text-warning-foreground")}>{s.ocupacaoSaturacao}</div>
               <div className="text-xs text-muted-foreground">de {s.capacidadeTotal}</div>
             </div>
             <div>
               <div className="text-[11px] uppercase text-muted-foreground">Livres</div>
-              <div className="text-3xl font-bold text-success">{livres}</div>
+              <div className={cn("text-3xl font-bold", isCritical ? "text-destructive" : "text-success")}>{livres}</div>
               <div className="text-xs text-muted-foreground">agora</div>
             </div>
             <div>
               <div className="text-[11px] uppercase text-muted-foreground">Taxa</div>
               <div className="h-2 bg-muted rounded-full overflow-hidden mt-2">
-                <div className="h-full bg-success" style={{ width: `${Math.min(ocupacaoPct, 100)}%` }} />
+                <div className={cn("h-full transition-all duration-500", isCritical ? "bg-destructive" : "bg-success")} style={{ width: `${Math.min(ocupacaoPct, 100)}%` }} />
               </div>
-              <div className="text-xs text-muted-foreground mt-1">{ocupacaoPct}%</div>
+              <div className={cn("text-xs mt-1 font-bold", isCritical ? "text-destructive" : "text-muted-foreground")}>{ocupacaoPct}%</div>
             </div>
           </div>
         </div>
@@ -216,7 +223,7 @@ export default function Dashboard() {
   );
 }
 
-function CapacityRing({ pct }: { pct: number }) {
+function CapacityRing({ pct, isCritical }: { pct: number; isCritical: boolean }) {
   const r = 38;
   const c = 2 * Math.PI * r;
   const off = c - (Math.min(pct, 100) / 100) * c;
@@ -224,10 +231,21 @@ function CapacityRing({ pct }: { pct: number }) {
     <div className="relative h-28 w-28">
       <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
         <circle cx="50" cy="50" r={r} fill="none" stroke="var(--muted)" strokeWidth="10" />
-        <circle cx="50" cy="50" r={r} fill="none" stroke="var(--info)" strokeWidth="10" strokeDasharray={c} strokeDashoffset={off} strokeLinecap="round" />
+        <circle 
+          cx="50" 
+          cy="50" 
+          r={r} 
+          fill="none" 
+          stroke={isCritical ? "var(--destructive)" : "var(--info)"} 
+          strokeWidth="10" 
+          strokeDasharray={c} 
+          strokeDashoffset={off} 
+          strokeLinecap="round" 
+          className="transition-all duration-500"
+        />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="text-xl font-bold text-info">{pct}%</div>
+        <div className={cn("text-xl font-bold", isCritical ? "text-destructive" : "text-info")}>{pct}%</div>
         <div className="text-[10px] text-muted-foreground">Ocupado</div>
       </div>
     </div>
