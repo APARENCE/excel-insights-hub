@@ -29,10 +29,6 @@ export default function Dashboard() {
   const dist = statusDistribution(ds.cheios);
   const movement = dailyMovement(ds.cheios);
   
-  const ocupacaoPct = Math.round((s.ocupacaoSaturacao / s.capacidadeTotal) * 1000) / 10;
-  const livres = s.capacidadeTotal - s.ocupacaoSaturacao;
-  const isCritical = ocupacaoPct >= 90;
-
   // Lógica de Agrupamento e Contagem da Coluna D (Filtrando vazios/N/A)
   const groupedRenault = useMemo(() => {
     const map = new Map<string, number>();
@@ -60,6 +56,13 @@ export default function Dashboard() {
   const totalTlogD = groupedTlog.reduce((acc, curr) => acc + curr[1], 0);
   const totalArmadoresD = groupedArmadores.reduce((acc, curr) => acc + curr[1], 0);
 
+  // SOMA SOLICITADA: Ocupação Real (Cheios) + Vazios (Renault + Tlog + Armadores)
+  const ocupacaoTotalReal = s.ocupacao + totalRenaultD + totalTlogD + totalArmadoresD;
+  
+  const ocupacaoPct = Math.round((ocupacaoTotalReal / s.capacidadeTotal) * 1000) / 10;
+  const livres = s.capacidadeTotal - ocupacaoTotalReal;
+  const isCritical = ocupacaoPct >= 90;
+
   return (
     <AppShell>
       <PageHeader
@@ -79,7 +82,7 @@ export default function Dashboard() {
       />
       
       <div className="px-6 grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Ocupação Real (AA)" value={s.ocupacao} hint="EM PATIO / DEPARA / PROCESSO" icon={Car} tone="success" />
+        <StatCard label="Ocupação Cheios (AA)" value={s.ocupacao} hint="EM PATIO / DEPARA / PROCESSO" icon={Car} tone="success" />
         <StatCard label="Programada Entrada" value={s.programadas} hint="Aguardando chegada" icon={ClipboardList} tone="warning" />
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
@@ -141,8 +144,8 @@ export default function Dashboard() {
         )}>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <div className={cn("font-semibold", isCritical ? "text-destructive" : "text-primary")}>Capacidade Operacional (Saturação)</div>
-              <div className="text-xs text-muted-foreground">Ocupação real + itens fixos (Locados/Armadores)</div>
+              <div className={cn("font-semibold", isCritical ? "text-destructive" : "text-primary")}>Capacidade Operacional Total</div>
+              <div className="text-xs text-muted-foreground">Soma de Cheios (AA) + Vazios (Renault, Tlog, Armadores)</div>
             </div>
             <span className={cn(
               "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold",
@@ -157,7 +160,7 @@ export default function Dashboard() {
             </div>
             <div>
               <div className="text-[11px] uppercase text-muted-foreground">Total Ocupado</div>
-              <div className={cn("text-3xl font-bold", isCritical ? "text-destructive" : "text-warning-foreground")}>{s.ocupacaoSaturacao}</div>
+              <div className={cn("text-3xl font-bold", isCritical ? "text-destructive" : "text-warning-foreground")}>{ocupacaoTotalReal}</div>
               <div className="text-xs text-muted-foreground">de {s.capacidadeTotal}</div>
             </div>
             <div>
