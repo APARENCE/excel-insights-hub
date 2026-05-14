@@ -56,7 +56,7 @@ export default function Dashboard() {
   const totalTlogD = groupedTlog.reduce((acc, curr) => acc + curr[1], 0);
   const totalArmadoresD = groupedArmadores.reduce((acc, curr) => acc + curr[1], 0);
 
-  // SOMA SOLICITADA: Ocupação Real (Cheios) + Vazios (Renault + Tlog + Armadores)
+  // SOMA TOTAL: Ocupação Real (Cheios) + Vazios (Renault + Tlog + Armadores)
   const ocupacaoTotalReal = s.ocupacao + totalRenaultD + totalTlogD + totalArmadoresD;
   
   const ocupacaoPct = Math.round((ocupacaoTotalReal / s.capacidadeTotal) * 1000) / 10;
@@ -82,7 +82,14 @@ export default function Dashboard() {
       />
       
       <div className="px-6 grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Ocupação Cheios (AA)" value={s.ocupacao} hint="EM PATIO / DEPARA / PROCESSO" icon={Car} tone="success" />
+        <StatCard 
+          label="Ocupação Total (Pátio)" 
+          value={ocupacaoTotalReal} 
+          hint={`Cheios (${s.ocupacao}) + Vazios (${totalRenaultD + totalTlogD + totalArmadoresD})`} 
+          icon={Car} 
+          tone="success" 
+          active
+        />
         <StatCard label="Programada Entrada" value={s.programadas} hint="Aguardando chegada" icon={ClipboardList} tone="warning" />
         <StatCard label="Depara em pátio" value={s.dePara} hint="Dê-para realizados" icon={Repeat} tone="info" />
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
