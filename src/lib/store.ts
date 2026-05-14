@@ -83,6 +83,7 @@ export function setUserRole(role: "CLIENTE" | "TRANSPORTADORA") {
   emit();
 }
 
+/* Priority handling – unchanged */
 export function addPriorityRequest(req: import("./types").PriorityRequest) {
   state = { ...state, priorityRequests: [req, ...state.priorityRequests] };
   supabase
@@ -135,6 +136,7 @@ export function deletePriorityRequest(id: string) {
   emit();
 }
 
+/* Sync all tables, including the three new ones */
 export async function syncFromSupabase() {
   if (typeof window === "undefined") return;
 
@@ -158,10 +160,7 @@ export async function syncFromSupabase() {
         .select("*")
         .order("imported_at", { ascending: false })
         .limit(50),
-      supabase
-        .from("priority_requests")
-        .select("*")
-        .order("solicitado_em", { ascending: false }),
+      supabase.from("priority_requests").select("*").order("solicitado_em", { ascending: false }),
       supabase.from("app_settings").select("*").maybeSingle(),
       supabase.from("vazios_locados_tlog").select("*"),
       supabase.from("vazios_locados_renault").select("*"),
@@ -201,6 +200,7 @@ export async function syncFromSupabase() {
             statusUso: v.status_uso,
             statusPatio: v.status_patio,
             diasNoPatio: v.dias_no_patio,
+            dataRetorno: v.data_retorno, // <-- new field (may be undefined)
           }))
         : state.vaziosLocados,
       vazioIngesys: ingesysRes.error

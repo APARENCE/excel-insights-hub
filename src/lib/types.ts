@@ -39,13 +39,43 @@ export interface VazioLocadoRow {
   statusUso?: string;
   statusPatio?: string;
   diasNoPatio?: number;
+  /** Nova coluna presente na aba “VAZIOS LOCADOS” */
+  dataRetorno?: string;
 }
 
+/* Existing auxiliary tables */
 export interface VazioIngesysRow {
   conteiner: string;
   statusD: string;
 }
 
+/* New tables – one per new sheet */
+export interface VazioLocadoTlogRow {
+  id: string;
+  conteiner: string;
+  armador?: string;
+  status?: string;
+  data_entrada?: string;
+  status_patio?: string;
+  dias_no_patio?: number;
+}
+
+export interface VazioLocadoRenaultRow {
+  id: string;
+  conteiner: string;
+  status?: string;
+  data_entrada?: string;
+  status_patio?: string;
+}
+
+export interface VazioArmadorRow {
+  id: string;
+  conteiner: string;
+  armador: string;
+  status?: string;
+}
+
+/* Miscellaneous types */
 export interface ImportRecord {
   id: string;
   fileName: string;
@@ -73,31 +103,7 @@ export interface PriorityRequest {
   observacao?: string;
 }
 
-export interface VazioLocadoTlogRow {
-  id: string;
-  conteiner: string;
-  armador?: string;
-  status?: string;
-  data_entrada?: string;
-  status_patio?: string;
-  dias_no_patio?: number;
-}
-
-export interface VazioLocadoRenaultRow {
-  id: string;
-  conteiner: string;
-  status?: string;
-  data_entrada?: string;
-  status_patio?: string;
-}
-
-export interface VazioArmadorRow {
-  id: string;
-  conteiner: string;
-  armador: string;
-  status?: string;
-}
-
+/* Global dataset */
 export interface AppDataset {
   cheios: CheioRow[];
   vaziosLocados: VazioLocadoRow[];
@@ -108,6 +114,8 @@ export interface AppDataset {
   settings: AppSettings;
   armadorCounts: Record<string, number>;
   userRole: "CLIENTE" | "TRANSPORTADORA";
+
+  /* New collections */
   vaziosLocadosTlog: VazioLocadoTlogRow[];
   vaziosLocadosRenault: VazioLocadoRenaultRow[];
   vaziosArmadores: VazioArmadorRow[];
