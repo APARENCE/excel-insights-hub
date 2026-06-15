@@ -74,13 +74,9 @@ export async function syncFromSupabase() {
     const results = await Promise.allSettled([
       supabase.from('containers_cheios').select('*'),
       supabase.from('vazios_locados').select('*'),
-      supabase.from('vazio_ingesys').select('*'),
       supabase.from('import_history').select('*').order('imported_at', { ascending: false }).limit(50),
       supabase.from('priority_requests').select('*').order('solicitado_em', { ascending: false }),
       supabase.from('app_settings').select('*').maybeSingle(),
-      supabase.from('vazios_locados_renault').select('*'),
-      supabase.from('vazios_locados_tlog').select('*'),
-      supabase.from('vazios_armadores').select('*')
     ]);
 
     const getData = (idx: number) => {
@@ -90,13 +86,9 @@ export async function syncFromSupabase() {
 
     const cheiosData = getData(0);
     const vaziosData = getData(1);
-    const ingesysData = getData(2);
-    const importsData = getData(3);
-    const prioritiesData = getData(4);
-    const settingsData = getData(5);
-    const renaultData = getData(6);
-    const tlogData = getData(7);
-    const armadoresData = getData(8);
+    const importsData = getData(2);
+    const prioritiesData = getData(3);
+    const settingsData = getData(4);
 
     const localRenault = loadLocalVazios(RENAULT_STORAGE_KEY);
     const localTlog = loadLocalVazios(TLOG_STORAGE_KEY);
@@ -134,25 +126,10 @@ export async function syncFromSupabase() {
         statusPatio: v.status_patio,
         diasNoPatio: v.dias_no_patio
       })) : state.vaziosLocados,
-      vazioIngesys: ingesysData && ingesysData.length ? ingesysData.map((i: any) => ({
-        conteiner: i.conteiner,
-        statusD: i.status_d
-      })) : (localIngesys.length ? localIngesys : state.vazioIngesys),
-      vaziosLocadosRenault: renaultData && renaultData.length ? renaultData.map((v: any) => ({
-        id: v.id,
-        conteiner: v.conteiner,
-        colunaD: v.coluna_d || "N/A"
-      })) : (localRenault.length ? localRenault : state.vaziosLocadosRenault),
-      vaziosLocadosTlog: tlogData && tlogData.length ? tlogData.map((v: any) => ({
-        id: v.id,
-        conteiner: v.conteiner,
-        colunaD: v.coluna_d || "N/A"
-      })) : (localTlog.length ? localTlog : state.vaziosLocadosTlog),
-      vaziosArmadores: armadoresData && armadoresData.length ? armadoresData.map((v: any) => ({
-        id: v.id,
-        conteiner: v.conteiner,
-        colunaD: v.coluna_d || "N/A"
-      })) : (localArmadores.length ? localArmadores : state.vaziosArmadores),
+      vazioIngesys: localIngesys,
+      vaziosLocadosRenault: localRenault,
+      vaziosLocadosTlog: localTlog,
+      vaziosArmadores: localArmadores,
       imports: importsData ? importsData.map((i: any) => ({
         id: i.id,
         fileName: i.file_name,
@@ -184,10 +161,6 @@ if (typeof window !== 'undefined') {
   supabase.channel('db-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'priority_requests' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'containers_cheios' }, () => syncFromSupabase())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazio_ingesys' }, () => syncFromSupabase())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_renault' }, () => syncFromSupabase())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_tlog' }, () => syncFromSupabase())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_armadores' }, () => syncFromSupabase())
     .subscribe();
 }
 
@@ -222,6 +195,7 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
           return;
         }
 
+        // Apenas as tabelas que REALMENTE existem no Supabase
         const tables = [
           { name: 'containers_cheios', data: newState.cheios, map: (c: CheioRow) => ({
             conteiner: c.conteiner, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
@@ -234,18 +208,6 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             conteiner: v.conteiner, armador: v.armador, tipo: v.tipo, data_entrada: v.dataEntrada,
             data_de_para: v.dataDePara, cheio_de_para: v.cheioDePara, status_uso: v.statusUso,
             status_patio: v.statusPatio, dias_no_patio: toInt(v.diasNoPatio)
-          })},
-          { name: 'vazio_ingesys', data: newState.vazioIngesys, map: (i: VazioIngesysRow) => ({
-            conteiner: i.conteiner, status_d: i.statusD
-          })},
-          { name: 'vazios_locados_renault', data: newState.vaziosLocadosRenault, map: (v: VazioGenericRow) => ({
-            conteiner: v.conteiner, coluna_d: v.colunaD
-          })},
-          { name: 'vazios_locados_tlog', data: newState.vaziosLocadosTlog, map: (v: VazioGenericRow) => ({
-            conteiner: v.conteiner, coluna_d: v.colunaD
-          })},
-          { name: 'vazios_armadores', data: newState.vaziosArmadores, map: (v: VazioGenericRow) => ({
-            conteiner: v.conteiner, coluna_d: v.colunaD
           })}
         ];
 
@@ -257,10 +219,8 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             try {
               const { error: delError } = await supabase.from(table.name).delete().neq('conteiner', '_none_');
               if (delError) {
-                console.warn(`[SUPABASE] Erro ao deletar em ${table.name}:`, delError);
-                if (delError.code !== '42P01') { // Ignora erro de tabela inexistente
-                  errors.push(`${table.name} (limpeza): ${delError.message}`);
-                }
+                console.error(`[SUPABASE] Erro ao deletar em ${table.name}:`, delError);
+                errors.push(`${table.name} (limpeza): ${delError.message}`);
                 continue;
               }
               const { error: insError } = await supabase.from(table.name).insert(table.data.map(table.map as any));
