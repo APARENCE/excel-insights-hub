@@ -6,6 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const INGESYS_STORAGE_KEY = "tlog:vazio-ingesys";
+const RENAULT_STORAGE_KEY = "tlog:vazios-renault";
+const TLOG_STORAGE_KEY = "tlog:vazios-tlog";
+const ARMADORES_STORAGE_KEY = "tlog:vazios-armadores";
 
 function loadLocalVazioIngesys(): VazioIngesysRow[] {
   if (typeof window === 'undefined') return [];
@@ -19,6 +22,20 @@ function loadLocalVazioIngesys(): VazioIngesysRow[] {
 function saveLocalVazioIngesys(rows: VazioIngesysRow[]) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(INGESYS_STORAGE_KEY, JSON.stringify(rows));
+}
+
+function loadLocalVazios(key: string): VazioGenericRow[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    return JSON.parse(window.localStorage.getItem(key) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalVazios(key: string, rows: VazioGenericRow[]) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(key, JSON.stringify(rows));
 }
 
 export type UserRole = "CLIENTE" | "TRANSPORTADORA";
@@ -68,7 +85,7 @@ export async function syncFromSupabase() {
 
     const getData = (idx: number) => {
       const res = results[idx];
-      return res.status === 'fulfilled' ? (res.value as any).data : null;
+      return res.status === 'fulfilled' && !(res.value as any).error ? (res.value as any).data : null;
     };
 
     const cheiosData = getData(0);
@@ -80,6 +97,11 @@ export async function syncFromSupabase() {
     const renaultData = getData(6);
     const tlogData = getData(7);
     const armadoresData = getData(8);
+
+    const localRenault = loadLocalVazios(RENAULT_STORAGE_KEY);
+    const localTlog = loadLocalVazios(TLOG_STORAGE_KEY);
+    const localArmadores = loadLocalVazios(ARMADORES_STORAGE_KEY);
+    const localIngesys = loadLocalVazioIngesys();
 
     state = {
       ...state,
@@ -112,25 +134,25 @@ export async function syncFromSupabase() {
         statusPatio: v.status_patio,
         diasNoPatio: v.dias_no_patio
       })) : state.vaziosLocados,
-      vazioIngesys: ingesysData ? ingesysData.map((i: any) => ({
+      vazioIngesys: ingesysData && ingesysData.length ? ingesysData.map((i: any) => ({
         conteiner: i.conteiner,
         statusD: i.status_d
-      })) : state.vazioIngesys,
-      vaziosLocadosRenault: renaultData ? renaultData.map((v: any) => ({
+      })) : (localIngesys.length ? localIngesys : state.vazioIngesys),
+      vaziosLocadosRenault: renaultData && renaultData.length ? renaultData.map((v: any) => ({
         id: v.id,
         conteiner: v.conteiner,
         colunaD: v.coluna_d || "N/A"
-      })) : state.vaziosLocadosRenault,
-      vaziosLocadosTlog: tlogData ? tlogData.map((v: any) => ({
+      })) : (localRenault.length ? localRenault : state.vaziosLocadosRenault),
+      vaziosLocadosTlog: tlogData && tlogData.length ? tlogData.map((v: any) => ({
         id: v.id,
         conteiner: v.conteiner,
         colunaD: v.coluna_d || "N/A"
-      })) : state.vaziosLocadosTlog,
-      vaziosArmadores: armadoresData ? armadoresData.map((v: any) => ({
+      })) : (localTlog.length ? localTlog : state.vaziosLocadosTlog),
+      vaziosArmadores: armadoresData && armadoresData.length ? armadoresData.map((v: any) => ({
         id: v.id,
         conteiner: v.conteiner,
         colunaD: v.coluna_d || "N/A"
-      })) : state.vaziosArmadores,
+      })) : (localArmadores.length ? localArmadores : state.vaziosArmadores),
       imports: importsData ? importsData.map((i: any) => ({
         id: i.id,
         fileName: i.file_name,
@@ -181,7 +203,12 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   if (newState.lastImportAt !== oldLastImport) {
     const lastImport = newState.imports[0];
     if (lastImport) {
+      // Salva sempre localmente primeiro para garantir resiliência
       saveLocalVazioIngesys(newState.vazioIngesys);
+      saveLocalVazios(RENAULT_STORAGE_KEY, newState.vaziosLocadosRenault);
+      saveLocalVazios(TLOG_STORAGE_KEY, newState.vaziosLocadosTlog);
+      saveLocalVazios(ARMADORES_STORAGE_KEY, newState.vaziosArmadores);
+
       try {
         await supabase.from('import_history').insert({
           file_name: lastImport.fileName,
@@ -219,9 +246,19 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
         for (const table of tables) {
           if (table.data.length > 0) {
             console.log(`[SUPABASE] Atualizando tabela: ${table.name}`);
-            await supabase.from(table.name).delete().neq('conteiner', '_none_');
-            const { error } = await supabase.from(table.name).insert(table.data.map(table.map as any));
-            if (error) console.error(`[SUPABASE] Erro ao inserir em ${table.name}:`, error);
+            try {
+              const { error: delError } = await supabase.from(table.name).delete().neq('conteiner', '_none_');
+              if (delError) {
+                console.warn(`[SUPABASE] Erro ao deletar em ${table.name} (pode não existir no banco):`, delError);
+                continue; // Pula para a próxima tabela se esta falhar (ex: tabela não existe)
+              }
+              const { error: insError } = await supabase.from(table.name).insert(table.data.map(table.map as any));
+              if (insError) {
+                console.error(`[SUPABASE] Erro ao inserir em ${table.name}:`, insError);
+              }
+            } catch (err) {
+              console.error(`[SUPABASE] Erro catastrófico na tabela ${table.name}:`, err);
+            }
           }
         }
         
