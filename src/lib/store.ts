@@ -188,10 +188,14 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   const oldLastImport = state.lastImportAt;
   const newState = updater(state);
   
+  // 1. ATUALIZAÇÃO OTIMISTA: Atualiza a tela instantaneamente com os novos dados
+  state = newState;
+  emit();
+
   if (newState.lastImportAt !== oldLastImport) {
     const lastImport = newState.imports[0];
     if (lastImport) {
-      // Salva sempre localmente primeiro para garantir resiliência imediata
+      // Salva localmente de imediato para resiliência
       saveLocalVazioIngesys(newState.vazioIngesys);
       saveLocalVazios(RENAULT_STORAGE_KEY, newState.vaziosLocadosRenault);
       saveLocalVazios(TLOG_STORAGE_KEY, newState.vaziosLocadosTlog);
@@ -296,9 +300,6 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
       }
     }
   }
-  
-  state = newState;
-  emit();
 }
 
 export async function clearAllDataset() {
