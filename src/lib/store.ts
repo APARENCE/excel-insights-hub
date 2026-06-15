@@ -210,11 +210,17 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
       saveLocalVazios(ARMADORES_STORAGE_KEY, newState.vaziosArmadores);
 
       try {
-        await supabase.from('import_history').insert({
+        const { error: histError } = await supabase.from('import_history').insert({
           file_name: lastImport.fileName,
           item_count: lastImport.itemCount,
           status: lastImport.status
         });
+
+        if (histError) {
+          console.error("[SUPABASE] Erro ao salvar histórico:", histError);
+          toast.error(`Erro de permissão ou conexão: ${histError.message}`);
+          return;
+        }
 
         const tables = [
           { name: 'containers_cheios', data: newState.cheios, map: (c: CheioRow) => ({
@@ -243,31 +249,44 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
           })}
         ];
 
+        const errors: string[] = [];
+
         for (const table of tables) {
           if (table.data.length > 0) {
             console.log(`[SUPABASE] Atualizando tabela: ${table.name}`);
             try {
               const { error: delError } = await supabase.from(table.name).delete().neq('conteiner', '_none_');
               if (delError) {
-                console.warn(`[SUPABASE] Erro ao deletar em ${table.name} (pode não existir no banco):`, delError);
-                continue; // Pula para a próxima tabela se esta falhar (ex: tabela não existe)
+                console.warn(`[SUPABASE] Erro ao deletar em ${table.name}:`, delError);
+                if (delError.code !== '42P01') { // Ignora erro de tabela inexistente
+                  errors.push(`${table.name} (limpeza): ${delError.message}`);
+                }
+                continue;
               }
               const { error: insError } = await supabase.from(table.name).insert(table.data.map(table.map as any));
               if (insError) {
                 console.error(`[SUPABASE] Erro ao inserir em ${table.name}:`, insError);
+                errors.push(`${table.name} (inserção): ${insError.message}`);
               }
-            } catch (err) {
+            } catch (err: any) {
               console.error(`[SUPABASE] Erro catastrófico na tabela ${table.name}:`, err);
+              errors.push(`${table.name}: ${err.message || err}`);
             }
           }
         }
         
-        toast.success("Dados sincronizados com Supabase!");
-        // Força uma nova sincronização para garantir que o estado local reflita o banco
+        if (errors.length > 0) {
+          toast.error(`Erro ao salvar algumas tabelas no Supabase:\n${errors.join('\n')}`, {
+            duration: 8000
+          });
+        } else {
+          toast.success("Dados sincronizados com Supabase com sucesso!");
+        }
+        
         await syncFromSupabase();
-      } catch (e) {
+      } catch (e: any) {
         console.error("[SUPABASE] Erro crítico no salvamento:", e);
-        toast.error("Erro ao salvar no banco de dados.");
+        toast.error(`Erro crítico de banco de dados: ${e.message || e}`);
       }
     }
   }
