@@ -63,7 +63,22 @@ function emit() {
   for (const l of listeners) l();
 }
 
-const toInt = (val: any) => (val != null && !isNaN(Number(val)) ? Math.round(Number(val)) : null);
+// Sanitizadores estritos para evitar erros de tipo no PostgreSQL
+const toInt = (val: any) => {
+  if (val == null || val === "") return null;
+  const n = Math.round(Number(val));
+  return isNaN(n) ? null : n;
+};
+
+const toISOString = (val: any) => {
+  if (!val || val === "") return null;
+  try {
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  } catch {
+    return null;
+  }
+};
 
 export async function syncFromSupabase() {
   if (typeof window === 'undefined') return;
@@ -176,13 +191,16 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   if (newState.lastImportAt !== oldLastImport) {
     const lastImport = newState.imports[0];
     if (lastImport) {
-      // Salva sempre localmente primeiro para garantir resiliência
+      // Salva sempre localmente primeiro para garantir resiliência imediata
       saveLocalVazioIngesys(newState.vazioIngesys);
       saveLocalVazios(RENAULT_STORAGE_KEY, newState.vaziosLocadosRenault);
       saveLocalVazios(TLOG_STORAGE_KEY, newState.vaziosLocadosTlog);
       saveLocalVazios(ARMADORES_STORAGE_KEY, newState.vaziosArmadores);
 
+      const toastId = toast.loading("Sincronizando dados com o Supabase...");
+
       try {
+        // 1. Salva o histórico de importação
         const { error: histError } = await supabase.from('import_history').insert({
           file_name: lastImport.fileName,
           item_count: lastImport.itemCount,
@@ -191,24 +209,49 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
 
         if (histError) {
           console.error("[SUPABASE] Erro ao salvar histórico:", histError);
-          toast.error(`Erro de permissão ou conexão: ${histError.message}`);
+          toast.error(`Erro ao salvar histórico: ${histError.message}`, { id: toastId });
           return;
         }
 
-        // Apenas as tabelas que REALMENTE existem no Supabase
+        // Tabelas que realmente existem no Supabase
         const tables = [
-          { name: 'containers_cheios', data: newState.cheios, map: (c: CheioRow) => ({
-            conteiner: c.conteiner, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
-            data_chegada: c.dataChegada, dias_no_patio: toInt(c.diasNoPatio), free_time: toInt(c.freeTime),
-            demurrage_vencimento: c.demurrageVencimento, dias_para_vencimento: toInt(c.diasParaVencimento),
-            status: c.status, fabrica: c.fabrica, data_envio_fabrica: c.dataEnvioFabrica,
-            conteiner_de_para: c.conteinerDePara, data_devolucao_vazio: c.dataDevolucaoVazio, coluna_as: c.colunaAS
-          })},
-          { name: 'vazios_locados', data: newState.vaziosLocados, map: (v: VazioLocadoRow) => ({
-            conteiner: v.conteiner, armador: v.armador, tipo: v.tipo, data_entrada: v.dataEntrada,
-            data_de_para: v.dataDePara, cheio_de_para: v.cheioDePara, status_uso: v.statusUso,
-            status_patio: v.statusPatio, dias_no_patio: toInt(v.diasNoPatio)
-          })}
+          { 
+            name: 'containers_cheios', 
+            data: newState.cheios, 
+            map: (c: CheioRow) => ({
+              conteiner: c.conteiner, 
+              lacre: c.lacre || null, 
+              tipo: c.tipo || null, 
+              armador: c.armador || null, 
+              navio: c.navio || null,
+              data_chegada: toISOString(c.dataChegada), 
+              dias_no_patio: toInt(c.diasNoPatio), 
+              free_time: toInt(c.freeTime),
+              demurrage_vencimento: toISOString(c.demurrageVencimento), 
+              dias_para_vencimento: toInt(c.diasParaVencimento),
+              status: c.status, 
+              fabrica: c.fabrica || null, 
+              data_envio_fabrica: toISOString(c.dataEnvioFabrica),
+              conteiner_de_para: c.conteinerDePara || null, 
+              data_devolucao_vazio: toISOString(c.dataDevolucaoVazio), 
+              coluna_as: c.colunaAS || null
+            })
+          },
+          { 
+            name: 'vazios_locados', 
+            data: newState.vaziosLocados, 
+            map: (v: VazioLocadoRow) => ({
+              conteiner: v.conteiner, 
+              armador: v.armador || null, 
+              tipo: v.tipo || null, 
+              data_entrada: toISOString(v.dataEntrada),
+              data_de_para: toISOString(v.dataDePara), 
+              cheio_de_para: v.cheioDePara || null, 
+              status_uso: v.statusUso || null,
+              status_patio: v.statusPatio || null, 
+              dias_no_patio: toInt(v.diasNoPatio)
+            })
+          }
         ];
 
         const errors: string[] = [];
@@ -216,37 +259,40 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
         for (const table of tables) {
           if (table.data.length > 0) {
             console.log(`[SUPABASE] Atualizando tabela: ${table.name}`);
-            try {
-              const { error: delError } = await supabase.from(table.name).delete().neq('conteiner', '_none_');
-              if (delError) {
-                console.error(`[SUPABASE] Erro ao deletar em ${table.name}:`, delError);
-                errors.push(`${table.name} (limpeza): ${delError.message}`);
-                continue;
-              }
-              const { error: insError } = await supabase.from(table.name).insert(table.data.map(table.map as any));
-              if (insError) {
-                console.error(`[SUPABASE] Erro ao inserir em ${table.name}:`, insError);
-                errors.push(`${table.name} (inserção): ${insError.message}`);
-              }
-            } catch (err: any) {
-              console.error(`[SUPABASE] Erro catastrófico na tabela ${table.name}:`, err);
-              errors.push(`${table.name}: ${err.message || err}`);
+            
+            // Mapeia e sanitiza os dados antes de enviar
+            const sanitizedData = table.data.map(table.map as any);
+
+            // Deleta os registros antigos
+            const { error: delError } = await supabase.from(table.name).delete().neq('conteiner', '_none_');
+            if (delError) {
+              console.error(`[SUPABASE] Erro ao limpar tabela ${table.name}:`, delError);
+              errors.push(`Limpeza ${table.name}: ${delError.message}`);
+              continue;
+            }
+
+            // Insere os novos dados sanitizados
+            const { error: insError } = await supabase.from(table.name).insert(sanitizedData);
+            if (insError) {
+              console.error(`[SUPABASE] Erro ao inserir dados na tabela ${table.name}:`, insError);
+              errors.push(`Inserção ${table.name}: ${insError.message}`);
             }
           }
         }
         
         if (errors.length > 0) {
-          toast.error(`Erro ao salvar algumas tabelas no Supabase:\n${errors.join('\n')}`, {
+          toast.error(`Erro na sincronização:\n${errors.join('\n')}`, {
+            id: toastId,
             duration: 8000
           });
         } else {
-          toast.success("Dados sincronizados com Supabase com sucesso!");
+          toast.success("Dados sincronizados com Supabase com sucesso!", { id: toastId });
         }
         
         await syncFromSupabase();
       } catch (e: any) {
         console.error("[SUPABASE] Erro crítico no salvamento:", e);
-        toast.error(`Erro crítico de banco de dados: ${e.message || e}`);
+        toast.error(`Erro crítico de banco de dados: ${e.message || e}`, { id: toastId });
       }
     }
   }
