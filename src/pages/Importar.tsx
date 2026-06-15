@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { CloudUpload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { CloudUpload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Trash2 } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
 import { parseExcelFile } from "@/lib/excel-parser";
-import { setDataset, useDataset } from "@/lib/store";
+import { setDataset, useDataset, clearAllDataset } from "@/lib/store";
 
 export default function ImportarPage() {
   const ds = useDataset();
@@ -66,9 +66,32 @@ export default function ImportarPage() {
     }
   }
 
+  const handleClear = async () => {
+    const confirmed = window.confirm(
+      "ATENÇÃO: Tem certeza que deseja apagar TODOS os dados do sistema e do Supabase? Esta ação não pode ser desfeita e deixará o sistema pronto para um novo upload."
+    );
+    if (confirmed) {
+      setBusy(true);
+      await clearAllDataset();
+      setBusy(false);
+    }
+  };
+
   return (
     <AppShell>
-      <PageHeader title="Importar" subtitle="Envie arquivo Excel" />
+      <PageHeader 
+        title="Importar" 
+        subtitle="Envie arquivo Excel" 
+        actions={
+          <button
+            onClick={handleClear}
+            disabled={busy}
+            className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider border border-destructive/30 rounded-md px-3 py-1.5 bg-destructive/10 hover:bg-destructive text-destructive hover:text-white transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Trash2 className="h-4 w-4" /> Limpar Banco de Dados
+          </button>
+        }
+      />
 
       <div className="px-6">
         <label

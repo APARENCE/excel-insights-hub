@@ -301,6 +301,44 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   emit();
 }
 
+export async function clearAllDataset() {
+  const toastId = toast.loading("Limpando todos os dados do sistema e do Supabase...");
+  try {
+    // 1. Deleta os dados das tabelas no Supabase
+    const p1 = supabase.from('containers_cheios').delete().neq('conteiner', '_none_');
+    const p2 = supabase.from('vazios_locados').delete().neq('conteiner', '_none_');
+    const p3 = supabase.from('import_history').delete().neq('status', '_none_');
+
+    const results = await Promise.all([p1, p2, p3]);
+    const errors = results.filter(r => r.error).map(r => r.error?.message);
+
+    if (errors.length > 0) {
+      throw new Error(errors.join(" | "));
+    }
+
+    // 2. Limpa o LocalStorage
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(INGESYS_STORAGE_KEY);
+      window.localStorage.removeItem(RENAULT_STORAGE_KEY);
+      window.localStorage.removeItem(TLOG_STORAGE_KEY);
+      window.localStorage.removeItem(ARMADORES_STORAGE_KEY);
+    }
+
+    // 3. Reseta o estado local
+    state = {
+      ...initial,
+      userRole: state.userRole,
+      settings: state.settings,
+    };
+    emit();
+
+    toast.success("Todos os dados foram apagados com sucesso!", { id: toastId });
+  } catch (e: any) {
+    console.error("[SUPABASE] Erro ao limpar dados:", e);
+    toast.error(`Erro ao limpar dados: ${e.message || e}`, { id: toastId });
+  }
+}
+
 export async function addPriorityRequest(req: PriorityRequest) {
   const { error } = await supabase.from('priority_requests').insert({
     conteiner: req.conteiner,
