@@ -105,12 +105,12 @@ export async function syncFromSupabase() {
         conteiner: v.conteiner,
         armador: v.armador,
         tipo: v.tipo,
-        dataEntrada: v.data_entrada,
-        dataDePara: v.data_de_para,
-        cheioDePara: v.cheio_de_para,
-        statusUso: v.status_uso,
-        statusPatio: v.status_patio,
-        diasNoPatio: v.dias_no_patio
+        data_entrada: v.data_entrada,
+        data_de_para: v.data_de_para,
+        cheio_de_para: v.cheio_de_para,
+        status_uso: v.status_uso,
+        status_patio: v.status_patio,
+        dias_no_patio: v.dias_no_patio
       })) : state.vaziosLocados,
       vazioIngesys: ingesysData ? ingesysData.map((i: any) => ({
         conteiner: i.conteiner,
@@ -237,6 +237,42 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   
   state = newState;
   emit();
+}
+
+export async function clearDataset() {
+  try {
+    console.log("[SUPABASE] Iniciando limpeza completa de dados...");
+    
+    // Limpa o localStorage do Ingesys
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(INGESYS_STORAGE_KEY);
+    }
+
+    // Deleta todos os registros de todas as tabelas operacionais
+    await Promise.all([
+      supabase.from('containers_cheios').delete().neq('conteiner', '_none_'),
+      supabase.from('vazios_locados').delete().neq('conteiner', '_none_'),
+      supabase.from('vazio_ingesys').delete().neq('conteiner', '_none_'),
+      supabase.from('vazios_locados_renault').delete().neq('conteiner', '_none_'),
+      supabase.from('vazios_locados_tlog').delete().neq('conteiner', '_none_'),
+      supabase.from('vazios_armadores').delete().neq('conteiner', '_none_'),
+      supabase.from('import_history').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+      supabase.from('priority_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    ]);
+
+    // Reseta o estado local mantendo apenas as configurações e o perfil do usuário
+    state = {
+      ...initial,
+      userRole: state.userRole,
+      settings: state.settings
+    };
+    
+    emit();
+    toast.success("Todos os dados foram limpos com sucesso!");
+  } catch (error) {
+    console.error("[SUPABASE] Erro ao limpar dados:", error);
+    toast.error("Erro ao realizar a limpeza dos dados.");
+  }
 }
 
 export async function addPriorityRequest(req: PriorityRequest) {

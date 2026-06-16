@@ -1,11 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { CloudUpload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { CloudUpload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Trash2 } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
 import { parseExcelFile } from "@/lib/excel-parser";
-import { setDataset, useDataset } from "@/lib/store";
+import { setDataset, useDataset, clearDataset } from "@/lib/store";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function ImportarPage() {
   const ds = useDataset();
@@ -66,9 +78,41 @@ export default function ImportarPage() {
     }
   }
 
+  const handleClear = async () => {
+    setBusy(true);
+    await clearDataset();
+    setBusy(false);
+  };
+
   return (
     <AppShell>
-      <PageHeader title="Importar" subtitle="Envie arquivo Excel" />
+      <PageHeader 
+        title="Importar" 
+        subtitle="Envie arquivo Excel" 
+        actions={
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm" className="gap-2 font-bold">
+                <Trash2 className="h-4 w-4" /> Limpar Dados do Sistema
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Tem certeza absoluta?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação irá deletar permanentemente todos os containers cheios, vazios locados, prioridades e histórico de importações do banco de dados. O sistema ficará totalmente limpo para um novo upload.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleClear} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Sim, limpar tudo
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        }
+      />
 
       <div className="px-6">
         <label
