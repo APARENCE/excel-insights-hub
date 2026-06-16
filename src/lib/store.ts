@@ -267,8 +267,12 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
               // Deleta registros existentes de forma segura
               const { error: delError } = await supabase.from(table.name).delete().neq('conteiner', '_none_');
               if (delError) {
-                console.warn(`[SUPABASE] Erro ao limpar tabela ${table.name} (pode não existir no banco):`, delError);
-                continue; // Pula para a próxima tabela se esta falhar
+                if (delError.code === '42P01') {
+                  console.warn(`[SUPABASE] Tabela ${table.name} não existe no banco de dados. Pulando.`);
+                  continue;
+                }
+                console.warn(`[SUPABASE] Erro ao limpar tabela ${table.name}:`, delError);
+                continue;
               }
               
               // Insere os novos registros em lotes (chunks) de 100 para evitar limites de payload ou timeouts
