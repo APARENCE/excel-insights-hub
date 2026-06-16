@@ -198,7 +198,9 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   if (newState.lastImportAt !== oldLastImport) {
     const lastImport = newState.imports[0];
     if (lastImport) {
+      const toastId = toast.loading("Sincronizando dados com o Supabase...");
       try {
+        // Salva o histórico de importação
         await supabase.from('import_history').insert({
           file_name: lastImport.fileName,
           item_count: lastImport.itemCount,
@@ -232,20 +234,28 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
           })}
         ];
 
-        for (const table of tables) {
-          if (table.data.length > 0) {
-            console.log(`[SUPABASE] Atualizando tabela: ${table.name}`);
-            await supabase.from(table.name).delete().neq('conteiner', '_none_');
-            const { error } = await supabase.from(table.name).insert(table.data.map(table.map as any));
-            if (error) console.error(`[SUPABASE] Erro ao inserir em ${table.name}:`, error);
-          }
-        }
+        // Executa a limpeza e inserção de todas as tabelas em paralelo para máxima velocidade
+        await Promise.all(
+          tables.map(async (table) => {
+            if (table.data.length > 0) {
+              console.log(`[SUPABASE] Atualizando tabela em paralelo: ${table.name}`);
+              // Deleta registros antigos
+              await supabase.from(table.name).delete().neq('conteiner', '_none_');
+              // Insere novos registros
+              const { error } = await supabase.from(table.name).insert(table.data.map(table.map as any));
+              if (error) {
+                console.error(`[SUPABASE] Erro ao inserir em ${table.name}:`, error);
+                throw error;
+              }
+            }
+          })
+        );
         
-        toast.success("Dados sincronizados com Supabase!");
+        toast.success("Dados sincronizados com Supabase com sucesso!", { id: toastId });
         await syncFromSupabase();
       } catch (e) {
         console.error("[SUPABASE] Erro crítico no salvamento:", e);
-        toast.error("Erro ao salvar no banco de dados.");
+        toast.error("Erro ao salvar no banco de dados.", { id: toastId });
       }
     }
   }
