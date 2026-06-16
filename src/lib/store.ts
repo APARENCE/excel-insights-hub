@@ -5,21 +5,8 @@ import type { AppDataset, PriorityRequest, CheioRow, VazioLocadoRow, VazioIngesy
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+const DATASET_STORAGE_KEY = "tlog:dataset";
 const INGESYS_STORAGE_KEY = "tlog:vazio-ingesys";
-
-function loadLocalVazioIngesys(): VazioIngesysRow[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    return JSON.parse(window.localStorage.getItem(INGESYS_STORAGE_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveLocalVazioIngesys(rows: VazioIngesysRow[]) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(INGESYS_STORAGE_KEY, JSON.stringify(rows));
-}
 
 export type UserRole = "CLIENTE" | "TRANSPORTADORA";
 
@@ -39,10 +26,36 @@ const initial: AppDataset & { userRole: UserRole } = {
   armadorCounts: { MSC: 0, CMA: 0, MAERSK: 0 },
 };
 
-let state: AppDataset & { userRole: UserRole } = initial;
+// Carrega os dados salvos localmente para evitar perda no refresh
+function loadLocalDataset(): AppDataset & { userRole: UserRole } {
+  if (typeof window === 'undefined') return initial;
+  try {
+    const saved = window.localStorage.getItem(DATASET_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return { ...initial, ...parsed };
+    }
+  } catch (e) {
+    console.error("Erro ao carregar dataset local:", e);
+  }
+  return initial;
+}
+
+// Salva os dados localmente de forma síncrona
+function saveLocalDataset(data: AppDataset & { userRole: UserRole }) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(DATASET_STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error("Erro ao salvar dataset local:", e);
+  }
+}
+
+let state: AppDataset & { userRole: UserRole } = loadLocalDataset();
 const listeners = new Set<() => void>();
 
 function emit() {
+  saveLocalDataset(state);
   for (const l of listeners) l();
 }
 
@@ -105,12 +118,12 @@ export async function syncFromSupabase() {
         conteiner: v.conteiner,
         armador: v.armador,
         tipo: v.tipo,
-        data_entrada: v.data_entrada,
-        data_de_para: v.data_de_para,
-        cheio_de_para: v.cheio_de_para,
-        status_uso: v.status_uso,
-        status_patio: v.status_patio,
-        dias_no_patio: v.dias_no_patio
+        dataEntrada: v.data_entrada,
+        dataDePara: v.data_de_para,
+        cheioDePara: v.cheio_de_para,
+        statusUso: v.status_uso,
+        statusPatio: v.status_patio,
+        diasNoPatio: v.dias_no_patio
       })) : state.vaziosLocados,
       vazioIngesys: ingesysData ? ingesysData.map((i: any) => ({
         conteiner: i.conteiner,
@@ -178,10 +191,13 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   const oldLastImport = state.lastImportAt;
   const newState = updater(state);
   
+  // Atualiza o estado local imediatamente para persistência instantânea
+  state = newState;
+  emit();
+
   if (newState.lastImportAt !== oldLastImport) {
     const lastImport = newState.imports[0];
     if (lastImport) {
-      saveLocalVazioIngesys(newState.vazioIngesys);
       try {
         await supabase.from('import_history').insert({
           file_name: lastImport.fileName,
@@ -226,7 +242,6 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
         }
         
         toast.success("Dados sincronizados com Supabase!");
-        // Força uma nova sincronização para garantir que o estado local reflita o banco
         await syncFromSupabase();
       } catch (e) {
         console.error("[SUPABASE] Erro crítico no salvamento:", e);
@@ -234,17 +249,15 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
       }
     }
   }
-  
-  state = newState;
-  emit();
 }
 
 export async function clearDataset() {
   try {
     console.log("[SUPABASE] Iniciando limpeza completa de dados...");
     
-    // Limpa o localStorage do Ingesys
+    // Limpa o localStorage
     if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(DATASET_STORAGE_KEY);
       window.localStorage.removeItem(INGESYS_STORAGE_KEY);
     }
 
