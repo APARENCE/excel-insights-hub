@@ -218,10 +218,23 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
 
         for (const table of tables) {
           if (table.data.length > 0) {
-            console.log(`[SUPABASE] Atualizando tabela: ${table.name}`);
-            await supabase.from(table.name).delete().neq('conteiner', '_none_');
-            const { error } = await supabase.from(table.name).insert(table.data.map(table.map as any));
-            if (error) console.error(`[SUPABASE] Erro ao inserir em ${table.name}:`, error);
+            try {
+              console.log(`[SUPABASE] Atualizando tabela: ${table.name}`);
+              // Deleta registros existentes de forma segura
+              const { error: delError } = await supabase.from(table.name).delete().neq('conteiner', '_none_');
+              if (delError) {
+                console.warn(`[SUPABASE] Erro ao limpar tabela ${table.name} (pode não existir no banco):`, delError);
+                continue; // Pula para a próxima tabela se esta falhar
+              }
+              
+              // Insere os novos registros
+              const { error: insError } = await supabase.from(table.name).insert(table.data.map(table.map as any));
+              if (insError) {
+                console.error(`[SUPABASE] Erro ao inserir dados na tabela ${table.name}:`, insError);
+              }
+            } catch (tableErr) {
+              console.error(`[SUPABASE] Erro inesperado ao processar tabela ${table.name}:`, tableErr);
+            }
           }
         }
         
