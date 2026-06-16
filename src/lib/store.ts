@@ -7,20 +7,6 @@ import { toast } from "sonner";
 
 const INGESYS_STORAGE_KEY = "tlog:vazio-ingesys";
 
-function loadLocalVazioIngesys(): VazioIngesysRow[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    return JSON.parse(window.localStorage.getItem(INGESYS_STORAGE_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveLocalVazioIngesys(rows: VazioIngesysRow[]) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(INGESYS_STORAGE_KEY, JSON.stringify(rows));
-}
-
 export type UserRole = "CLIENTE" | "TRANSPORTADORA";
 
 const initial: AppDataset & { userRole: UserRole } = {
@@ -39,7 +25,39 @@ const initial: AppDataset & { userRole: UserRole } = {
   armadorCounts: { MSC: 0, CMA: 0, MAERSK: 0 },
 };
 
-let state: AppDataset & { userRole: UserRole } = initial;
+// Inicializa o estado imediatamente a partir do localStorage para carregamento instantâneo (Offline-First)
+function getInitialState(): AppDataset & { userRole: UserRole } {
+  if (typeof window === 'undefined') return initial;
+  try {
+    const localCheios = window.localStorage.getItem("tlog:cheios");
+    const localVazios = window.localStorage.getItem("tlog:vazios_locados");
+    const localIngesys = window.localStorage.getItem("tlog:vazio_ingesys");
+    const localRenault = window.localStorage.getItem("tlog:vazios_locados_renault");
+    const localTlog = window.localStorage.getItem("tlog:vazios_locados_tlog");
+    const localArmadores = window.localStorage.getItem("tlog:vazios_armadores");
+    const localImports = window.localStorage.getItem("tlog:imports");
+    const localPriorities = window.localStorage.getItem("tlog:priority_requests");
+    const localSettings = window.localStorage.getItem("tlog:settings");
+
+    return {
+      cheios: localCheios ? JSON.parse(localCheios) : initial.cheios,
+      vaziosLocados: localVazios ? JSON.parse(localVazios) : initial.vaziosLocados,
+      vazioIngesys: localIngesys ? JSON.parse(localIngesys) : initial.vazioIngesys,
+      vaziosLocadosRenault: localRenault ? JSON.parse(localRenault) : initial.vaziosLocadosRenault,
+      vaziosLocadosTlog: localTlog ? JSON.parse(localTlog) : initial.vaziosLocadosTlog,
+      vaziosArmadores: localArmadores ? JSON.parse(localArmadores) : initial.vaziosArmadores,
+      imports: localImports ? JSON.parse(localImports) : initial.imports,
+      priorityRequests: localPriorities ? JSON.parse(localPriorities) : initial.priorityRequests,
+      userRole: "CLIENTE",
+      settings: localSettings ? JSON.parse(localSettings) : initial.settings,
+      armadorCounts: { MSC: 0, CMA: 0, MAERSK: 0 },
+    };
+  } catch {
+    return initial;
+  }
+}
+
+let state: AppDataset & { userRole: UserRole } = getInitialState();
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -151,6 +169,20 @@ export async function syncFromSupabase() {
       settings: settingsData ? { capacidadePatio: settingsData.capacidade_patio } : state.settings,
       armadorCounts: countArmadores(state.cheios)
     };
+
+    // Atualiza o localStorage com os dados mais recentes do Supabase
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("tlog:cheios", JSON.stringify(state.cheios));
+      localStorage.setItem("tlog:vazios_locados", JSON.stringify(state.vaziosLocados));
+      localStorage.setItem("tlog:vazio_ingesys", JSON.stringify(state.vazioIngesys));
+      localStorage.setItem("tlog:vazios_locados_renault", JSON.stringify(state.vaziosLocadosRenault));
+      localStorage.setItem("tlog:vazios_locados_tlog", JSON.stringify(state.vaziosLocadosTlog));
+      localStorage.setItem("tlog:vazios_armadores", JSON.stringify(state.vaziosArmadores));
+      localStorage.setItem("tlog:imports", JSON.stringify(state.imports));
+      localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
+      localStorage.setItem("tlog:settings", JSON.stringify(state.settings));
+    }
+
     emit();
     console.log("[SUPABASE] Sincronização concluída com sucesso.");
   } catch (error) {
@@ -178,10 +210,22 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   const oldLastImport = state.lastImportAt;
   const newState = updater(state);
   
+  // Salva imediatamente no localStorage para persistência instantânea offline-first
+  if (typeof window !== 'undefined') {
+    localStorage.setItem("tlog:cheios", JSON.stringify(newState.cheios));
+    localStorage.setItem("tlog:vazios_locados", JSON.stringify(newState.vaziosLocados));
+    localStorage.setItem("tlog:vazio_ingesys", JSON.stringify(newState.vazioIngesys));
+    localStorage.setItem("tlog:vazios_locados_renault", JSON.stringify(newState.vaziosLocadosRenault));
+    localStorage.setItem("tlog:vazios_locados_tlog", JSON.stringify(newState.vaziosLocadosTlog));
+    localStorage.setItem("tlog:vazios_armadores", JSON.stringify(newState.vaziosArmadores));
+    localStorage.setItem("tlog:imports", JSON.stringify(newState.imports));
+    localStorage.setItem("tlog:priority_requests", JSON.stringify(newState.priorityRequests));
+    localStorage.setItem("tlog:settings", JSON.stringify(newState.settings));
+  }
+  
   if (newState.lastImportAt !== oldLastImport) {
     const lastImport = newState.imports[0];
     if (lastImport) {
-      saveLocalVazioIngesys(newState.vazioIngesys);
       try {
         await supabase.from('import_history').insert({
           file_name: lastImport.fileName,
@@ -227,10 +271,17 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
                 continue; // Pula para a próxima tabela se esta falhar
               }
               
-              // Insere os novos registros
-              const { error: insError } = await supabase.from(table.name).insert(table.data.map(table.map as any));
-              if (insError) {
-                console.error(`[SUPABASE] Erro ao inserir dados na tabela ${table.name}:`, insError);
+              // Insere os novos registros em lotes (chunks) de 100 para evitar limites de payload ou timeouts
+              const mappedData = table.data.map(table.map as any);
+              const chunkSize = 100;
+              for (let i = 0; i < mappedData.length; i += chunkSize) {
+                const chunk = mappedData.slice(i, i + chunkSize);
+                const { error: insError } = await supabase.from(table.name).insert(chunk);
+                if (insError) {
+                  console.error(`[SUPABASE] Erro ao inserir lote na tabela ${table.name}:`, insError);
+                  toast.error(`Erro ao salvar lote na tabela ${table.name}: ${insError.message}`);
+                  throw insError;
+                }
               }
             } catch (tableErr) {
               console.error(`[SUPABASE] Erro inesperado ao processar tabela ${table.name}:`, tableErr);
@@ -239,7 +290,6 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
         }
         
         toast.success("Dados sincronizados com Supabase!");
-        // Força uma nova sincronização para garantir que o estado local reflita o banco
         await syncFromSupabase();
       } catch (e) {
         console.error("[SUPABASE] Erro crítico no salvamento:", e);

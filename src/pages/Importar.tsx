@@ -45,8 +45,8 @@ export default function ImportarPage() {
           status: "success" as const,
         };
 
-        // Atualiza o dataset global incluindo as novas abas de vazios
-        setDataset((prev) => ({
+        // Atualiza o dataset global incluindo as novas abas de vazios e aguarda a sincronização
+        await setDataset((prev) => ({
           ...prev,
           cheios: parsed.cheios.length ? parsed.cheios : prev.cheios,
           vaziosLocados: parsed.vaziosLocados.length ? parsed.vaziosLocados : prev.vaziosLocados,
