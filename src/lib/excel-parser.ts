@@ -112,42 +112,19 @@ function parseGenericVazios(wb: XLSX.WorkBook, sheetNames: string[]): VazioGener
   const sheet = findSheet(wb, sheetNames);
   if (!sheet) return [];
   const aoa = sheetAsAOA(wb, sheet);
-  if (aoa.length === 0) return [];
-
-  // Busca dinâmica de cabeçalhos nas primeiras linhas
-  let headerRowIndex = 0;
-  let headers: string[] = [];
-  for (let i = 0; i < Math.min(10, aoa.length); i++) {
-    const row = aoa[i];
-    if (row && row.some(cell => typeof cell === 'string' && /conteiner|container|prefixo/i.test(cell))) {
-      headerRowIndex = i;
-      headers = row.map(cell => String(cell || '').toUpperCase().trim());
-      break;
-    }
-  }
-
-  if (headers.length === 0 && aoa[0]) {
-    headers = aoa[0].map(cell => String(cell || '').toUpperCase().trim());
-  }
-
-  const findCol = (names: string[], defaultCol: number): number => {
-    const idx = headers.findIndex(h => names.some(name => h === name || h.includes(name)));
-    return idx !== -1 ? idx : defaultCol;
-  };
-
-  const containerCol = findCol(["CONTAINER", "CONTEINER", "PREFIXO"], col("A"));
-  const statusCol = findCol(["STATUS", "SITUACAO", "SITUAÇÃO", "TIPO", "ARMADOR"], col("D"));
-
   const results: VazioGenericRow[] = [];
-  for (let i = headerRowIndex + 1; i < aoa.length; i++) {
+  const colA = col("A");
+  const colD = col("D");
+
+  for (let i = 1; i < aoa.length; i++) {
     const r = aoa[i];
     if (!r) continue;
-    const conteiner = str(r[containerCol]);
+    const conteiner = str(r[colA]);
     if (!conteiner) continue;
     results.push({
       id: crypto.randomUUID(),
       conteiner,
-      colunaD: str(r[statusCol]) || "N/A"
+      colunaD: str(r[colD]) || "N/A"
     });
   }
   return results;
@@ -164,52 +141,14 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   if (cheiosSheet) {
     const ws = wb.Sheets[cheiosSheet];
     const aoa = sheetAsAOA(wb, cheiosSheet);
-    
-    // Busca dinâmica de cabeçalhos nas primeiras linhas
-    let headerRowIndex = 0;
-    let headers: string[] = [];
-    for (let i = 0; i < Math.min(10, aoa.length); i++) {
-      const row = aoa[i];
-      if (row && row.some(cell => typeof cell === 'string' && /conteiner|container/i.test(cell))) {
-        headerRowIndex = i;
-        headers = row.map(cell => String(cell || '').toUpperCase().trim());
-        break;
-      }
-    }
-
-    if (headers.length === 0 && aoa[0]) {
-      headers = aoa[0].map(cell => String(cell || '').toUpperCase().trim());
-    }
-
-    const findCol = (names: string[], defaultCol: number): number => {
-      const idx = headers.findIndex(h => names.some(name => h === name || h.includes(name)));
-      return idx !== -1 ? idx : defaultCol;
-    };
-
-    const C = {
-      conteiner: findCol(["CONTAINER", "CONTEINER", "PREFIXO"], col("A")),
-      lacre: findCol(["LACRE"], col("B")),
-      tipo: findCol(["TIPO"], col("C")),
-      dataChegada: findCol(["DATA CHEGADA", "CHEGADA", "DT CHEGADA", "DT_CHEGADA"], col("G")),
-      diasNoPatio: findCol(["DIAS NO PATIO", "DIAS PATIO", "DIAS NO PÁTIO", "DIAS PÁTIO"], col("H")),
-      armador: findCol(["ARMADOR"], col("I")),
-      navio: findCol(["NAVIO"], col("J")),
-      freeTime: findCol(["FREE TIME", "FREETIME"], col("L")),
-      demurrage: findCol(["DEMURRAGE", "VENCIMENTO DEMURRAGE", "VENC. DEMURRAGE", "VENCIMENTO"], col("M")),
-      diasVenc: findCol(["DIAS PARA VENCIMENTO", "DIAS VENCIMENTO", "DIAS RESTANTES", "DIAS VENC", "DIAS PARA VENC"], col("N")), 
-      fabrica: findCol(["FABRICA", "FÁBRICA", "DESTINO"], col("S")),
-      conteinerDePara: findCol(["DE-PARA", "DE PARA", "CONTEINER DE-PARA", "CONTEINER DE PARA", "DE_PARA"], col("X")),
-      status: findCol(["STATUS", "SITUACAO", "SITUAÇÃO"], col("AA")),
-      dataEnvioFabrica: findCol(["DATA ENVIO FABRICA", "ENVIO FABRICA", "DATA ENVIO FÁBRICA", "ENVIO FÁBRICA"], col("AD")),
-      dataRetornoLocado: findCol(["DATA RETORNO", "RETORNO LOCADO", "DEVOLUCAO", "DEVOLUÇÃO"], col("AH")),
-      infoAS: findCol(["AS", "COLUNA AS", "INFO AS", "COLUNA_AS"], col("AS")),
-    };
-
+    const colAA = col("AA");
+    const colA = col("A");
     const range = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : undefined;
+    
     if (range) {
       for (let i = range.s.r + 1; i <= range.e.r; i++) {
-        const valAA = cellDisplayValue(ws, i, C.status);
-        const conteinerId = cellDisplayValue(ws, i, C.conteiner);
+        const valAA = cellDisplayValue(ws, i, colAA);
+        const conteinerId = cellDisplayValue(ws, i, colA);
         if (valAA) {
           currentVazioIngesys.push({
             conteiner: conteinerId || `ITEM-${i + 1}`,
@@ -219,7 +158,26 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       }
     }
 
-    for (let i = headerRowIndex + 1; i < aoa.length; i++) {
+    const C = {
+      conteiner: col("A"),
+      lacre: col("B"),
+      tipo: col("C"),
+      dataChegada: col("G"),
+      diasNoPatio: col("H"),
+      armador: col("I"),
+      navio: col("J"),
+      freeTime: col("L"),
+      demurrage: col("M"),
+      diasVenc: col("N"), 
+      fabrica: col("S"),
+      conteinerDePara: col("X"),
+      status: col("AA"),
+      dataEnvioFabrica: col("AD"),
+      dataRetornoLocado: col("AH"),
+      infoAS: col("AS"),
+    };
+
+    for (let i = 1; i < aoa.length; i++) {
       const r = aoa[i];
       if (!r) continue;
       const conteiner = str(r[C.conteiner]);
@@ -259,41 +217,18 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   const vlSheet = findSheet(wb, ["VAZIO LOCADO", "VAZIOS LOCADOS", "LOCADOS"]);
   if (vlSheet) {
     const aoa = sheetAsAOA(wb, vlSheet);
-    
-    // Busca dinâmica de cabeçalhos nas primeiras linhas
-    let headerRowIndex = 0;
-    let headers: string[] = [];
-    for (let i = 0; i < Math.min(10, aoa.length); i++) {
-      const row = aoa[i];
-      if (row && row.some(cell => typeof cell === 'string' && /conteiner|container/i.test(cell))) {
-        headerRowIndex = i;
-        headers = row.map(cell => String(cell || '').toUpperCase().trim());
-        break;
-      }
-    }
-
-    if (headers.length === 0 && aoa[0]) {
-      headers = aoa[0].map(cell => String(cell || '').toUpperCase().trim());
-    }
-
-    const findCol = (names: string[], defaultCol: number): number => {
-      const idx = headers.findIndex(h => names.some(name => h === name || h.includes(name)));
-      return idx !== -1 ? idx : defaultCol;
-    };
-
     const V = {
-      cheioDePara: findCol(["CHEIO DE-PARA", "CHEIO DE PARA", "CHEIO_DE_PARA"], col("A")),
-      armador: findCol(["ARMADOR"], col("B")),
-      dataDePara: findCol(["DATA DE-PARA", "DATA DE PARA", "DATA DE_PARA"], col("C")),
-      dataEntrada: findCol(["DATA ENTRADA", "ENTRADA", "DATA_ENTRADA"], col("E")),
-      conteiner: findCol(["CONTAINER", "CONTEINER", "PREFIXO"], col("F")),
-      tipo: findCol(["TIPO"], col("G")),
-      statusUso: findCol(["STATUS USO", "STATUS_USO", "USO"], col("I")),
-      statusPatio: findCol(["STATUS PATIO", "STATUS_PATIO", "PATIO", "PÁTIO"], col("J")),
-      diasNoPatio: findCol(["DIAS NO PATIO", "DIAS PATIO", "DIAS NO PÁTIO", "DIAS PÁTIO"], col("K")),
+      cheioDePara: col("A"),
+      armador: col("B"),
+      dataDePara: col("C"),
+      dataEntrada: col("E"),
+      conteiner: col("F"),
+      tipo: col("G"),
+      statusUso: col("I"),
+      statusPatio: col("J"),
+      diasNoPatio: col("K"),
     };
-
-    for (let i = headerRowIndex + 1; i < aoa.length; i++) {
+    for (let i = 1; i < aoa.length; i++) {
       const r = aoa[i];
       if (!r) continue;
       const conteiner = str(r[V.conteiner]);

@@ -5,11 +5,21 @@ import type { AppDataset, PriorityRequest, CheioRow, VazioLocadoRow, VazioIngesy
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const DATASET_STORAGE_KEY = "tlog:dataset";
 const INGESYS_STORAGE_KEY = "tlog:vazio-ingesys";
-const RENAULT_STORAGE_KEY = "tlog:vazios-renault";
-const TLOG_STORAGE_KEY = "tlog:vazios-tlog";
-const ARMADORES_STORAGE_KEY = "tlog:vazios-armadores";
+
+function loadLocalVazioIngesys(): VazioIngesysRow[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    return JSON.parse(window.localStorage.getItem(INGESYS_STORAGE_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalVazioIngesys(rows: VazioIngesysRow[]) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(INGESYS_STORAGE_KEY, JSON.stringify(rows));
+}
 
 export type UserRole = "CLIENTE" | "TRANSPORTADORA";
 
@@ -29,59 +39,10 @@ const initial: AppDataset & { userRole: UserRole } = {
   armadorCounts: { MSC: 0, CMA: 0, MAERSK: 0 },
 };
 
-// Carrega os dados salvos localmente para evitar perda no refresh
-function loadLocalDataset(): AppDataset & { userRole: UserRole } {
-  if (typeof window === 'undefined') return initial;
-  try {
-    const saved = window.localStorage.getItem(DATASET_STORAGE_KEY);
-    const ingesys = window.localStorage.getItem(INGESYS_STORAGE_KEY);
-    const renault = window.localStorage.getItem(RENAULT_STORAGE_KEY);
-    const tlog = window.localStorage.getItem(TLOG_STORAGE_KEY);
-    const armadores = window.localStorage.getItem(ARMADORES_STORAGE_KEY);
-
-    const parsed = saved ? JSON.parse(saved) : {};
-    
-    return {
-      ...initial,
-      ...parsed,
-      vazioIngesys: ingesys ? JSON.parse(ingesys) : (parsed.vazioIngesys || []),
-      vaziosLocadosRenault: renault ? JSON.parse(renault) : (parsed.vaziosLocadosRenault || []),
-      vaziosLocadosTlog: tlog ? JSON.parse(tlog) : (parsed.vaziosLocadosTlog || []),
-      vaziosArmadores: armadores ? JSON.parse(armadores) : (parsed.vaziosArmadores || []),
-    };
-  } catch (e) {
-    console.error("Erro ao carregar dataset local:", e);
-  }
-  return initial;
-}
-
-// Salva os dados localmente de forma síncrona
-function saveLocalDataset(data: AppDataset & { userRole: UserRole }) {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(DATASET_STORAGE_KEY, JSON.stringify({
-      cheios: data.cheios,
-      vaziosLocados: data.vaziosLocados,
-      imports: data.imports,
-      priorityRequests: data.priorityRequests,
-      userRole: data.userRole,
-      settings: data.settings,
-      lastImportAt: data.lastImportAt
-    }));
-    window.localStorage.setItem(INGESYS_STORAGE_KEY, JSON.stringify(data.vazioIngesys));
-    window.localStorage.setItem(RENAULT_STORAGE_KEY, JSON.stringify(data.vaziosLocadosRenault));
-    window.localStorage.setItem(TLOG_STORAGE_KEY, JSON.stringify(data.vaziosLocadosTlog));
-    window.localStorage.setItem(ARMADORES_STORAGE_KEY, JSON.stringify(data.vaziosArmadores));
-  } catch (e) {
-    console.error("Erro ao salvar dataset local:", e);
-  }
-}
-
-let state: AppDataset & { userRole: UserRole } = loadLocalDataset();
+let state: AppDataset & { userRole: UserRole } = initial;
 const listeners = new Set<() => void>();
 
 function emit() {
-  saveLocalDataset(state);
   for (const l of listeners) l();
 }
 
@@ -96,9 +57,13 @@ export async function syncFromSupabase() {
     const results = await Promise.allSettled([
       supabase.from('containers_cheios').select('*'),
       supabase.from('vazios_locados').select('*'),
+      supabase.from('vazio_ingesys').select('*'),
       supabase.from('import_history').select('*').order('imported_at', { ascending: false }).limit(50),
       supabase.from('priority_requests').select('*').order('solicitado_em', { ascending: false }),
-      supabase.from('app_settings').select('*').maybeSingle()
+      supabase.from('app_settings').select('*').maybeSingle(),
+      supabase.from('vazios_locados_renault').select('*'),
+      supabase.from('vazios_locados_tlog').select('*'),
+      supabase.from('vazios_armadores').select('*')
     ]);
 
     const getData = (idx: number) => {
@@ -108,9 +73,13 @@ export async function syncFromSupabase() {
 
     const cheiosData = getData(0);
     const vaziosData = getData(1);
-    const importsData = getData(2);
-    const prioritiesData = getData(3);
-    const settingsData = getData(4);
+    const ingesysData = getData(2);
+    const importsData = getData(3);
+    const prioritiesData = getData(4);
+    const settingsData = getData(5);
+    const renaultData = getData(6);
+    const tlogData = getData(7);
+    const armadoresData = getData(8);
 
     state = {
       ...state,
@@ -143,6 +112,25 @@ export async function syncFromSupabase() {
         statusPatio: v.status_patio,
         diasNoPatio: v.dias_no_patio
       })) : state.vaziosLocados,
+      vazioIngesys: ingesysData ? ingesysData.map((i: any) => ({
+        conteiner: i.conteiner,
+        statusD: i.status_d
+      })) : state.vazioIngesys,
+      vaziosLocadosRenault: renaultData ? renaultData.map((v: any) => ({
+        id: v.id,
+        conteiner: v.conteiner,
+        colunaD: v.coluna_d || "N/A"
+      })) : state.vaziosLocadosRenault,
+      vaziosLocadosTlog: tlogData ? tlogData.map((v: any) => ({
+        id: v.id,
+        conteiner: v.conteiner,
+        colunaD: v.coluna_d || "N/A"
+      })) : state.vaziosLocadosTlog,
+      vaziosArmadores: armadoresData ? armadoresData.map((v: any) => ({
+        id: v.id,
+        conteiner: v.conteiner,
+        colunaD: v.coluna_d || "N/A"
+      })) : state.vaziosArmadores,
       imports: importsData ? importsData.map((i: any) => ({
         id: i.id,
         fileName: i.file_name,
@@ -174,6 +162,10 @@ if (typeof window !== 'undefined') {
   supabase.channel('db-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'priority_requests' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'containers_cheios' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazio_ingesys' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_renault' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_tlog' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_armadores' }, () => syncFromSupabase())
     .subscribe();
 }
 
@@ -186,23 +178,17 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   const oldLastImport = state.lastImportAt;
   const newState = updater(state);
   
-  // Atualiza o estado local imediatamente para persistência instantânea
-  state = newState;
-  emit();
-
   if (newState.lastImportAt !== oldLastImport) {
     const lastImport = newState.imports[0];
     if (lastImport) {
-      const toastId = toast.loading("Sincronizando dados com o Supabase...");
+      saveLocalVazioIngesys(newState.vazioIngesys);
       try {
-        // Salva o histórico de importação
         await supabase.from('import_history').insert({
           file_name: lastImport.fileName,
           item_count: lastImport.itemCount,
           status: lastImport.status
         });
 
-        // Apenas tabelas que existem no Supabase
         const tables = [
           { name: 'containers_cheios', data: newState.cheios, map: (c: CheioRow) => ({
             conteiner: c.conteiner, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
@@ -215,70 +201,42 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
             conteiner: v.conteiner, armador: v.armador, tipo: v.tipo, data_entrada: v.dataEntrada,
             data_de_para: v.dataDePara, cheio_de_para: v.cheioDePara, status_uso: v.statusUso,
             status_patio: v.statusPatio, dias_no_patio: toInt(v.diasNoPatio)
+          })},
+          { name: 'vazio_ingesys', data: newState.vazioIngesys, map: (i: VazioIngesysRow) => ({
+            conteiner: i.conteiner, status_d: i.statusD
+          })},
+          { name: 'vazios_locados_renault', data: newState.vaziosLocadosRenault, map: (v: VazioGenericRow) => ({
+            conteiner: v.conteiner, coluna_d: v.colunaD
+          })},
+          { name: 'vazios_locados_tlog', data: newState.vaziosLocadosTlog, map: (v: VazioGenericRow) => ({
+            conteiner: v.conteiner, coluna_d: v.colunaD
+          })},
+          { name: 'vazios_armadores', data: newState.vaziosArmadores, map: (v: VazioGenericRow) => ({
+            conteiner: v.conteiner, coluna_d: v.colunaD
           })}
         ];
 
-        // Executa a limpeza e inserção das tabelas existentes em paralelo
-        await Promise.all(
-          tables.map(async (table) => {
-            if (table.data.length > 0) {
-              console.log(`[SUPABASE] Atualizando tabela em paralelo: ${table.name}`);
-              // Deleta registros antigos
-              await supabase.from(table.name).delete().neq('conteiner', '_none_');
-              // Insere novos registros
-              const { error } = await supabase.from(table.name).insert(table.data.map(table.map as any));
-              if (error) {
-                console.error(`[SUPABASE] Erro ao inserir em ${table.name}:`, error);
-                throw error;
-              }
-            }
-          })
-        );
+        for (const table of tables) {
+          if (table.data.length > 0) {
+            console.log(`[SUPABASE] Atualizando tabela: ${table.name}`);
+            await supabase.from(table.name).delete().neq('conteiner', '_none_');
+            const { error } = await supabase.from(table.name).insert(table.data.map(table.map as any));
+            if (error) console.error(`[SUPABASE] Erro ao inserir em ${table.name}:`, error);
+          }
+        }
         
-        toast.success("Dados sincronizados com Supabase com sucesso!", { id: toastId });
+        toast.success("Dados sincronizados com Supabase!");
+        // Força uma nova sincronização para garantir que o estado local reflita o banco
         await syncFromSupabase();
       } catch (e) {
         console.error("[SUPABASE] Erro crítico no salvamento:", e);
-        toast.error("Erro ao salvar no banco de dados.", { id: toastId });
+        toast.error("Erro ao salvar no banco de dados.");
       }
     }
   }
-}
-
-export async function clearDataset() {
-  try {
-    console.log("[SUPABASE] Iniciando limpeza completa de dados...");
-    
-    // Limpa o localStorage
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(DATASET_STORAGE_KEY);
-      window.localStorage.removeItem(INGESYS_STORAGE_KEY);
-      window.localStorage.removeItem(RENAULT_STORAGE_KEY);
-      window.localStorage.removeItem(TLOG_STORAGE_KEY);
-      window.localStorage.removeItem(ARMADORES_STORAGE_KEY);
-    }
-
-    // Deleta todos os registros de todas as tabelas operacionais existentes
-    await Promise.all([
-      supabase.from('containers_cheios').delete().neq('conteiner', '_none_'),
-      supabase.from('vazios_locados').delete().neq('conteiner', '_none_'),
-      supabase.from('import_history').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-      supabase.from('priority_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-    ]);
-
-    // Reseta o estado local mantendo apenas as configurações e o perfil do usuário
-    state = {
-      ...initial,
-      userRole: state.userRole,
-      settings: state.settings
-    };
-    
-    emit();
-    toast.success("Todos os dados foram limpos com sucesso!");
-  } catch (error) {
-    console.error("[SUPABASE] Erro ao limpar dados:", error);
-    toast.error("Erro ao realizar a limpeza dos dados.");
-  }
+  
+  state = newState;
+  emit();
 }
 
 export async function addPriorityRequest(req: PriorityRequest) {

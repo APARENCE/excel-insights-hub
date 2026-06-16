@@ -29,38 +29,32 @@ export default function Dashboard() {
   const dist = statusDistribution(ds.cheios);
   const movement = dailyMovement(ds.cheios);
   
-  // Lógica de Agrupamento e Contagem da Coluna D (Incluindo Sem Status para bater o total)
+  // Lógica de Agrupamento e Contagem da Coluna D (Filtrando vazios/N/A)
   const groupedRenault = useMemo(() => {
     const map = new Map<string, number>();
-    ds.vaziosLocadosRenault.forEach(v => {
-      const label = v.colunaD || "Sem Status";
-      map.set(label, (map.get(label) || 0) + 1);
-    });
+    const valid = ds.vaziosLocadosRenault.filter(v => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
+    valid.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
     return Array.from(map.entries());
   }, [ds.vaziosLocadosRenault]);
 
   const groupedTlog = useMemo(() => {
     const map = new Map<string, number>();
-    ds.vaziosLocadosTlog.forEach(v => {
-      const label = v.colunaD || "Sem Status";
-      map.set(label, (map.get(label) || 0) + 1);
-    });
+    const valid = ds.vaziosLocadosTlog.filter(v => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
+    valid.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
     return Array.from(map.entries());
   }, [ds.vaziosLocadosTlog]);
 
   const groupedArmadores = useMemo(() => {
     const map = new Map<string, number>();
-    ds.vaziosArmadores.forEach(v => {
-      const label = v.colunaD || "Sem Status";
-      map.set(label, (map.get(label) || 0) + 1);
-    });
+    const valid = ds.vaziosArmadores.filter(v => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
+    valid.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
     return Array.from(map.entries());
   }, [ds.vaziosArmadores]);
 
-  // Totais reais baseados no número de registros
-  const totalRenaultD = ds.vaziosLocadosRenault.length;
-  const totalTlogD = ds.vaziosLocadosTlog.length;
-  const totalArmadoresD = ds.vaziosArmadores.length;
+  // Totais baseados na presença de valor na Coluna D
+  const totalRenaultD = groupedRenault.reduce((acc, curr) => acc + curr[1], 0);
+  const totalTlogD = groupedTlog.reduce((acc, curr) => acc + curr[1], 0);
+  const totalArmadoresD = groupedArmadores.reduce((acc, curr) => acc + curr[1], 0);
 
   // SOMA TOTAL: Ocupação Real (Cheios) + Vazios (Renault + Tlog + Armadores)
   const ocupacaoTotalReal = s.ocupacao + totalRenaultD + totalTlogD + totalArmadoresD;
