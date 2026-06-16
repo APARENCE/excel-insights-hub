@@ -108,11 +108,6 @@ function cellDisplayValue(ws: XLSX.WorkSheet, row: number, column: number): stri
   return str(cell.w ?? cell.v);
 }
 
-function cellRawValue(ws: XLSX.WorkSheet, row: number, column: number): unknown {
-  const cell = ws[XLSX.utils.encode_cell({ r: row, c: column })];
-  return cell ? cell.v : undefined;
-}
-
 function parseGenericVazios(wb: XLSX.WorkBook, sheetNames: string[]): VazioGenericRow[] {
   const sheet = findSheet(wb, sheetNames);
   if (!sheet) return [];
@@ -145,6 +140,7 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
   const cheiosSheet = findSheet(wb, ["CHEIOS TLOG ATENDIMENTO RENAULT", "CHEIOS TLOG", "CHEIOS"]);
   if (cheiosSheet) {
     const ws = wb.Sheets[cheiosSheet];
+    const aoa = sheetAsAOA(wb, cheiosSheet);
     const colAA = col("AA");
     const colA = col("A");
     const range = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : undefined;
@@ -181,50 +177,46 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       infoAS: col("AS"),
     };
 
-    if (range) {
-      // Começa em range.s.r + 1 para pular o cabeçalho
-      for (let i = range.s.r + 1; i <= range.e.r; i++) {
-        const conteiner = cellDisplayValue(ws, i, C.conteiner);
-        if (!conteiner) continue;
+    for (let i = 1; i < aoa.length; i++) {
+      const r = aoa[i];
+      if (!r) continue;
+      const conteiner = str(r[C.conteiner]);
+      if (!conteiner) continue;
 
-        const rawStatusAA = cellDisplayValue(ws, i, C.status);
-        const rawContentN = cellDisplayValue(ws, i, C.diasVenc);
-        const rawContentNVal = cellRawValue(ws, i, C.diasVenc);
-        
-        let finalStatus: ContainerStatus = normalizeStatus(rawStatusAA);
-        if (rawContentN && (rawContentN.toUpperCase().includes("PROGRAMADA") || rawContentN.toUpperCase().includes("ENTRADA"))) {
-          finalStatus = "PROGRAMADA ENTRADA NO PATIO";
-        }
-
-        cheios.push({
-          conteiner,
-          lacre: cellDisplayValue(ws, i, C.lacre),
-          tipo: cellDisplayValue(ws, i, C.tipo),
-          armador: cellDisplayValue(ws, i, C.armador),
-          navio: cellDisplayValue(ws, i, C.navio),
-          dataChegada: excelDateToISO(cellRawValue(ws, i, C.dataChegada)),
-          diasNoPatio: num(cellRawValue(ws, i, C.diasNoPatio)),
-          freeTime: num(cellRawValue(ws, i, C.freeTime)),
-          demurrageVencimento: excelDateToISO(cellRawValue(ws, i, C.demurrage)),
-          diasParaVencimento: typeof rawContentNVal === 'number' ? num(rawContentNVal) : undefined,
-          status: finalStatus,
-          fabrica: cellDisplayValue(ws, i, C.fabrica),
-          dataEnvioFabrica: excelDateToISO(cellRawValue(ws, i, C.dataEnvioFabrica)),
-          conteinerDePara: cellDisplayValue(ws, i, C.conteinerDePara),
-          dataDevolucaoVazio: excelDateToISO(cellRawValue(ws, i, C.dataRetornoLocado)),
-          colunaAS: cellDisplayValue(ws, i, C.infoAS),
-          raw: {},
-        });
+      const rawStatusAA = str(r[C.status]);
+      const rawContentN = str(r[C.diasVenc]);
+      
+      let finalStatus: ContainerStatus = normalizeStatus(rawStatusAA);
+      if (rawContentN && (rawContentN.toUpperCase().includes("PROGRAMADA") || rawContentN.toUpperCase().includes("ENTRADA"))) {
+        finalStatus = "PROGRAMADA ENTRADA NO PATIO";
       }
+
+      cheios.push({
+        conteiner,
+        lacre: str(r[C.lacre]),
+        tipo: str(r[C.tipo]),
+        armador: str(r[C.armador]),
+        navio: str(r[C.navio]),
+        dataChegada: excelDateToISO(r[C.dataChegada]),
+        diasNoPatio: num(r[C.diasNoPatio]),
+        freeTime: num(r[C.freeTime]),
+        demurrageVencimento: excelDateToISO(r[C.demurrage]),
+        diasParaVencimento: typeof r[C.diasVenc] === 'number' ? num(r[C.diasVenc]) : undefined,
+        status: finalStatus,
+        fabrica: str(r[C.fabrica]),
+        dataEnvioFabrica: excelDateToISO(r[C.dataEnvioFabrica]),
+        conteinerDePara: str(r[C.conteinerDePara]),
+        dataDevolucaoVazio: excelDateToISO(r[C.dataRetornoLocado]),
+        colunaAS: str(r[C.infoAS]),
+        raw: {},
+      });
     }
   }
 
   const vaziosLocados: VazioLocadoRow[] = [];
   const vlSheet = findSheet(wb, ["VAZIO LOCADO", "VAZIOS LOCADOS", "LOCADOS"]);
   if (vlSheet) {
-    const ws = wb.Sheets[vlSheet];
-    const range = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : undefined;
-    
+    const aoa = sheetAsAOA(wb, vlSheet);
     const V = {
       cheioDePara: col("A"),
       armador: col("B"),
@@ -236,23 +228,22 @@ export async function parseExcelFile(file: File): Promise<ParsedExcel> {
       statusPatio: col("J"),
       diasNoPatio: col("K"),
     };
-
-    if (range) {
-      for (let i = range.s.r + 1; i <= range.e.r; i++) {
-        const conteiner = cellDisplayValue(ws, i, V.conteiner);
-        if (!conteiner) continue;
-        vaziosLocados.push({
-          conteiner,
-          armador: cellDisplayValue(ws, i, V.armador),
-          tipo: cellDisplayValue(ws, i, V.tipo),
-          cheioDePara: cellDisplayValue(ws, i, V.cheioDePara),
-          dataDePara: excelDateToISO(cellRawValue(ws, i, V.dataDePara)),
-          dataEntrada: excelDateToISO(cellRawValue(ws, i, V.dataEntrada)),
-          statusUso: cellDisplayValue(ws, i, V.statusUso),
-          statusPatio: cellDisplayValue(ws, i, V.statusPatio),
-          diasNoPatio: num(cellRawValue(ws, i, V.diasNoPatio)),
-        });
-      }
+    for (let i = 1; i < aoa.length; i++) {
+      const r = aoa[i];
+      if (!r) continue;
+      const conteiner = str(r[V.conteiner]);
+      if (!conteiner) continue;
+      vaziosLocados.push({
+        conteiner,
+        armador: str(r[V.armador]),
+        tipo: str(r[V.tipo]),
+        cheioDePara: str(r[V.cheioDePara]),
+        dataDePara: excelDateToISO(r[V.dataDePara]),
+        dataEntrada: excelDateToISO(r[V.dataEntrada]),
+        statusUso: str(r[V.statusUso]),
+        statusPatio: str(r[V.statusPatio]),
+        diasNoPatio: num(r[V.diasNoPatio]),
+      });
     }
   }
 
