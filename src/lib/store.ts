@@ -306,6 +306,67 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   emit();
 }
 
+export async function clearDataset() {
+  console.log("[STORE] Limpando todos os dados locais e remotos...");
+
+  // 1. Limpa o localStorage imediatamente
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem("tlog:cheios");
+    localStorage.removeItem("tlog:vazios_locados");
+    localStorage.removeItem("tlog:vazio_ingesys");
+    localStorage.removeItem("tlog:vazios_locados_renault");
+    localStorage.removeItem("tlog:vazios_locados_tlog");
+    localStorage.removeItem("tlog:vazios_armadores");
+    localStorage.removeItem("tlog:imports");
+    localStorage.removeItem("tlog:priority_requests");
+  }
+
+  // 2. Reseta o estado em memória
+  state = {
+    ...state,
+    cheios: [],
+    vaziosLocados: [],
+    vazioIngesys: [],
+    vaziosLocadosRenault: [],
+    vaziosLocadosTlog: [],
+    vaziosArmadores: [],
+    imports: [],
+    priorityRequests: [],
+    lastImportAt: undefined,
+    armadorCounts: { MSC: 0, CMA: 0, MAERSK: 0 }
+  };
+
+  emit();
+
+  // 3. Limpa as tabelas no Supabase
+  const tablesWithConteiner = [
+    'containers_cheios',
+    'vazios_locados',
+    'vazio_ingesys',
+    'vazios_locados_renault',
+    'vazios_locados_tlog',
+    'vazios_armadores'
+  ];
+
+  const tablesWithId = [
+    'import_history',
+    'priority_requests'
+  ];
+
+  try {
+    for (const table of tablesWithConteiner) {
+      await supabase.from(table).delete().neq('conteiner', '_none_');
+    }
+    for (const table of tablesWithId) {
+      await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    }
+    toast.success("Banco de dados e histórico limpos com sucesso!");
+  } catch (e) {
+    console.error("[SUPABASE] Erro ao limpar tabelas remota:", e);
+    toast.error("Dados locais limpos, mas houve um erro ao limpar o Supabase.");
+  }
+}
+
 export async function addPriorityRequest(req: PriorityRequest) {
   const { error } = await supabase.from('priority_requests').insert({
     conteiner: req.conteiner,
