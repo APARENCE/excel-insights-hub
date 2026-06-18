@@ -105,7 +105,6 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
 
     const tables = [
       { name: 'containers_cheios', data: dataset.cheios, map: (c: CheioRow) => {
-        // Sempre gera um sufixo aleatório único para garantir que nenhum registro seja descartado por restrição de chave única
         const uniqueId = `${c.conteiner}_${crypto.randomUUID().slice(0, 8)}`;
         return {
           id: crypto.randomUUID(),
