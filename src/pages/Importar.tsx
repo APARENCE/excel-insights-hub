@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { CloudUpload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Trash2, Play } from "lucide-react";
+import { CloudUpload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Trash2, Play, Database } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
 import { parseExcelFile } from "@/lib/excel-parser";
-import { setDataset, useDataset, clearDataset, restoreImport } from "@/lib/store";
+import { setDataset, useDataset, clearDataset, restoreImport, saveDatasetToSupabase } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -22,6 +22,7 @@ import {
 export default function ImportarPage() {
   const ds = useDataset();
   const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [drag, setDrag] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -99,6 +100,17 @@ export default function ImportarPage() {
     }
   };
 
+  const handleManualSave = async () => {
+    setSaving(true);
+    try {
+      await saveDatasetToSupabase();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <AppShell>
       <PageHeader 
@@ -106,31 +118,48 @@ export default function ImportarPage() {
         subtitle="Envie arquivo Excel" 
         actions={
           (ds.cheios.length > 0 || ds.vaziosLocados.length > 0 || ds.imports.length > 0) && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm" className="gap-2 font-bold cursor-pointer">
-                  <Trash2 className="h-4 w-4" /> Limpar Todos os Dados
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Tem certeza absoluta?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta ação irá apagar permanentemente todos os containers cheios, vazios, histórico de importações e solicitações de prioridade tanto do seu navegador quanto do banco de dados Supabase.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={handleClearAll} 
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold"
-                    disabled={clearing}
-                  >
-                    {clearing ? "Limpando..." : "Sim, Limpar Tudo"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleManualSave}
+                disabled={saving || ds.cheios.length === 0}
+                className="gap-2 font-bold cursor-pointer"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Database className="h-4 w-4 text-primary" />
+                )}
+                Salvar no Banco
+              </Button>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" className="gap-2 font-bold cursor-pointer">
+                    <Trash2 className="h-4 w-4" /> Limpar Todos os Dados
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Tem certeza absoluta?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação irá apagar permanentemente todos os containers cheios, vazios, histórico de importações e solicitações de prioridade tanto do seu navegador quanto do banco de dados Supabase.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleClearAll} 
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold"
+                      disabled={clearing}
+                    >
+                      {clearing ? "Limpando..." : "Sim, Limpar Tudo"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           )
         }
       />

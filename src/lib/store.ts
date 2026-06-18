@@ -77,6 +77,87 @@ function countArmadores(cheios: CheioRow[]) {
   return counts;
 }
 
+export async function saveDatasetToSupabase(dataset: AppDataset = state) {
+  const lastImport = dataset.imports[0];
+  if (!lastImport) {
+    console.log("[SUPABASE] Nenhuma importação encontrada para salvar.");
+    return false;
+  }
+
+  const toastId = toast.loading("Salvando dados no Supabase...");
+
+  try {
+    // 1. Salva o histórico de importação
+    const { error: importError } = await supabase.from('import_history').upsert({
+      id: lastImport.id,
+      file_name: lastImport.fileName,
+      item_count: lastImport.itemCount,
+      status: lastImport.status,
+      imported_at: lastImport.importedAt
+    });
+
+    if (importError) throw importError;
+
+    const tables = [
+      { name: 'containers_cheios', data: dataset.cheios, map: (c: CheioRow) => ({
+        conteiner: c.conteiner, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
+        data_chegada: c.dataChegada, dias_no_patio: toInt(c.diasNoPatio), free_time: toInt(c.freeTime),
+        demurrage_vencimento: c.demurrageVencimento, dias_para_vencimento: toInt(c.diasParaVencimento),
+        status: c.status, fabrica: c.fabrica, data_envio_fabrica: c.dataEnvioFabrica,
+        conteiner_de_para: c.conteinerDePara, data_devolucao_vazio: c.dataDevolucaoVazio, coluna_as: c.colunaAS
+      })},
+      { name: 'vazios_locados', data: dataset.vaziosLocados, map: (v: VazioLocadoRow) => ({
+        conteiner: v.conteiner, armador: v.armador, tipo: v.tipo, data_entrada: v.dataEntrada,
+        data_de_para: v.dataDePara, cheio_de_para: v.cheioDePara, status_uso: v.statusUso,
+        status_patio: v.statusPatio, dias_no_patio: toInt(v.diasNoPatio)
+      })},
+      { name: 'vazio_ingesys', data: dataset.vazioIngesys, map: (i: VazioIngesysRow) => ({
+        conteiner: i.conteiner, status_d: i.statusD
+      })},
+      { name: 'vazios_locados_renault', data: dataset.vaziosLocadosRenault, map: (v: VazioGenericRow) => ({
+        conteiner: v.conteiner, coluna_d: v.colunaD
+      })},
+      { name: 'vazios_locados_tlog', data: dataset.vaziosLocadosTlog, map: (v: VazioGenericRow) => ({
+        conteiner: v.conteiner, coluna_d: v.colunaD
+      })},
+      { name: 'vazios_armadores', data: dataset.vaziosArmadores, map: (v: VazioGenericRow) => ({
+        conteiner: v.conteiner, coluna_d: v.colunaD
+      })}
+    ];
+
+    for (const table of tables) {
+      console.log(`[SUPABASE] Limpando e salvando tabela: ${table.name}`);
+      
+      // Deleta registros existentes
+      const { error: delError } = await supabase.from(table.name).delete().neq('conteiner', '_none_');
+      if (delError) {
+        console.error(`[SUPABASE] Erro ao limpar tabela ${table.name}:`, delError);
+        throw delError;
+      }
+
+      if (table.data.length > 0) {
+        const mappedData = table.data.map(table.map as any);
+        const chunkSize = 100;
+        for (let i = 0; i < mappedData.length; i += chunkSize) {
+          const chunk = mappedData.slice(i, i + chunkSize);
+          const { error: insError } = await supabase.from(table.name).insert(chunk);
+          if (insError) {
+            console.error(`[SUPABASE] Erro ao inserir lote na tabela ${table.name}:`, insError);
+            throw insError;
+          }
+        }
+      }
+    }
+
+    toast.success("Dados salvos com sucesso no Supabase!", { id: toastId });
+    return true;
+  } catch (error: any) {
+    console.error("[SUPABASE] Erro crítico ao salvar dados:", error);
+    toast.error(`Erro ao salvar no banco de dados: ${error.message || error}`, { id: toastId });
+    return false;
+  }
+}
+
 export async function syncFromSupabase() {
   if (typeof window === 'undefined') return;
 
@@ -116,6 +197,17 @@ export async function syncFromSupabase() {
     const renaultData = getData(6);
     const tlogData = getData(7);
     const armadoresData = getData(8);
+
+    // Se o Supabase estiver completamente vazio, mantemos os dados locais para não sobrescrever com arrays vazios
+    const isSupabaseEmpty = 
+      (!cheiosData || cheiosData.length === 0) &&
+      (!vaziosData || vaziosData.length === 0) &&
+      (!ingesysData || ingesysData.length === 0);
+
+    if (isSupabaseEmpty) {
+      console.log("[SUPABASE] Banco de dados remoto está vazio. Mantendo dados locais.");
+      return;
+    }
 
     const localImports = state.imports;
     const supabaseImports = importsData ? importsData.map((i: any) => ({
@@ -264,87 +356,13 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
       localStorage.removeItem("tlog:active_import_id");
     }
   }
-  
-  if (newState.lastImportAt !== oldLastImport) {
-    const lastImport = newState.imports[0];
-    if (lastImport) {
-      try {
-        await supabase.from('import_history').upsert({
-          id: lastImport.id,
-          file_name: lastImport.fileName,
-          item_count: lastImport.itemCount,
-          status: lastImport.status
-        });
 
-        const tables = [
-          { name: 'containers_cheios', data: newState.cheios, map: (c: CheioRow) => ({
-            conteiner: c.conteiner, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
-            data_chegada: c.dataChegada, dias_no_patio: toInt(c.diasNoPatio), free_time: toInt(c.freeTime),
-            demurrage_vencimento: c.demurrageVencimento, dias_para_vencimento: toInt(c.diasParaVencimento),
-            status: c.status, fabrica: c.fabrica, data_envio_fabrica: c.dataEnvioFabrica,
-            conteiner_de_para: c.conteinerDePara, data_devolucao_vazio: c.dataDevolucaoVazio, coluna_as: c.colunaAS
-          })},
-          { name: 'vazios_locados', data: newState.vaziosLocados, map: (v: VazioLocadoRow) => ({
-            conteiner: v.conteiner, armador: v.armador, tipo: v.tipo, data_entrada: v.dataEntrada,
-            data_de_para: v.dataDePara, cheio_de_para: v.cheioDePara, status_uso: v.statusUso,
-            status_patio: v.statusPatio, dias_no_patio: toInt(v.diasNoPatio)
-          })},
-          { name: 'vazio_ingesys', data: newState.vazioIngesys, map: (i: VazioIngesysRow) => ({
-            conteiner: i.conteiner, status_d: i.statusD
-          })},
-          { name: 'vazios_locados_renault', data: newState.vaziosLocadosRenault, map: (v: VazioGenericRow) => ({
-            conteiner: v.conteiner, coluna_d: v.colunaD
-          })},
-          { name: 'vazios_locados_tlog', data: newState.vaziosLocadosTlog, map: (v: VazioGenericRow) => ({
-            conteiner: v.conteiner, coluna_d: v.colunaD
-          })},
-          { name: 'vazios_armadores', data: newState.vaziosArmadores, map: (v: VazioGenericRow) => ({
-            conteiner: v.conteiner, coluna_d: v.colunaD
-          })}
-        ];
-
-        for (const table of tables) {
-          if (table.data.length > 0) {
-            try {
-              console.log(`[SUPABASE] Atualizando tabela: ${table.name}`);
-              const { error: delError } = await supabase.from(table.name).delete().neq('conteiner', '_none_');
-              if (delError) {
-                if (delError.code === '42P01') {
-                  console.warn(`[SUPABASE] Tabela ${table.name} não existe no banco de dados. Pulando.`);
-                  continue;
-                }
-                console.warn(`[SUPABASE] Erro ao limpar tabela ${table.name}:`, delError);
-                continue;
-              }
-              
-              const mappedData = table.data.map(table.map as any);
-              const chunkSize = 100;
-              for (let i = 0; i < mappedData.length; i += chunkSize) {
-                const chunk = mappedData.slice(i, i + chunkSize);
-                const { error: insError } = await supabase.from(table.name).insert(chunk);
-                if (insError) {
-                  console.error(`[SUPABASE] Erro ao inserir lote na tabela ${table.name}:`, insError);
-                  toast.error(`Erro ao salvar lote na tabela ${table.name}: ${insError.message}`);
-                  throw insError;
-                }
-              }
-            } catch (tableErr) {
-              console.error(`[SUPABASE] Erro inesperado ao processar tabela ${table.name}:`, tableErr);
-            }
-          }
-        }
-        
-        toast.success("Dados sincronizados com Supabase!");
-        await syncFromSupabase();
-      } catch (e) {
-        console.error("[SUPABASE] Erro crítico no salvamento:", e);
-        toast.error("Erro ao salvar no banco de dados.");
-      }
-    }
-  }
-  
   state = newState;
   emit();
+  
+  if (newState.lastImportAt !== oldLastImport) {
+    await saveDatasetToSupabase(newState);
+  }
 }
 
 export async function restoreImport(importId: string) {
