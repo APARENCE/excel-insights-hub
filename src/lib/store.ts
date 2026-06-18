@@ -19,6 +19,7 @@ const initial: AppDataset & { userRole: UserRole } = {
   imports: [],
   priorityRequests: [],
   userRole: "CLIENTE",
+  activeImportId: undefined,
   settings: {
     capacidadePatio: 600,
   },
@@ -38,6 +39,7 @@ function getInitialState(): AppDataset & { userRole: UserRole } {
     const localImports = window.localStorage.getItem("tlog:imports");
     const localPriorities = window.localStorage.getItem("tlog:priority_requests");
     const localSettings = window.localStorage.getItem("tlog:settings");
+    const localActiveImportId = window.localStorage.getItem("tlog:active_import_id");
 
     return {
       cheios: localCheios ? JSON.parse(localCheios) : initial.cheios,
@@ -49,6 +51,7 @@ function getInitialState(): AppDataset & { userRole: UserRole } {
       imports: localImports ? JSON.parse(localImports) : initial.imports,
       priorityRequests: localPriorities ? JSON.parse(localPriorities) : initial.priorityRequests,
       userRole: "CLIENTE",
+      activeImportId: localActiveImportId || undefined,
       settings: localSettings ? JSON.parse(localSettings) : initial.settings,
       armadorCounts: { MSC: 0, CMA: 0, MAERSK: 0 },
     };
@@ -99,8 +102,6 @@ export async function syncFromSupabase() {
     const tlogData = getData(7);
     const armadoresData = getData(8);
 
-    // Só sobrescreve os dados locais se o Supabase retornar dados válidos e não vazios.
-    // Caso contrário, mantém os dados do último upload salvos no localStorage.
     state = {
       ...state,
       cheios: cheiosData && cheiosData.length > 0 ? cheiosData.map((c: any) => ({
@@ -223,6 +224,11 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
     localStorage.setItem("tlog:imports", JSON.stringify(newState.imports));
     localStorage.setItem("tlog:priority_requests", JSON.stringify(newState.priorityRequests));
     localStorage.setItem("tlog:settings", JSON.stringify(newState.settings));
+    if (newState.activeImportId) {
+      localStorage.setItem("tlog:active_import_id", newState.activeImportId);
+    } else {
+      localStorage.removeItem("tlog:active_import_id");
+    }
   }
   
   if (newState.lastImportAt !== oldLastImport) {
@@ -308,6 +314,37 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   emit();
 }
 
+export async function restoreImport(importId: string) {
+  if (typeof window === 'undefined') return;
+  
+  const payloadStr = localStorage.getItem(`tlog:payload:${importId}`);
+  if (!payloadStr) {
+    toast.error("Dados deste upload não foram encontrados localmente.");
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(payloadStr);
+    
+    await setDataset((prev) => ({
+      ...prev,
+      cheios: parsed.cheios || [],
+      vaziosLocados: parsed.vaziosLocados || [],
+      vazioIngesys: parsed.vazioIngesys || [],
+      vaziosLocadosRenault: parsed.vaziosLocadosRenault || [],
+      vaziosLocadosTlog: parsed.vaziosLocadosTlog || [],
+      vaziosArmadores: parsed.vaziosArmadores || [],
+      activeImportId: importId,
+      lastImportAt: new Date().toISOString() // Força a sincronização com o Supabase
+    }));
+
+    toast.success("Dados do upload restaurados e ativados com sucesso!");
+  } catch (e) {
+    console.error(e);
+    toast.error("Erro ao restaurar os dados do upload.");
+  }
+}
+
 export async function clearDataset() {
   console.log("[STORE] Limpando todos os dados locais e remotos...");
 
@@ -321,6 +358,15 @@ export async function clearDataset() {
     localStorage.removeItem("tlog:vazios_armadores");
     localStorage.removeItem("tlog:imports");
     localStorage.removeItem("tlog:priority_requests");
+    localStorage.removeItem("tlog:active_import_id");
+
+    // Limpa todos os payloads salvos
+    const keys = Object.keys(localStorage);
+    for (const key of keys) {
+      if (key.startsWith("tlog:payload:")) {
+        localStorage.removeItem(key);
+      }
+    }
   }
 
   // 2. Reseta o estado em memória
@@ -335,6 +381,7 @@ export async function clearDataset() {
     imports: [],
     priorityRequests: [],
     lastImportAt: undefined,
+    activeImportId: undefined,
     armadorCounts: { MSC: 0, CMA: 0, MAERSK: 0 }
   };
 

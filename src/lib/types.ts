@@ -90,6 +90,7 @@ export interface AppDataset {
   imports: ImportRecord[];
   priorityRequests: PriorityRequest[];
   lastImportAt?: string;
+  activeImportId?: string;
   settings: AppSettings;
   armadorCounts: Record<string, number>;
 }

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { CloudUpload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Trash2 } from "lucide-react";
+import { CloudUpload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Trash2, Play } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
 import { parseExcelFile } from "@/lib/excel-parser";
-import { setDataset, useDataset, clearDataset } from "@/lib/store";
+import { setDataset, useDataset, clearDataset, restoreImport } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -41,6 +41,14 @@ export default function ImportarPage() {
         }
         const parsed = await parseExcelFile(file);
         
+        // Gera um ID único para este upload
+        const importId = crypto.randomUUID();
+
+        // Salva o payload completo no localStorage para restauração futura
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`tlog:payload:${importId}`, JSON.stringify(parsed));
+        }
+
         // Soma total de itens importados para o histórico
         const itemCount = 
           parsed.cheios.length + 
@@ -51,14 +59,14 @@ export default function ImportarPage() {
           parsed.vaziosArmadores.length;
 
         const record = {
-          id: crypto.randomUUID(),
+          id: importId,
           fileName: file.name,
           importedAt: new Date().toISOString(),
           itemCount,
           status: "success" as const,
         };
 
-        // Atualiza o dataset global incluindo as novas abas de vazios e aguarda a sincronização
+        // Atualiza o dataset global incluindo as novas abas de vazios e define como ativo
         await setDataset((prev) => ({
           ...prev,
           cheios: parsed.cheios.length ? parsed.cheios : prev.cheios,
@@ -69,6 +77,7 @@ export default function ImportarPage() {
           vaziosArmadores: parsed.vaziosArmadores.length ? parsed.vaziosArmadores : prev.vaziosArmadores,
           imports: [record, ...prev.imports].slice(0, 50),
           lastImportAt: record.importedAt,
+          activeImportId: importId,
         }));
       }
     } catch (e) {
@@ -192,33 +201,52 @@ export default function ImportarPage() {
                 <th className="px-4 py-3 text-left font-medium">Data</th>
                 <th className="px-4 py-3 text-left font-medium">Itens</th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
+                <th className="px-4 py-3 text-right font-medium">Ações</th>
               </tr>
             </thead>
             <tbody>
               {ds.imports.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
                     Nenhuma importação ainda.
                   </td>
                 </tr>
               )}
-              {ds.imports.map((r) => (
-                <tr key={r.id} className="border-t border-border hover:bg-muted/20">
-                  <td className="px-4 py-2.5 flex items-center gap-2">
-                    <FileSpreadsheet className="h-4 w-4 text-success" />
-                    {r.fileName}
-                  </td>
-                  <td className="px-4 py-2.5 text-muted-foreground">
-                    {new Date(r.importedAt).toLocaleDateString("pt-BR")}
-                  </td>
-                  <td className="px-4 py-2.5">{r.itemCount}</td>
-                  <td className="px-4 py-2.5">
-                    <StatusBadge tone="success">
-                      <CheckCircle2 className="h-3 w-3 mr-1" /> Sucesso
-                    </StatusBadge>
-                  </td>
-                </tr>
-              ))}
+              {ds.imports.map((r) => {
+                const isActive = ds.activeImportId === r.id;
+                return (
+                  <tr key={r.id} className={`border-t border-border hover:bg-muted/20 ${isActive ? "bg-primary/5" : ""}`}>
+                    <td className="px-4 py-2.5 flex items-center gap-2">
+                      <FileSpreadsheet className={`h-4 w-4 ${isActive ? "text-primary" : "text-success"}`} />
+                      <span className={isActive ? "font-bold text-primary" : ""}>{r.fileName}</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-muted-foreground">
+                      {new Date(r.importedAt).toLocaleDateString("pt-BR")}
+                    </td>
+                    <td className="px-4 py-2.5">{r.itemCount}</td>
+                    <td className="px-4 py-2.5">
+                      <StatusBadge tone={isActive ? "primary" : "success"}>
+                        {isActive ? "Ativo" : "Sucesso"}
+                      </StatusBadge>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      {!isActive && (
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => restoreImport(r.id)}
+                          className="h-7 text-xs gap-1 cursor-pointer"
+                        >
+                          <Play className="h-3 w-3" /> Ativar
+                        </Button>
+                      )}
+                      {isActive && (
+                        <span className="text-xs font-bold text-primary px-2">Ativo agora</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
