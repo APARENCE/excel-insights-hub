@@ -66,6 +66,11 @@ function emit() {
 
 const toInt = (val: any) => (val != null && !isNaN(Number(val)) ? Math.round(Number(val)) : null);
 
+const cleanConteiner = (name: string) => {
+  if (!name) return name;
+  return name.includes('_') ? name.split('_')[0] : name;
+};
+
 function countArmadores(cheios: CheioRow[]) {
   const counts: Record<string, number> = { MSC: 0, CMA: 0, MAERSK: 0 };
   for (const c of cheios) {
@@ -99,32 +104,39 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
     if (importError) throw importError;
 
     const tables = [
-      { name: 'containers_cheios', data: dataset.cheios, map: (c: CheioRow) => ({
-        id: crypto.randomUUID(),
-        conteiner: c.conteiner, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
-        data_chegada: c.dataChegada, dias_no_patio: toInt(c.diasNoPatio), free_time: toInt(c.freeTime),
-        demurrage_vencimento: c.demurrageVencimento, dias_para_vencimento: toInt(c.diasParaVencimento),
-        status: c.status, fabrica: c.fabrica, data_envio_fabrica: c.dataEnvioFabrica,
-        conteiner_de_para: c.conteinerDePara, data_devolucao_vazio: c.dataDevolucaoVazio, coluna_as: c.colunaAS
-      })},
-      { name: 'vazios_locados', data: dataset.vaziosLocados, map: (v: VazioLocadoRow) => ({
-        id: crypto.randomUUID(),
-        conteiner: v.conteiner, armador: v.armador, tipo: v.tipo, data_entrada: v.dataEntrada,
-        data_de_para: v.dataDePara, cheio_de_para: v.cheioDePara, status_uso: v.statusUso,
-        status_patio: v.statusPatio, dias_no_patio: toInt(v.diasNoPatio)
-      })},
+      { name: 'containers_cheios', data: dataset.cheios, map: (c: CheioRow) => {
+        // Usa a data de chegada (coluna G) como parte do ID único para evitar conflitos de chave primária
+        const uniqueId = c.dataChegada ? `${c.conteiner}_${c.dataChegada.slice(0, 10)}` : `${c.conteiner}_${crypto.randomUUID().slice(0, 8)}`;
+        return {
+          id: crypto.randomUUID(),
+          conteiner: uniqueId, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
+          data_chegada: c.dataChegada, dias_no_patio: toInt(c.diasNoPatio), free_time: toInt(c.freeTime),
+          demurrage_vencimento: c.demurrageVencimento, dias_para_vencimento: toInt(c.diasParaVencimento),
+          status: c.status, fabrica: c.fabrica, data_envio_fabrica: c.dataEnvioFabrica,
+          conteiner_de_para: c.conteinerDePara, data_devolucao_vazio: c.dataDevolucaoVazio, coluna_as: c.colunaAS
+        };
+      }},
+      { name: 'vazios_locados', data: dataset.vaziosLocados, map: (v: VazioLocadoRow) => {
+        const uniqueId = v.dataEntrada ? `${v.conteiner}_${v.dataEntrada.slice(0, 10)}` : `${v.conteiner}_${crypto.randomUUID().slice(0, 8)}`;
+        return {
+          id: crypto.randomUUID(),
+          conteiner: uniqueId, armador: v.armador, tipo: v.tipo, data_entrada: v.dataEntrada,
+          data_de_para: v.dataDePara, cheio_de_para: v.cheioDePara, status_uso: v.statusUso,
+          status_patio: v.statusPatio, dias_no_patio: toInt(v.diasNoPatio)
+        };
+      }},
       { name: 'vazio_ingesys', data: dataset.vazioIngesys, map: (i: VazioIngesysRow) => ({
         id: crypto.randomUUID(),
-        conteiner: i.conteiner, status_d: i.statusD
+        conteiner: `${i.conteiner}_${crypto.randomUUID().slice(0, 8)}`, status_d: i.statusD
       })},
       { name: 'vazios_locados_renault', data: dataset.vaziosLocadosRenault, map: (v: VazioGenericRow) => ({
-        conteiner: v.conteiner, coluna_d: v.colunaD
+        conteiner: `${v.conteiner}_${crypto.randomUUID().slice(0, 8)}`, coluna_d: v.colunaD
       })},
       { name: 'vazios_locados_tlog', data: dataset.vaziosLocadosTlog, map: (v: VazioGenericRow) => ({
-        conteiner: v.conteiner, coluna_d: v.colunaD
+        conteiner: `${v.conteiner}_${crypto.randomUUID().slice(0, 8)}`, coluna_d: v.colunaD
       })},
       { name: 'vazios_armadores', data: dataset.vaziosArmadores, map: (v: VazioGenericRow) => ({
-        conteiner: v.conteiner, coluna_d: v.colunaD
+        conteiner: `${v.conteiner}_${crypto.randomUUID().slice(0, 8)}`, coluna_d: v.colunaD
       })}
     ];
 
@@ -236,7 +248,7 @@ export async function syncFromSupabase() {
     state = {
       ...state,
       cheios: cheiosData && cheiosData.length > 0 ? cheiosData.map((c: any) => ({
-        conteiner: c.conteiner,
+        conteiner: cleanConteiner(c.conteiner),
         lacre: c.lacre,
         tipo: c.tipo,
         armador: c.armador,
@@ -254,7 +266,7 @@ export async function syncFromSupabase() {
         colunaAS: c.coluna_as
       })) : state.cheios,
       vaziosLocados: vaziosData && vaziosData.length > 0 ? vaziosData.map((v: any) => ({
-        conteiner: v.conteiner,
+        conteiner: cleanConteiner(v.conteiner),
         armador: v.armador,
         tipo: v.tipo,
         dataEntrada: v.data_entrada,
@@ -265,29 +277,29 @@ export async function syncFromSupabase() {
         diasNoPatio: v.dias_no_patio
       })) : state.vaziosLocados,
       vazioIngesys: ingesysData && ingesysData.length > 0 ? ingesysData.map((i: any) => ({
-        conteiner: i.conteiner,
+        conteiner: cleanConteiner(i.conteiner),
         statusD: i.status_d
       })) : state.vazioIngesys,
       vaziosLocadosRenault: renaultData && renaultData.length > 0 ? renaultData.map((v: any) => ({
         id: v.id,
-        conteiner: v.conteiner,
+        conteiner: cleanConteiner(v.conteiner),
         colunaD: v.coluna_d || "N/A"
       })) : state.vaziosLocadosRenault,
       vaziosLocadosTlog: tlogData && tlogData.length > 0 ? tlogData.map((v: any) => ({
         id: v.id,
-        conteiner: v.conteiner,
+        conteiner: cleanConteiner(v.conteiner),
         colunaD: v.coluna_d || "N/A"
       })) : state.vaziosLocadosTlog,
       vaziosArmadores: armadoresData && armadoresData.length > 0 ? armadoresData.map((v: any) => ({
         id: v.id,
-        conteiner: v.conteiner,
+        conteiner: cleanConteiner(v.conteiner),
         colunaD: v.coluna_d || "N/A"
       })) : state.vaziosArmadores,
       imports: combinedImports,
       activeImportId: activeImportId,
       priorityRequests: prioritiesData ? prioritiesData.map((p: any) => ({
         id: p.id,
-        conteiner: p.conteiner,
+        conteiner: cleanConteiner(p.conteiner),
         nivel: p.nivel,
         status: p.status,
         solicitadoEm: p.solicitado_em,
