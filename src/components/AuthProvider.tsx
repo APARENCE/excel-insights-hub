@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { syncFromSupabase } from '@/lib/store';
 
 interface AuthContextType {
   session: Session | null;
@@ -20,14 +19,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session with resilience
+    // Get initial session
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         setSession(session);
         setUser(session?.user ?? null);
-        if (session) {
-          syncFromSupabase();
-        }
       })
       .catch((err) => {
         console.error("Auth initialization error:", err);
@@ -36,16 +32,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       });
 
-    // Listen for auth changes
+    // Listen for auth changes - APENAS atualiza estado de auth, NÃO sincroniza dados
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      
-      // Só sincroniza se houver uma sessão ativa e válida
-      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
-        syncFromSupabase();
-      }
+      // REMOVIDO: syncFromSupabase() daqui - era isso que apagava seus dados no refresh
     });
 
     return () => subscription.unsubscribe();

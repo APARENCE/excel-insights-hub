@@ -77,6 +77,10 @@ function countArmadores(cheios: CheioRow[]) {
   return counts;
 }
 
+/**
+ * Salva no Supabase SEM apagar dados locais se falhar.
+ * Só envia, nunca puxa.
+ */
 export async function saveDatasetToSupabase(dataset: AppDataset = state) {
   const lastImport = dataset.imports[0];
   if (!lastImport) {
@@ -129,6 +133,7 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
     for (const table of tables) {
       console.log(`[SUPABASE] Salvando tabela: ${table.name} (${table.data.length} registros)`);
       
+      // Deleta e reinsere tudo (upsert não funciona bem com UUIDs aleatórios)
       const { error: delError } = await supabase.from(table.name).delete().neq('conteiner', '_none_');
       if (delError) throw delError;
 
@@ -152,6 +157,10 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
   }
 }
 
+/**
+ * NÃO USA MAIS AUTOMATICAMENTE.
+ * Só chame manualmente se QUISER sobrescrever o local com o remoto.
+ */
 export async function forceSyncFromSupabase() {
   if (typeof window === 'undefined') return;
 
@@ -188,6 +197,7 @@ export async function forceSyncFromSupabase() {
     const tlogData = getData(7);
     const armadoresData = getData(8);
 
+    // Só atualiza se o remoto tiver MAIS dados que o local (proteção extra)
     const localTotal = state.cheios.length + state.vaziosLocados.length;
     const remoteTotal = (cheiosData?.length || 0) + (vaziosData?.length || 0);
 
@@ -195,70 +205,43 @@ export async function forceSyncFromSupabase() {
       state = {
         ...state,
         cheios: cheiosData?.map((c: any) => ({
-          conteiner: c.conteiner,
-          lacre: c.lacre,
-          tipo: c.tipo,
-          armador: c.armador,
-          navio: c.navio,
-          dataChegada: c.data_chegada,
-          diasNoPatio: c.dias_no_patio,
-          freeTime: c.free_time,
-          demurrageVencimento: c.demurrage_vencimento,
-          diasParaVencimento: c.dias_para_vencimento,
-          status: c.status,
-          fabrica: c.fabrica,
-          dataEnvioFabrica: c.data_envio_fabrica,
-          conteinerDePara: c.conteiner_de_para,
-          dataDevolucaoVazio: c.data_devolucao_vazio,
-          colunaAS: c.coluna_as
+          conteiner: c.conteiner, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
+          dataChegada: c.data_chegada, diasNoPatio: c.dias_no_patio, freeTime: c.free_time,
+          demurrageVencimento: c.demurrage_vencimento, diasParaVencimento: c.dias_para_vencimento,
+          status: c.status, fabrica: c.fabrica, dataEnvioFabrica: c.data_envio_fabrica,
+          conteinerDePara: c.conteiner_de_para, dataDevolucaoVazio: c.data_devolucao_vazio, colunaAS: c.coluna_as
         })) || state.cheios,
         vaziosLocados: vaziosData?.map((v: any) => ({
-          conteiner: v.conteiner,
-          armador: v.armador,
-          tipo: v.tipo,
-          dataEntrada: v.data_entrada,
-          dataDePara: v.data_de_para,
-          cheioDePara: v.cheio_de_para,
-          statusUso: v.status_uso,
-          statusPatio: v.status_patio,
-          diasNoPatio: v.dias_no_patio        })) || state.vaziosLocados,
+          conteiner: v.conteiner, armador: v.armador, tipo: v.tipo, dataEntrada: v.data_entrada,
+          dataDePara: v.data_de_para, cheioDePara: v.cheio_de_para, statusUso: v.status_uso,
+          statusPatio: v.status_patio, diasNoPatio: v.dias_no_patio
+        })) || state.vaziosLocados,
         vazioIngesys: ingesysData?.map((i: any) => ({
-          conteiner: i.conteiner,
-          statusD: i.status_d
+          conteiner: i.conteiner, statusD: i.status_d
         })) || state.vazioIngesys,
         vaziosLocadosRenault: renaultData?.map((v: any) => ({
-          id: v.id,
-          conteiner: v.conteiner,
-          colunaD: v.coluna_d || "N/A"
+          id: v.id, conteiner: v.conteiner, colunaD: v.coluna_d || "N/A"
         })) || state.vaziosLocadosRenault,
         vaziosLocadosTlog: tlogData?.map((v: any) => ({
-          id: v.id,
-          conteiner: v.conteiner,
-          colunaD: v.coluna_d || "N/A"
+          id: v.id, conteiner: v.conteiner, colunaD: v.coluna_d || "N/A"
         })) || state.vaziosLocadosTlog,
         vaziosArmadores: armadoresData?.map((v: any) => ({
-          id: v.id,
-          conteiner: v.conteiner,
-          colunaD: v.coluna_d || "N/A"
+          id: v.id, conteiner: v.conteiner, colunaD: v.coluna_d || "N/A"
         })) || state.vaziosArmadores,
         imports: importsData?.map((i: any) => ({
           id: i.id, fileName: i.file_name, importedAt: i.imported_at,
           itemCount: i.item_count, status: i.status
         })) || state.imports,
         priorityRequests: prioritiesData?.map((p: any) => ({
-          id: p.id,
-          conteiner: p.conteiner,
-          nivel: p.nivel,
-          status: p.status,
-          solicitadoEm: p.solicitado_em,
-          fabricaDestino: p.fabrica_destino,
-          previsaoFabrica: p.previsao_fabrica,
-          observacao: p.observacao
+          id: p.id, conteiner: p.conteiner, nivel: p.nivel, status: p.status,
+          solicitadoEm: p.solicitado_em, fabricaDestino: p.fabrica_destino,
+          previsaoFabrica: p.previsao_fabrica, observacao: p.observacao
         })) || state.priorityRequests,
         settings: settingsData ? { capacidadePatio: settingsData.capacidade_patio } : state.settings,
         armadorCounts: countArmadores(state.cheios)
       };
 
+      // Persiste no localStorage
       localStorage.setItem("tlog:cheios", JSON.stringify(state.cheios));
       localStorage.setItem("tlog:vazios_locados", JSON.stringify(state.vaziosLocados));
       localStorage.setItem("tlog:vazio_ingesys", JSON.stringify(state.vazioIngesys));
@@ -311,8 +294,10 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   state = newState;
   emit();
   
+  // Salva no Supabase em background, SEM bloquear a UI
   if (newState.lastImportAt !== oldLastImport) {
-    saveDatasetToSupabase(newState).catch(() => {}); // Erro já tratado dentro da função  }
+    saveDatasetToSupabase(newState).catch(() => {}); // Erro já tratado dentro da função
+  }
 }
 
 export async function restoreImport(importId: string) {
@@ -374,6 +359,7 @@ export async function clearDataset() {
   };
   emit();
 
+  // Limpa remoto também (best effort)
   try {
     await Promise.all([
       supabase.from('containers_cheios').delete().neq('conteiner', '_none_'),
@@ -393,90 +379,53 @@ export async function clearDataset() {
 
 export async function addPriorityRequest(req: PriorityRequest) {
   const { error } = await supabase.from('priority_requests').insert({
-    conteiner: req.conteiner,
-    nivel: req.nivel,
-    status: req.status,
-    fabrica_destino: req.fabricaDestino,
-    previsao_fabrica: req.previsaoFabrica,
+    conteiner: req.conteiner, nivel: req.nivel, status: req.status,
+    fabrica_destino: req.fabricaDestino, previsao_fabrica: req.previsaoFabrica,
     observacao: req.observacao
   });
   if (error) toast.error("Erro ao salvar prioridade");
   else {
     // Atualiza local imediatamente
-    const newRequest: PriorityRequest = { ...req };
-    state = { ...state, priorityRequests: [newRequest, ...state.priorityRequests] };
+    state = { ...state, priorityRequests: [req, ...state.priorityRequests] };
     emit();
   }
 }
 
 export async function updatePriorityStatus(id: string, status: PriorityRequest["status"]) {
   const { error } = await supabase.from('priority_requests').update({ status }).eq('id', id);
-  if (error) {
-    toast.error("Erro ao atualizar status");
-    return;
-  }
-  const request = state.priorityRequests.find((r: PriorityRequest) => r.id === id);
+  if (error) { toast.error("Erro ao atualizar"); return; }
+  
+  const request = state.priorityRequests.find(r => r.id === id);
   if (request && (status === 'DESPACHADO' || status === 'FINALIZADO')) {
     await supabase.from('containers_cheios')
       .update({ status: "ENVIADO PARA FABRICA", data_envio_fabrica: new Date().toISOString() })
       .eq('conteiner', request.conteiner);
   }
-  // Atualiza local com tipagem explícita
-  state = {
-    ...state,
-    priorityRequests: state.priorityRequests.map((r: PriorityRequest) =>
-      r.id === id ? { ...r, status } : r
-    )
-  };
+  // Atualiza local
+  state = { ...state, priorityRequests: state.priorityRequests.map(r => r.id === id ? { ...r, status } : r) };
   emit();
 }
 
 export async function deletePriorityRequest(id: string) {
   const { error } = await supabase.from('priority_requests').delete().eq('id', id);
-  if (error) {
-    toast.error("Erro ao excluir");
-    return;
-  }
-  // Atualiza local com tipagem explícita
-  state = {
-    ...state,
-    priorityRequests: state.priorityRequests.filter((r: PriorityRequest) => r.id !== id)
-  };
+  if (error) { toast.error("Erro ao excluir"); return; }
+  state = { ...state, priorityRequests: state.priorityRequests.filter(r => r.id !== id) };
   emit();
 }
 
 export async function updateSettings(settings: Partial<AppDataset["settings"]>) {
   if (settings.capacidadePatio === undefined) return;
-  state = {
-    ...state,
-    settings: {
-      ...state.settings,
-      capacidadePatio: settings.capacidadePatio
-    }
-  };
+  state = { ...state, settings: { ...state.settings, capacidadePatio: settings.capacidadePatio } };
   if (typeof window !== 'undefined') localStorage.setItem("tlog:settings", JSON.stringify(state.settings));
   emit();
-
-  const { error } = await supabase.from('app_settings').upsert({
-    id: '00000000-0000-0000-0000-000000000000',
-    capacidade_patio: settings.capacidadePatio
-  });
-
-  if (error) {
-    console.error("[SUPABASE] Erro ao salvar configurações:", error);
-    toast.error("Erro ao salvar configurações no banco de dados.");
-  } else {
-    toast.success("Configurações salvas com sucesso!");
-    syncFromSupabase();
-  }
+  const { error } = await supabase.from('app_settings').upsert({ id: '00000000-0000-0000-0000-000000000000', capacidade_patio: settings.capacidadePatio });
+  if (error) toast.error("Erro ao salvar config no banco");
+  else toast.success("Configurações salvas!");
 }
 
 export function useDataset() {
   return useSyncExternalStore(
-    (cb) => {
-      listeners.add(cb);
-      return () => listeners.delete(cb);
-    },
+    (cb) => { listeners.add(cb); return () => listeners.delete(cb); },
     () => state,
     () => initial,
   );
