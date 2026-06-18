@@ -72,7 +72,7 @@ const toInt = (val: any) => (val != null && !isNaN(Number(val)) ? Math.round(Num
 export async function syncFromSupabase() {
   if (typeof window === 'undefined') return;
 
-  console.log("[SUPABASE] Iniciando sincronização...");
+  console.log("[SUPABASE] Sincronizando configurações e dados...");
 
   try {
     const results = await Promise.allSettled([
@@ -128,17 +128,17 @@ export async function syncFromSupabase() {
         tipo: c.tipo,
         armador: c.armador,
         navio: c.navio,
-        dataChegada: c.data_chegada,
+        data_chegada: c.data_chegada,
         diasNoPatio: c.dias_no_patio,
         freeTime: c.free_time,
         demurrageVencimento: c.demurrage_vencimento,
         diasParaVencimento: c.dias_para_vencimento,
         status: c.status,
         fabrica: c.fabrica,
-        dataEnvioFabrica: c.data_envio_fabrica,
+        data_envio_fabrica: c.data_envio_fabrica,
         conteinerDePara: c.conteiner_de_para,
         dataDevolucaoVazio: c.data_devolucao_vazio,
-        colunaAS: c.coluna_as
+        coluna_as: c.coluna_as
       })) : state.cheios,
       vaziosLocados: vaziosData && vaziosData.length > 0 ? vaziosData.map((v: any) => ({
         conteiner: v.conteiner,
@@ -147,8 +147,8 @@ export async function syncFromSupabase() {
         dataEntrada: v.data_entrada,
         dataDePara: v.data_de_para,
         cheioDePara: v.cheio_de_para,
-        statusUso: v.status_uso,
-        statusPatio: v.status_patio,
+        status_uso: v.status_uso,
+        status_patio: v.status_patio,
         diasNoPatio: v.dias_no_patio
       })) : state.vaziosLocados,
       vazioIngesys: ingesysData && ingesysData.length > 0 ? ingesysData.map((i: any) => ({
@@ -213,6 +213,7 @@ if (typeof window !== 'undefined') {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_renault' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_tlog' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_armadores' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => syncFromSupabase())
     .subscribe();
 }
 
@@ -465,11 +466,35 @@ export async function deletePriorityRequest(id: string) {
 }
 
 export async function updateSettings(settings: Partial<AppDataset["settings"]>) {
-  const { error } = await supabase.from('app_settings').update({
+  if (settings.capacidadePatio === undefined) return;
+
+  // Atualiza o estado local imediatamente para feedback instantâneo
+  state = {
+    ...state,
+    settings: {
+      ...state.settings,
+      capacidadePatio: settings.capacidadePatio
+    }
+  };
+  
+  if (typeof window !== 'undefined') {
+    localStorage.setItem("tlog:settings", JSON.stringify(state.settings));
+  }
+  emit();
+
+  // Atualiza no Supabase usando upsert para garantir que o registro padrão seja atualizado
+  const { error } = await supabase.from('app_settings').upsert({
+    id: '00000000-0000-0000-0000-000000000000',
     capacidade_patio: settings.capacidadePatio
-  }).neq('id', '00000000-0000-0000-0000-000000000000');
-  if (error) toast.error("Erro ao salvar configurações");
-  else syncFromSupabase();
+  });
+
+  if (error) {
+    console.error("[SUPABASE] Erro ao salvar configurações:", error);
+    toast.error("Erro ao salvar configurações no banco de dados.");
+  } else {
+    toast.success("Configurações salvas com sucesso!");
+    syncFromSupabase();
+  }
 }
 
 export function useDataset() {
