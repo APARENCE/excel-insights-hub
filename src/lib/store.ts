@@ -59,6 +59,7 @@ function getInitialState(): AppDataset & { userRole: UserRole } {
 
 let state: AppDataset & { userRole: UserRole } = getInitialState();
 const listeners = new Set<() => void>();
+let isSaving = false; // Trava para evitar que a sincronização em tempo real sobrescreva dados parciais durante o salvamento em lote
 
 function emit() {
   for (const l of listeners) l();
@@ -68,7 +69,7 @@ const toInt = (val: any) => (val != null && !isNaN(Number(val)) ? Math.round(Num
 
 const cleanConteiner = (name: string) => {
   if (!name) return name;
-  return name.includes('_') ? name.split('_')[0] : name;
+  return name.includes('::') ? name.split('::')[0] : name;
 };
 
 function countArmadores(cheios: CheioRow[]) {
@@ -90,6 +91,7 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
   }
 
   const toastId = toast.loading("Salvando dados no Supabase...");
+  isSaving = true; // Ativa a trava de salvamento
 
   try {
     // 1. Salva o histórico de importação
@@ -105,7 +107,7 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
 
     const tables = [
       { name: 'containers_cheios', data: dataset.cheios, map: (c: CheioRow) => {
-        const uniqueId = `${c.conteiner}_${crypto.randomUUID().slice(0, 8)}`;
+        const uniqueId = `${c.conteiner}::${crypto.randomUUID().slice(0, 8)}`;
         return {
           id: crypto.randomUUID(),
           conteiner: uniqueId, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
@@ -116,7 +118,7 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
         };
       }},
       { name: 'vazios_locados', data: dataset.vaziosLocados, map: (v: VazioLocadoRow) => {
-        const uniqueId = `${v.conteiner}_${crypto.randomUUID().slice(0, 8)}`;
+        const uniqueId = `${v.conteiner}::${crypto.randomUUID().slice(0, 8)}`;
         return {
           id: crypto.randomUUID(),
           conteiner: uniqueId, armador: v.armador, tipo: v.tipo, data_entrada: v.dataEntrada,
@@ -126,16 +128,16 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
       }},
       { name: 'vazio_ingesys', data: dataset.vazioIngesys, map: (i: VazioIngesysRow) => ({
         id: crypto.randomUUID(),
-        conteiner: `${i.conteiner}_${crypto.randomUUID().slice(0, 8)}`, status_d: i.statusD
+        conteiner: `${i.conteiner}::${crypto.randomUUID().slice(0, 8)}`, status_d: i.statusD
       })},
       { name: 'vazios_locados_renault', data: dataset.vaziosLocadosRenault, map: (v: VazioGenericRow) => ({
-        conteiner: `${v.conteiner}_${crypto.randomUUID().slice(0, 8)}`, coluna_d: v.colunaD
+        conteiner: `${v.conteiner}::${crypto.randomUUID().slice(0, 8)}`, coluna_d: v.colunaD
       })},
       { name: 'vazios_locados_tlog', data: dataset.vaziosLocadosTlog, map: (v: VazioGenericRow) => ({
-        conteiner: `${v.conteiner}_${crypto.randomUUID().slice(0, 8)}`, coluna_d: v.colunaD
+        conteiner: `${v.conteiner}::${crypto.randomUUID().slice(0, 8)}`, coluna_d: v.colunaD
       })},
       { name: 'vazios_armadores', data: dataset.vaziosArmadores, map: (v: VazioGenericRow) => ({
-        conteiner: `${v.conteiner}_${crypto.randomUUID().slice(0, 8)}`, coluna_d: v.colunaD
+        conteiner: `${v.conteiner}::${crypto.randomUUID().slice(0, 8)}`, coluna_d: v.colunaD
       })}
     ];
 
@@ -169,11 +171,18 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
     console.error("[SUPABASE] Erro crítico ao salvar dados:", error);
     toast.error(`Erro ao salvar no banco de dados: ${error.message || error}`, { id: toastId });
     return false;
+  } finally {
+    isSaving = false; // Desativa a trava de salvamento
+    await syncFromSupabase(); // Sincroniza uma vez no final para garantir consistência
   }
 }
 
 export async function syncFromSupabase() {
   if (typeof window === 'undefined') return;
+  if (isSaving) {
+    console.log("[SUPABASE] Salvamento em andamento. Ignorando sincronização em tempo real.");
+    return;
+  }
 
   try {
     // VERIFICAÇÃO DE SEGURANÇA: Só prossegue se houver uma sessão ativa no Supabase
