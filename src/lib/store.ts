@@ -260,8 +260,8 @@ export async function syncFromSupabase() {
         dataEntrada: v.data_entrada,
         dataDePara: v.data_de_para,
         cheioDePara: v.cheio_de_para,
-        status_uso: v.status_uso,
-        status_patio: v.status_patio,
+        statusUso: v.status_uso,
+        statusPatio: v.status_patio,
         diasNoPatio: v.dias_no_patio
       })) : state.vaziosLocados,
       vazioIngesys: ingesysData && ingesysData.length > 0 ? ingesysData.map((i: any) => ({
