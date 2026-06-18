@@ -128,17 +128,17 @@ export async function syncFromSupabase() {
         tipo: c.tipo,
         armador: c.armador,
         navio: c.navio,
-        data_chegada: c.data_chegada,
+        dataChegada: c.data_chegada,
         diasNoPatio: c.dias_no_patio,
         freeTime: c.free_time,
         demurrageVencimento: c.demurrage_vencimento,
         diasParaVencimento: c.dias_para_vencimento,
         status: c.status,
         fabrica: c.fabrica,
-        data_envio_fabrica: c.data_envio_fabrica,
+        dataEnvioFabrica: c.data_envio_fabrica,
         conteinerDePara: c.conteiner_de_para,
         dataDevolucaoVazio: c.data_devolucao_vazio,
-        coluna_as: c.coluna_as
+        colunaAS: c.coluna_as
       })) : state.cheios,
       vaziosLocados: vaziosData && vaziosData.length > 0 ? vaziosData.map((v: any) => ({
         conteiner: v.conteiner,
@@ -147,8 +147,8 @@ export async function syncFromSupabase() {
         dataEntrada: v.data_entrada,
         dataDePara: v.data_de_para,
         cheioDePara: v.cheio_de_para,
-        status_uso: v.status_uso,
-        status_patio: v.status_patio,
+        statusUso: v.status_uso,
+        statusPatio: v.status_patio,
         diasNoPatio: v.dias_no_patio
       })) : state.vaziosLocados,
       vazioIngesys: ingesysData && ingesysData.length > 0 ? ingesysData.map((i: any) => ({
