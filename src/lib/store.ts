@@ -201,14 +201,13 @@ export async function syncFromSupabase() {
     const tlogData = getData(7);
     const armadoresData = getData(8);
 
-    // Se o Supabase estiver completamente vazio, mantemos os dados locais para não sobrescrever com arrays vazios
-    const isSupabaseEmpty = 
-      (!cheiosData || cheiosData.length === 0) &&
-      (!vaziosData || vaziosData.length === 0) &&
-      (!ingesysData || ingesysData.length === 0);
+    // TRAVA DE SEGURANÇA: Se o Supabase retornar menos dados do que temos localmente,
+    // e o banco remoto estiver vazio ou incompleto, mantemos os dados locais para evitar perda de informação.
+    const localTotal = state.cheios.length + state.vaziosLocados.length;
+    const remoteTotal = (cheiosData?.length || 0) + (vaziosData?.length || 0);
 
-    if (isSupabaseEmpty) {
-      console.log("[SUPABASE] Banco de dados remoto está vazio. Mantendo dados locais.");
+    if (localTotal > 0 && remoteTotal === 0) {
+      console.log("[SUPABASE] Banco remoto vazio ou incompleto. Mantendo dados locais intactos.");
       return;
     }
 
@@ -236,7 +235,7 @@ export async function syncFromSupabase() {
 
     state = {
       ...state,
-      cheios: cheiosData ? cheiosData.map((c: any) => ({
+      cheios: cheiosData && cheiosData.length > 0 ? cheiosData.map((c: any) => ({
         conteiner: c.conteiner,
         lacre: c.lacre,
         tipo: c.tipo,
@@ -254,32 +253,32 @@ export async function syncFromSupabase() {
         dataDevolucaoVazio: c.data_devolucao_vazio,
         colunaAS: c.coluna_as
       })) : state.cheios,
-      vaziosLocados: vaziosData ? vaziosData.map((v: any) => ({
+      vaziosLocados: vaziosData && vaziosData.length > 0 ? vaziosData.map((v: any) => ({
         conteiner: v.conteiner,
         armador: v.armador,
         tipo: v.tipo,
         dataEntrada: v.data_entrada,
         dataDePara: v.data_de_para,
         cheioDePara: v.cheio_de_para,
-        statusUso: v.status_uso,
-        statusPatio: v.status_patio,
+        status_uso: v.status_uso,
+        status_patio: v.status_patio,
         diasNoPatio: v.dias_no_patio
       })) : state.vaziosLocados,
-      vazioIngesys: ingesysData ? ingesysData.map((i: any) => ({
+      vazioIngesys: ingesysData && ingesysData.length > 0 ? ingesysData.map((i: any) => ({
         conteiner: i.conteiner,
         statusD: i.status_d
       })) : state.vazioIngesys,
-      vaziosLocadosRenault: renaultData ? renaultData.map((v: any) => ({
+      vaziosLocadosRenault: renaultData && renaultData.length > 0 ? renaultData.map((v: any) => ({
         id: v.id,
         conteiner: v.conteiner,
         colunaD: v.coluna_d || "N/A"
       })) : state.vaziosLocadosRenault,
-      vaziosLocadosTlog: tlogData ? tlogData.map((v: any) => ({
+      vaziosLocadosTlog: tlogData && tlogData.length > 0 ? tlogData.map((v: any) => ({
         id: v.id,
         conteiner: v.conteiner,
         colunaD: v.coluna_d || "N/A"
       })) : state.vaziosLocadosTlog,
-      vaziosArmadores: armadoresData ? armadoresData.map((v: any) => ({
+      vaziosArmadores: armadoresData && armadoresData.length > 0 ? armadoresData.map((v: any) => ({
         id: v.id,
         conteiner: v.conteiner,
         colunaD: v.coluna_d || "N/A"
