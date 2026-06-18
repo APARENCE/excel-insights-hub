@@ -105,8 +105,8 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
 
     const tables = [
       { name: 'containers_cheios', data: dataset.cheios, map: (c: CheioRow) => {
-        // Usa a data de chegada (coluna G) como parte do ID único para evitar conflitos de chave primária
-        const uniqueId = c.dataChegada ? `${c.conteiner}_${c.dataChegada.slice(0, 10)}` : `${c.conteiner}_${crypto.randomUUID().slice(0, 8)}`;
+        // Sempre gera um sufixo aleatório único para garantir que nenhum registro seja descartado por restrição de chave única
+        const uniqueId = `${c.conteiner}_${crypto.randomUUID().slice(0, 8)}`;
         return {
           id: crypto.randomUUID(),
           conteiner: uniqueId, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
@@ -117,7 +117,7 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
         };
       }},
       { name: 'vazios_locados', data: dataset.vaziosLocados, map: (v: VazioLocadoRow) => {
-        const uniqueId = v.dataEntrada ? `${v.conteiner}_${v.dataEntrada.slice(0, 10)}` : `${v.conteiner}_${crypto.randomUUID().slice(0, 8)}`;
+        const uniqueId = `${v.conteiner}_${crypto.randomUUID().slice(0, 8)}`;
         return {
           id: crypto.randomUUID(),
           conteiner: uniqueId, armador: v.armador, tipo: v.tipo, data_entrada: v.dataEntrada,
