@@ -193,6 +193,7 @@ export default function ImportarPage() {
 
       <div className="px-6 mt-6 pb-8">
         <h3 className="font-semibold mb-3">Importações Recentes</h3>
+        <p className="text-xs text-muted-foreground mb-3">Clique em qualquer linha do histórico para carregar e assumir os dados daquela planilha.</p>
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs text-muted-foreground">
@@ -215,7 +216,16 @@ export default function ImportarPage() {
               {ds.imports.map((r) => {
                 const isActive = ds.activeImportId === r.id;
                 return (
-                  <tr key={r.id} className={`border-t border-border hover:bg-muted/20 ${isActive ? "bg-primary/5" : ""}`}>
+                  <tr 
+                    key={r.id} 
+                    onClick={() => !isActive && restoreImport(r.id)}
+                    className={`border-t border-border transition-colors cursor-pointer ${
+                      isActive 
+                        ? "bg-primary/5 hover:bg-primary/10" 
+                        : "hover:bg-muted/40"
+                    }`}
+                    title={isActive ? "Esta planilha já está ativa" : "Clique para assumir os dados desta planilha"}
+                  >
                     <td className="px-4 py-2.5 flex items-center gap-2">
                       <FileSpreadsheet className={`h-4 w-4 ${isActive ? "text-primary" : "text-success"}`} />
                       <span className={isActive ? "font-bold text-primary" : ""}>{r.fileName}</span>
@@ -234,7 +244,10 @@ export default function ImportarPage() {
                         <Button 
                           size="sm" 
                           variant="outline" 
-                          onClick={() => restoreImport(r.id)}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Evita clique duplo/conflito com o onClick da linha
+                            restoreImport(r.id);
+                          }}
                           className="h-7 text-xs gap-1 cursor-pointer"
                         >
                           <Play className="h-3 w-3" /> Ativar
