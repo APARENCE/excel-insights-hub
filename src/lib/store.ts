@@ -99,9 +99,11 @@ export async function syncFromSupabase() {
     const tlogData = getData(7);
     const armadoresData = getData(8);
 
+    // Só sobrescreve os dados locais se o Supabase retornar dados válidos e não vazios.
+    // Caso contrário, mantém os dados do último upload salvos no localStorage.
     state = {
       ...state,
-      cheios: cheiosData ? cheiosData.map((c: any) => ({
+      cheios: cheiosData && cheiosData.length > 0 ? cheiosData.map((c: any) => ({
         conteiner: c.conteiner,
         lacre: c.lacre,
         tipo: c.tipo,
@@ -119,7 +121,7 @@ export async function syncFromSupabase() {
         dataDevolucaoVazio: c.data_devolucao_vazio,
         colunaAS: c.coluna_as
       })) : state.cheios,
-      vaziosLocados: vaziosData ? vaziosData.map((v: any) => ({
+      vaziosLocados: vaziosData && vaziosData.length > 0 ? vaziosData.map((v: any) => ({
         conteiner: v.conteiner,
         armador: v.armador,
         tipo: v.tipo,
@@ -130,33 +132,33 @@ export async function syncFromSupabase() {
         statusPatio: v.status_patio,
         diasNoPatio: v.dias_no_patio
       })) : state.vaziosLocados,
-      vazioIngesys: ingesysData ? ingesysData.map((i: any) => ({
+      vazioIngesys: ingesysData && ingesysData.length > 0 ? ingesysData.map((i: any) => ({
         conteiner: i.conteiner,
         statusD: i.status_d
       })) : state.vazioIngesys,
-      vaziosLocadosRenault: renaultData ? renaultData.map((v: any) => ({
+      vaziosLocadosRenault: renaultData && renaultData.length > 0 ? renaultData.map((v: any) => ({
         id: v.id,
         conteiner: v.conteiner,
         colunaD: v.coluna_d || "N/A"
       })) : state.vaziosLocadosRenault,
-      vaziosLocadosTlog: tlogData ? tlogData.map((v: any) => ({
+      vaziosLocadosTlog: tlogData && tlogData.length > 0 ? tlogData.map((v: any) => ({
         id: v.id,
         conteiner: v.conteiner,
         colunaD: v.coluna_d || "N/A"
       })) : state.vaziosLocadosTlog,
-      vaziosArmadores: armadoresData ? armadoresData.map((v: any) => ({
+      vaziosArmadores: armadoresData && armadoresData.length > 0 ? armadoresData.map((v: any) => ({
         id: v.id,
         conteiner: v.conteiner,
         colunaD: v.coluna_d || "N/A"
       })) : state.vaziosArmadores,
-      imports: importsData ? importsData.map((i: any) => ({
+      imports: importsData && importsData.length > 0 ? importsData.map((i: any) => ({
         id: i.id,
         fileName: i.file_name,
         importedAt: i.imported_at,
         itemCount: i.item_count,
         status: i.status as any
       })) : state.imports,
-      priorityRequests: prioritiesData ? prioritiesData.map((p: any) => ({
+      priorityRequests: prioritiesData && prioritiesData.length > 0 ? prioritiesData.map((p: any) => ({
         id: p.id,
         conteiner: p.conteiner,
         nivel: p.nivel,
@@ -170,7 +172,7 @@ export async function syncFromSupabase() {
       armadorCounts: countArmadores(state.cheios)
     };
 
-    // Atualiza o localStorage com os dados mais recentes do Supabase
+    // Atualiza o localStorage com os dados mais recentes
     if (typeof window !== 'undefined') {
       localStorage.setItem("tlog:cheios", JSON.stringify(state.cheios));
       localStorage.setItem("tlog:vazios_locados", JSON.stringify(state.vaziosLocados));
