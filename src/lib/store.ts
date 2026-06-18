@@ -77,23 +77,6 @@ function countArmadores(cheios: CheioRow[]) {
   return counts;
 }
 
-// Função auxiliar para remover duplicatas de contêineres mantendo a ocorrência mais recente
-function deduplicateBy<T>(arr: T[], keyGetter: (item: T) => string): T[] {
-  const seen = new Set<string>();
-  const result: T[] = [];
-  for (let i = arr.length - 1; i >= 0; i--) {
-    const val = arr[i];
-    if (!val) continue;
-    const key = keyGetter(val).trim().toUpperCase();
-    if (!key) continue;
-    if (!seen.has(key)) {
-      seen.add(key);
-      result.unshift(val);
-    }
-  }
-  return result;
-}
-
 export async function saveDatasetToSupabase(dataset: AppDataset = state) {
   const lastImport = dataset.imports[0];
   if (!lastImport) {
@@ -115,37 +98,32 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
 
     if (importError) throw importError;
 
-    // Deduplica os dados em memória antes de enviar para o Supabase
-    const uniqueCheios = deduplicateBy(dataset.cheios, c => c.conteiner);
-    const uniqueVaziosLocados = deduplicateBy(dataset.vaziosLocados, v => v.conteiner);
-    const uniqueVazioIngesys = deduplicateBy(dataset.vazioIngesys, i => i.conteiner);
-    const uniqueRenault = deduplicateBy(dataset.vaziosLocadosRenault, v => v.conteiner);
-    const uniqueTlog = deduplicateBy(dataset.vaziosLocadosTlog, v => v.conteiner);
-    const uniqueArmadores = deduplicateBy(dataset.vaziosArmadores, v => v.conteiner);
-
     const tables = [
-      { name: 'containers_cheios', data: uniqueCheios, map: (c: CheioRow) => ({
+      { name: 'containers_cheios', data: dataset.cheios, map: (c: CheioRow) => ({
+        id: crypto.randomUUID(),
         conteiner: c.conteiner, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
         data_chegada: c.dataChegada, dias_no_patio: toInt(c.diasNoPatio), free_time: toInt(c.freeTime),
         demurrage_vencimento: c.demurrageVencimento, dias_para_vencimento: toInt(c.diasParaVencimento),
         status: c.status, fabrica: c.fabrica, data_envio_fabrica: c.dataEnvioFabrica,
         conteiner_de_para: c.conteinerDePara, data_devolucao_vazio: c.dataDevolucaoVazio, coluna_as: c.colunaAS
       })},
-      { name: 'vazios_locados', data: uniqueVaziosLocados, map: (v: VazioLocadoRow) => ({
+      { name: 'vazios_locados', data: dataset.vaziosLocados, map: (v: VazioLocadoRow) => ({
+        id: crypto.randomUUID(),
         conteiner: v.conteiner, armador: v.armador, tipo: v.tipo, data_entrada: v.dataEntrada,
         data_de_para: v.dataDePara, cheio_de_para: v.cheioDePara, status_uso: v.statusUso,
         status_patio: v.statusPatio, dias_no_patio: toInt(v.diasNoPatio)
       })},
-      { name: 'vazio_ingesys', data: uniqueVazioIngesys, map: (i: VazioIngesysRow) => ({
+      { name: 'vazio_ingesys', data: dataset.vazioIngesys, map: (i: VazioIngesysRow) => ({
+        id: crypto.randomUUID(),
         conteiner: i.conteiner, status_d: i.statusD
       })},
-      { name: 'vazios_locados_renault', data: uniqueRenault, map: (v: VazioGenericRow) => ({
+      { name: 'vazios_locados_renault', data: dataset.vaziosLocadosRenault, map: (v: VazioGenericRow) => ({
         conteiner: v.conteiner, coluna_d: v.colunaD
       })},
-      { name: 'vazios_locados_tlog', data: uniqueTlog, map: (v: VazioGenericRow) => ({
+      { name: 'vazios_locados_tlog', data: dataset.vaziosLocadosTlog, map: (v: VazioGenericRow) => ({
         conteiner: v.conteiner, coluna_d: v.colunaD
       })},
-      { name: 'vazios_armadores', data: uniqueArmadores, map: (v: VazioGenericRow) => ({
+      { name: 'vazios_armadores', data: dataset.vaziosArmadores, map: (v: VazioGenericRow) => ({
         conteiner: v.conteiner, coluna_d: v.colunaD
       })}
     ];

@@ -19,23 +19,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-// Função auxiliar para remover duplicatas mantendo a ocorrência mais recente
-function deduplicateBy<T>(arr: T[], keyGetter: (item: T) => string): T[] {
-  const seen = new Set<string>();
-  const result: T[] = [];
-  for (let i = arr.length - 1; i >= 0; i--) {
-    const val = arr[i];
-    if (!val) continue;
-    const key = keyGetter(val).trim().toUpperCase();
-    if (!key) continue;
-    if (!seen.has(key)) {
-      seen.add(key);
-      result.unshift(val);
-    }
-  }
-  return result;
-}
-
 export default function ImportarPage() {
   const ds = useDataset();
   const [busy, setBusy] = useState(false);
@@ -57,17 +40,7 @@ export default function ImportarPage() {
         if (file.size > 10 * 1024 * 1024) {
           throw new Error("Arquivo maior que 10MB.");
         }
-        const parsedRaw = await parseExcelFile(file);
-        
-        // Deduplica imediatamente para garantir consistência entre tela e banco de dados
-        const parsed = {
-          cheios: deduplicateBy(parsedRaw.cheios, c => c.conteiner),
-          vaziosLocados: deduplicateBy(parsedRaw.vaziosLocados, v => v.conteiner),
-          vazioIngesys: deduplicateBy(parsedRaw.vazioIngesys, i => i.conteiner),
-          vaziosLocadosRenault: deduplicateBy(parsedRaw.vaziosLocadosRenault, v => v.conteiner),
-          vaziosLocadosTlog: deduplicateBy(parsedRaw.vaziosLocadosTlog, v => v.conteiner),
-          vaziosArmadores: deduplicateBy(parsedRaw.vaziosArmadores, v => v.conteiner),
-        };
+        const parsed = await parseExcelFile(file);
 
         // Gera um ID único para este upload
         const importId = crypto.randomUUID();
