@@ -42,7 +42,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
       setLoading(false);
       
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+      // Só sincroniza se houver uma sessão ativa e válida
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
         syncFromSupabase();
       }
     });

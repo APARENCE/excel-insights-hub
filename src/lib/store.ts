@@ -80,9 +80,16 @@ function countArmadores(cheios: CheioRow[]) {
 export async function syncFromSupabase() {
   if (typeof window === 'undefined') return;
 
-  console.log("[SUPABASE] Sincronizando configurações e dados...");
-
   try {
+    // VERIFICAÇÃO DE SEGURANÇA: Só prossegue se houver uma sessão ativa no Supabase
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.log("[SUPABASE] Sem sessão ativa. Ignorando sincronização para evitar sobrescrever dados locais.");
+      return;
+    }
+
+    console.log("[SUPABASE] Sincronizando configurações e dados...");
+
     const results = await Promise.allSettled([
       supabase.from('containers_cheios').select('*'),
       supabase.from('vazios_locados').select('*'),
