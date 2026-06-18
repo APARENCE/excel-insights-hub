@@ -102,6 +102,24 @@ export async function syncFromSupabase() {
     const tlogData = getData(7);
     const armadoresData = getData(8);
 
+    // Mescla o histórico de importações do Supabase com o histórico local para evitar perdas
+    const localImports = state.imports;
+    const supabaseImports = importsData ? importsData.map((i: any) => ({
+      id: i.id,
+      fileName: i.file_name,
+      importedAt: i.imported_at,
+      itemCount: i.item_count,
+      status: i.status as any
+    })) : [];
+
+    const combinedImports = [...supabaseImports];
+    for (const local of localImports) {
+      if (!combinedImports.some(i => i.id === local.id)) {
+        combinedImports.push(local);
+      }
+    }
+    combinedImports.sort((a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime());
+
     state = {
       ...state,
       cheios: cheiosData && cheiosData.length > 0 ? cheiosData.map((c: any) => ({
@@ -152,13 +170,7 @@ export async function syncFromSupabase() {
         conteiner: v.conteiner,
         colunaD: v.coluna_d || "N/A"
       })) : state.vaziosArmadores,
-      imports: importsData && importsData.length > 0 ? importsData.map((i: any) => ({
-        id: i.id,
-        fileName: i.file_name,
-        importedAt: i.imported_at,
-        itemCount: i.item_count,
-        status: i.status as any
-      })) : state.imports,
+      imports: combinedImports,
       priorityRequests: prioritiesData && prioritiesData.length > 0 ? prioritiesData.map((p: any) => ({
         id: p.id,
         conteiner: p.conteiner,
@@ -235,7 +247,9 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
     const lastImport = newState.imports[0];
     if (lastImport) {
       try {
-        await supabase.from('import_history').insert({
+        // Usa upsert com o ID do cliente para garantir consistência perfeita de IDs
+        await supabase.from('import_history').upsert({
+          id: lastImport.id,
           file_name: lastImport.fileName,
           item_count: lastImport.itemCount,
           status: lastImport.status
