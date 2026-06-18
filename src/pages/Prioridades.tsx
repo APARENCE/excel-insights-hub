@@ -46,12 +46,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useDataset, addPriorityRequest, updatePriorityStatus, deletePriorityRequest, setDataset } from "@/lib/store";
 import { toast } from "sonner";
-import { PriorityLevel, RequestStatus } from '@/lib/types';
+import { PriorityLevel, RequestStatus, PriorityRequest, CheioRow } from '@/lib/types';
 import { cn } from "@/lib/utils";
 
-/**
- * Sinaleiro com Rótulos de Texto
- */
 function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) {
   const steps = [
     { id: 'PENDENTE', label: 'FILA', color: 'bg-destructive' },
@@ -117,29 +114,29 @@ export default function PrioridadesPage() {
   const isTransportadora = userRole === "TRANSPORTADORA";
 
   const availableContainers = useMemo(() => {
-    const existingIds = new Set(ds.priorityRequests.filter(r => r.status !== 'FINALIZADO').map(r => r.conteiner));
-    return ds.cheios.filter(c => 
+    const existingIds = new Set(ds.priorityRequests.filter((r: PriorityRequest) => r.status !== 'FINALIZADO').map((r: PriorityRequest) => r.conteiner));
+    return ds.cheios.filter((c: CheioRow) => 
       (c.status === "EM PATIO TLOG-SJP" || c.status === "DEPARA EM PATIO TLOG-SJP") && 
       !existingIds.has(c.conteiner)
     );
   }, [ds.cheios, ds.priorityRequests]);
 
   const stats = {
-    pendentes: ds.priorityRequests.filter(r => r.status === 'PENDENTE').length,
-    carregando: ds.priorityRequests.filter(r => r.status === 'CARREGANDO').length,
-    despachados: ds.priorityRequests.filter(r => r.status === 'DESPACHADO').length,
-    finalizados: ds.priorityRequests.filter(r => r.status === 'FINALIZADO').length,
+    pendentes: ds.priorityRequests.filter((r: PriorityRequest) => r.status === 'PENDENTE').length,
+    carregando: ds.priorityRequests.filter((r: PriorityRequest) => r.status === 'CARREGANDO').length,
+    despachados: ds.priorityRequests.filter((r: PriorityRequest) => r.status === 'DESPACHADO').length,
+    finalizados: ds.priorityRequests.filter((r: PriorityRequest) => r.status === 'FINALIZADO').length,
   };
 
   const sortedRequests = useMemo(() => {
     const weight: Record<string, number> = { 'CRITICA': 3, 'ALTA': 2, 'NORMAL': 1 };
-    return ds.priorityRequests.map(req => ({
+    return ds.priorityRequests.map((req: PriorityRequest) => ({
       ...req,
-      details: ds.cheios.find(c => c.conteiner === req.conteiner)
-    })).sort((a, b) => {
+      details: ds.cheios.find((c: CheioRow) => c.conteiner === req.conteiner)
+    })).sort((a: any, b: any) => {
       const statusWeight: Record<RequestStatus, number> = { 'PENDENTE': 4, 'CARREGANDO': 3, 'DESPACHADO': 2, 'FINALIZADO': 1 };
-      if (statusWeight[a.status] !== statusWeight[b.status]) {
-        return statusWeight[b.status] - statusWeight[a.status];
+      if (statusWeight[a.status as RequestStatus] !== statusWeight[b.status as RequestStatus]) {
+        return statusWeight[b.status as RequestStatus] - statusWeight[a.status as RequestStatus];
       }
       if (weight[a.nivel] !== weight[b.nivel]) {
         return weight[b.nivel] - weight[a.nivel];
@@ -253,7 +250,7 @@ export default function PrioridadesPage() {
         subtitle="Fluxo de Saída em Tempo Real"
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setDataset(prev => ({...prev, priorityRequests: prev.priorityRequests.filter(r => r.status !== 'FINALIZADO')}))} className="text-[10px] h-8">
+            <Button variant="outline" size="sm" onClick={() => setDataset((prev: any) => ({...prev, priorityRequests: prev.priorityRequests.filter((r: any) => r.status !== 'FINALIZADO')}))} className="text-[10px] h-8">
               <Eraser className="h-3 w-3 mr-1.5" /> Limpar OK
             </Button>
             {isCliente && (
@@ -284,7 +281,7 @@ export default function PrioridadesPage() {
                               <CommandList>
                                 <CommandEmpty>Nenhum disponível.</CommandEmpty>
                                 <CommandGroup>
-                                  {availableContainers.map((c) => (
+                                  {availableContainers.map((c: CheioRow) => (
                                     <CommandItem key={c.conteiner} value={`${c.conteiner} ${c.conteinerDePara}`} onSelect={() => { setSelectedContainer(c.conteiner); setSearchOpen(false); }} className="cursor-pointer">
                                       <div className="flex flex-col">
                                         <span className="font-bold text-sm">{c.conteiner}</span>
@@ -364,10 +361,10 @@ export default function PrioridadesPage() {
           <div className="divide-y divide-border">
             {sortedRequests.length === 0 ? (
               <div className="py-10 text-center text-muted-foreground text-[10px] italic">
-                Nenhuma solicitação ativa na fila.
+                Nenhuma solicitação activa na fila.
               </div>
             ) : (
-              sortedRequests.map(req => <RequestRow key={req.id} req={req} />)
+              sortedRequests.map((req: any) => <RequestRow key={req.id} req={req} />)
             )}
           </div>
         </div>

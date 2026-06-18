@@ -18,6 +18,7 @@ import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useDataset } from "@/lib/store";
 import { buildDemurrageBuckets, buildDemurrageRows } from "@/lib/analytics";
+import type { CheioRow } from "@/lib/types";
 
 const sevColor = {
   vencido: "#ef4444",
@@ -29,9 +30,8 @@ const sevColor = {
 export default function DemurragePage() {
   const ds = useDataset();
   
-  // Filtra apenas o que está EM PATIO TLOG-SJP para toda a análise da página
   const filteredCheios = useMemo(() => 
-    ds.cheios.filter(c => c.status === "EM PATIO TLOG-SJP"), 
+    ds.cheios.filter((c: CheioRow) => c.status === "EM PATIO TLOG-SJP"), 
     [ds.cheios]
   );
 

@@ -9,6 +9,7 @@ import { SettingsDialog } from "@/components/SettingsDialog";
 import { useDataset } from "@/lib/store";
 import { summary } from "@/lib/analytics";
 import { exportToExcel } from "@/lib/excel-parser";
+import type { CheioRow } from "@/lib/types";
 
 function statusTone(s: string): "success" | "info" | "warning" | "default" | "primary" {
   if (s.includes("FINALIZ") || s.includes("DEVOLV")) return "success";
@@ -26,14 +27,14 @@ export default function EstoquePage() {
 
   const rows = useMemo(() => {
     return ds.cheios
-      .filter((c) => (filter === "all" ? true : c.status === filter))
-      .filter((c) => (q ? c.conteiner.toLowerCase().includes(q.toLowerCase()) : true));
+      .filter((c: CheioRow) => (filter === "all" ? true : c.status === filter))
+      .filter((c: CheioRow) => (q ? c.conteiner.toLowerCase().includes(q.toLowerCase()) : true));
   }, [ds.cheios, q, filter]);
 
-  const statuses = useMemo(() => Array.from(new Set(ds.cheios.map((c) => c.status))), [ds.cheios]);
+  const statuses = useMemo(() => Array.from(new Set(ds.cheios.map((c: CheioRow) => c.status))), [ds.cheios]);
 
   const handleExport = () => {
-    const exportData = rows.map(r => ({
+    const exportData = rows.map((r: CheioRow) => ({
       Container: r.conteiner,
       Lacre: r.lacre || "",
       Tipo: r.tipo || "",
@@ -90,7 +91,7 @@ export default function EstoquePage() {
             className="flex-1 bg-card border border-border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
           >
             <option value="all">Todos os Status</option>
-            {statuses.map((s) => (
+            {statuses.map((s: any) => (
               <option key={s} value={s}>
                 {s}
               </option>
@@ -120,7 +121,7 @@ export default function EstoquePage() {
                   </td>
                 </tr>
               )}
-              {rows.slice(0, 200).map((r, i) => (
+              {rows.slice(0, 200).map((r: CheioRow, i: number) => (
                 <tr key={r.conteiner + i} className="border-t border-border hover:bg-muted/30">
                   <td className="px-4 py-3">
                     <div className="font-medium">{r.conteiner}</div>

@@ -6,21 +6,22 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useDataset } from "@/lib/store";
+import type { VazioLocadoRow } from "@/lib/types";
 
 export default function VaziosPage() {
   const ds = useDataset();
   const [q, setQ] = useState("");
 
   const total = ds.vaziosLocados.length;
-  const emPatio = ds.vaziosLocados.filter((v) => !v.statusPatio || /patio|pátio|fabrica/i.test(v.statusPatio)).length;
-  const dePara = ds.vaziosLocados.filter((v) => /realizado/i.test(v.statusUso || "")).length;
-  const fabrica = ds.vaziosLocados.filter((v) => /fabrica/i.test(v.statusPatio || "")).length;
-  const saida = ds.vaziosLocados.filter((v) => /devolv|saida|saída/i.test(v.statusPatio || "")).length;
+  const emPatio = ds.vaziosLocados.filter((v: VazioLocadoRow) => !v.statusPatio || /patio|pátio|fabrica/i.test(v.statusPatio)).length;
+  const dePara = ds.vaziosLocados.filter((v: VazioLocadoRow) => /realizado/i.test(v.statusUso || "")).length;
+  const fabrica = ds.vaziosLocados.filter((v: VazioLocadoRow) => /fabrica/i.test(v.statusPatio || "")).length;
+  const saida = ds.vaziosLocados.filter((v: VazioLocadoRow) => /devolv|saida|saída/i.test(v.statusPatio || "")).length;
 
   const rows = useMemo(
     () =>
       ds.vaziosLocados
-        .filter((v) => (q ? v.conteiner.toLowerCase().includes(q.toLowerCase()) : true))
+        .filter((v: VazioLocadoRow) => (q ? v.conteiner.toLowerCase().includes(q.toLowerCase()) : true))
         .slice(0, 300),
     [ds.vaziosLocados, q],
   );
@@ -85,7 +86,7 @@ export default function VaziosPage() {
                     </td>
                   </tr>
                 )}
-                {rows.map((r, i) => (
+                {rows.map((r: VazioLocadoRow, i: number) => (
                   <tr key={`${r.conteiner}-${i}`} className="border-t border-border hover:bg-muted/20">
                     <td className="px-4 py-2.5 font-medium">{r.conteiner}</td>
                     <td className="px-4 py-2.5 text-muted-foreground">{r.tipo || "—"}</td>

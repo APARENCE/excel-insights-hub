@@ -20,6 +20,7 @@ import { useDataset } from "@/lib/store";
 import { dailyMovement, statusDistribution, summary } from "@/lib/analytics";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import type { VazioGenericRow } from "@/lib/types";
 
 const STATUS_COLORS = ["#16a34a", "#94a3b8", "#64748b", "#a855f7", "#0ea5e9", "#f59e0b", "#ef4444", "#8b5cf6"];
 
@@ -29,34 +30,31 @@ export default function Dashboard() {
   const dist = statusDistribution(ds.cheios);
   const movement = dailyMovement(ds.cheios);
   
-  // Lógica de Agrupamento e Contagem da Coluna D (Filtrando vazios/N/A)
   const groupedRenault = useMemo(() => {
     const map = new Map<string, number>();
-    const valid = ds.vaziosLocadosRenault.filter(v => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
-    valid.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
+    const valid = ds.vaziosLocadosRenault.filter((v: VazioGenericRow) => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
+    valid.forEach((v: VazioGenericRow) => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
     return Array.from(map.entries());
   }, [ds.vaziosLocadosRenault]);
 
   const groupedTlog = useMemo(() => {
     const map = new Map<string, number>();
-    const valid = ds.vaziosLocadosTlog.filter(v => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
-    valid.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
+    const valid = ds.vaziosLocadosTlog.filter((v: VazioGenericRow) => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
+    valid.forEach((v: VazioGenericRow) => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
     return Array.from(map.entries());
   }, [ds.vaziosLocadosTlog]);
 
   const groupedArmadores = useMemo(() => {
     const map = new Map<string, number>();
-    const valid = ds.vaziosArmadores.filter(v => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
-    valid.forEach(v => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
+    const valid = ds.vaziosArmadores.filter((v: VazioGenericRow) => v.colunaD && v.colunaD !== "N/A" && v.colunaD !== "-");
+    valid.forEach((v: VazioGenericRow) => map.set(v.colunaD, (map.get(v.colunaD) || 0) + 1));
     return Array.from(map.entries());
   }, [ds.vaziosArmadores]);
 
-  // Totais baseados na presença de valor na Coluna D
   const totalRenaultD = groupedRenault.reduce((acc, curr) => acc + curr[1], 0);
   const totalTlogD = groupedTlog.reduce((acc, curr) => acc + curr[1], 0);
   const totalArmadoresD = groupedArmadores.reduce((acc, curr) => acc + curr[1], 0);
 
-  // SOMA TOTAL: Ocupação Real (Cheios) + Vazios (Renault + Tlog + Armadores)
   const ocupacaoTotalReal = s.ocupacao + totalRenaultD + totalTlogD + totalArmadoresD;
   
   const ocupacaoPct = Math.round((ocupacaoTotalReal / s.capacidadeTotal) * 1000) / 10;
@@ -96,7 +94,6 @@ export default function Dashboard() {
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
       </div>
 
-      {/* Seção: Gestão de Vazios */}
       <section className="px-6 mt-6">
         <div className="flex items-center gap-2 mb-4">
           <Boxes className="h-5 w-5 text-primary" />
@@ -110,7 +107,6 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Detalhes Renault */}
           <div className="space-y-3">
             <div className="text-xs font-bold uppercase text-muted-foreground px-1">Status Vazios Renault</div>
             <div className="grid grid-cols-1 gap-2">
@@ -121,7 +117,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Detalhes Tlog */}
           <div className="space-y-3">
             <div className="text-xs font-bold uppercase text-muted-foreground px-1">Status Vazios Tlog</div>
             <div className="grid grid-cols-1 gap-2">
@@ -132,7 +127,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Detalhes Armadores */}
           <div className="space-y-3">
             <div className="text-xs font-bold uppercase text-muted-foreground px-1">Status Vazios Armadores</div>
             <div className="grid grid-cols-1 gap-2">
