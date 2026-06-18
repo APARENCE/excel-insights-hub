@@ -67,11 +67,6 @@ function emit() {
 
 const toInt = (val: any) => (val != null && !isNaN(Number(val)) ? Math.round(Number(val)) : null);
 
-const cleanConteiner = (name: string) => {
-  if (!name) return name;
-  return name.includes('::') ? name.split('::')[0] : name;
-};
-
 function countArmadores(cheios: CheioRow[]) {
   const counts: Record<string, number> = { MSC: 0, CMA: 0, MAERSK: 0 };
   for (const c of cheios) {
@@ -107,10 +102,9 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
 
     const tables = [
       { name: 'containers_cheios', data: dataset.cheios, map: (c: CheioRow) => {
-        const uniqueId = `${c.conteiner}::${crypto.randomUUID().slice(0, 8)}`;
         return {
           id: crypto.randomUUID(),
-          conteiner: uniqueId, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
+          conteiner: c.conteiner, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
           data_chegada: c.dataChegada, dias_no_patio: toInt(c.diasNoPatio), free_time: toInt(c.freeTime),
           demurrage_vencimento: c.demurrageVencimento, dias_para_vencimento: toInt(c.diasParaVencimento),
           status: c.status, fabrica: c.fabrica, data_envio_fabrica: c.dataEnvioFabrica,
@@ -118,26 +112,28 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
         };
       }},
       { name: 'vazios_locados', data: dataset.vaziosLocados, map: (v: VazioLocadoRow) => {
-        const uniqueId = `${v.conteiner}::${crypto.randomUUID().slice(0, 8)}`;
         return {
           id: crypto.randomUUID(),
-          conteiner: uniqueId, armador: v.armador, tipo: v.tipo, data_entrada: v.dataEntrada,
+          conteiner: v.conteiner, armador: v.armador, tipo: v.tipo, data_entrada: v.dataEntrada,
           data_de_para: v.dataDePara, cheio_de_para: v.cheioDePara, status_uso: v.statusUso,
           status_patio: v.statusPatio, dias_no_patio: toInt(v.diasNoPatio)
         };
       }},
       { name: 'vazio_ingesys', data: dataset.vazioIngesys, map: (i: VazioIngesysRow) => ({
         id: crypto.randomUUID(),
-        conteiner: `${i.conteiner}::${crypto.randomUUID().slice(0, 8)}`, status_d: i.statusD
+        conteiner: i.conteiner, status_d: i.statusD
       })},
       { name: 'vazios_locados_renault', data: dataset.vaziosLocadosRenault, map: (v: VazioGenericRow) => ({
-        conteiner: `${v.conteiner}::${crypto.randomUUID().slice(0, 8)}`, coluna_d: v.colunaD
+        id: v.id || crypto.randomUUID(),
+        conteiner: v.conteiner, coluna_d: v.colunaD
       })},
       { name: 'vazios_locados_tlog', data: dataset.vaziosLocadosTlog, map: (v: VazioGenericRow) => ({
-        conteiner: `${v.conteiner}::${crypto.randomUUID().slice(0, 8)}`, coluna_d: v.colunaD
+        id: v.id || crypto.randomUUID(),
+        conteiner: v.conteiner, coluna_d: v.colunaD
       })},
       { name: 'vazios_armadores', data: dataset.vaziosArmadores, map: (v: VazioGenericRow) => ({
-        conteiner: `${v.conteiner}::${crypto.randomUUID().slice(0, 8)}`, coluna_d: v.colunaD
+        id: v.id || crypto.randomUUID(),
+        conteiner: v.conteiner, coluna_d: v.colunaD
       })}
     ];
 
@@ -256,7 +252,7 @@ export async function syncFromSupabase() {
     state = {
       ...state,
       cheios: cheiosData && cheiosData.length > 0 ? cheiosData.map((c: any) => ({
-        conteiner: cleanConteiner(c.conteiner),
+        conteiner: c.conteiner,
         lacre: c.lacre,
         tipo: c.tipo,
         armador: c.armador,
@@ -274,7 +270,7 @@ export async function syncFromSupabase() {
         colunaAS: c.coluna_as
       })) : state.cheios,
       vaziosLocados: vaziosData && vaziosData.length > 0 ? vaziosData.map((v: any) => ({
-        conteiner: cleanConteiner(v.conteiner),
+        conteiner: v.conteiner,
         armador: v.armador,
         tipo: v.tipo,
         dataEntrada: v.data_entrada,
@@ -285,29 +281,29 @@ export async function syncFromSupabase() {
         diasNoPatio: v.dias_no_patio
       })) : state.vaziosLocados,
       vazioIngesys: ingesysData && ingesysData.length > 0 ? ingesysData.map((i: any) => ({
-        conteiner: cleanConteiner(i.conteiner),
+        conteiner: i.conteiner,
         statusD: i.status_d
       })) : state.vazioIngesys,
       vaziosLocadosRenault: renaultData && renaultData.length > 0 ? renaultData.map((v: any) => ({
         id: v.id,
-        conteiner: cleanConteiner(v.conteiner),
+        conteiner: v.conteiner,
         colunaD: v.coluna_d || "N/A"
       })) : state.vaziosLocadosRenault,
       vaziosLocadosTlog: tlogData && tlogData.length > 0 ? tlogData.map((v: any) => ({
         id: v.id,
-        conteiner: cleanConteiner(v.conteiner),
+        conteiner: v.conteiner,
         colunaD: v.coluna_d || "N/A"
       })) : state.vaziosLocadosTlog,
       vaziosArmadores: armadoresData && armadoresData.length > 0 ? armadoresData.map((v: any) => ({
         id: v.id,
-        conteiner: cleanConteiner(v.conteiner),
+        conteiner: v.conteiner,
         colunaD: v.coluna_d || "N/A"
       })) : state.vaziosArmadores,
       imports: combinedImports,
       activeImportId: activeImportId,
       priorityRequests: prioritiesData ? prioritiesData.map((p: any) => ({
         id: p.id,
-        conteiner: cleanConteiner(p.conteiner),
+        conteiner: p.conteiner,
         nivel: p.nivel,
         status: p.status,
         solicitadoEm: p.solicitado_em,
@@ -344,11 +340,6 @@ export async function syncFromSupabase() {
 if (typeof window !== 'undefined') {
   supabase.channel('db-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'priority_requests' }, () => syncFromSupabase())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'containers_cheios' }, () => syncFromSupabase())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazio_ingesys' }, () => syncFromSupabase())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_renault' }, () => syncFromSupabase())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_tlog' }, () => syncFromSupabase())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_armadores' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => syncFromSupabase())
     .subscribe();
 }
