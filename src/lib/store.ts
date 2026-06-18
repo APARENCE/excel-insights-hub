@@ -59,7 +59,6 @@ function getInitialState(): AppDataset & { userRole: UserRole } {
 
 let state: AppDataset & { userRole: UserRole } = getInitialState();
 const listeners = new Set<() => void>();
-let isSaving = false; // Trava para evitar que a sincronização em tempo real sobrescreva dados parciais durante o salvamento em lote
 
 function emit() {
   for (const l of listeners) l();
@@ -86,7 +85,6 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
   }
 
   const toastId = toast.loading("Salvando dados no Supabase...");
-  isSaving = true; // Ativa a trava de salvamento
 
   try {
     // 1. Salva o histórico de importação
@@ -101,38 +99,31 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
     if (importError) throw importError;
 
     const tables = [
-      { name: 'containers_cheios', data: dataset.cheios, map: (c: CheioRow) => {
-        return {
-          id: crypto.randomUUID(),
-          conteiner: c.conteiner, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
-          data_chegada: c.dataChegada, dias_no_patio: toInt(c.diasNoPatio), free_time: toInt(c.freeTime),
-          demurrage_vencimento: c.demurrageVencimento, dias_para_vencimento: toInt(c.diasParaVencimento),
-          status: c.status, fabrica: c.fabrica, data_envio_fabrica: c.dataEnvioFabrica,
-          conteiner_de_para: c.conteinerDePara, data_devolucao_vazio: c.dataDevolucaoVazio, coluna_as: c.colunaAS
-        };
-      }},
-      { name: 'vazios_locados', data: dataset.vaziosLocados, map: (v: VazioLocadoRow) => {
-        return {
-          id: crypto.randomUUID(),
-          conteiner: v.conteiner, armador: v.armador, tipo: v.tipo, data_entrada: v.dataEntrada,
-          data_de_para: v.dataDePara, cheio_de_para: v.cheioDePara, status_uso: v.statusUso,
-          status_patio: v.statusPatio, dias_no_patio: toInt(v.diasNoPatio)
-        };
-      }},
+      { name: 'containers_cheios', data: dataset.cheios, map: (c: CheioRow) => ({
+        id: crypto.randomUUID(),
+        conteiner: c.conteiner, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
+        data_chegada: c.dataChegada, dias_no_patio: toInt(c.diasNoPatio), free_time: toInt(c.freeTime),
+        demurrage_vencimento: c.demurrageVencimento, dias_para_vencimento: toInt(c.diasParaVencimento),
+        status: c.status, fabrica: c.fabrica, data_envio_fabrica: c.dataEnvioFabrica,
+        conteiner_de_para: c.conteinerDePara, data_devolucao_vazio: c.dataDevolucaoVazio, coluna_as: c.colunaAS
+      })},
+      { name: 'vazios_locados', data: dataset.vaziosLocados, map: (v: VazioLocadoRow) => ({
+        id: crypto.randomUUID(),
+        conteiner: v.conteiner, armador: v.armador, tipo: v.tipo, data_entrada: v.dataEntrada,
+        data_de_para: v.dataDePara, cheio_de_para: v.cheioDePara, status_uso: v.statusUso,
+        status_patio: v.statusPatio, dias_no_patio: toInt(v.diasNoPatio)
+      })},
       { name: 'vazio_ingesys', data: dataset.vazioIngesys, map: (i: VazioIngesysRow) => ({
         id: crypto.randomUUID(),
         conteiner: i.conteiner, status_d: i.statusD
       })},
       { name: 'vazios_locados_renault', data: dataset.vaziosLocadosRenault, map: (v: VazioGenericRow) => ({
-        id: v.id || crypto.randomUUID(),
         conteiner: v.conteiner, coluna_d: v.colunaD
       })},
       { name: 'vazios_locados_tlog', data: dataset.vaziosLocadosTlog, map: (v: VazioGenericRow) => ({
-        id: v.id || crypto.randomUUID(),
         conteiner: v.conteiner, coluna_d: v.colunaD
       })},
       { name: 'vazios_armadores', data: dataset.vaziosArmadores, map: (v: VazioGenericRow) => ({
-        id: v.id || crypto.randomUUID(),
         conteiner: v.conteiner, coluna_d: v.colunaD
       })}
     ];
@@ -167,18 +158,11 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
     console.error("[SUPABASE] Erro crítico ao salvar dados:", error);
     toast.error(`Erro ao salvar no banco de dados: ${error.message || error}`, { id: toastId });
     return false;
-  } finally {
-    isSaving = false; // Desativa a trava de salvamento
-    await syncFromSupabase(); // Sincroniza uma vez no final para garantir consistência
   }
 }
 
 export async function syncFromSupabase() {
   if (typeof window === 'undefined') return;
-  if (isSaving) {
-    console.log("[SUPABASE] Salvamento em andamento. Ignorando sincronização em tempo real.");
-    return;
-  }
 
   try {
     // VERIFICAÇÃO DE SEGURANÇA: Só prossegue se houver uma sessão ativa no Supabase
@@ -340,6 +324,11 @@ export async function syncFromSupabase() {
 if (typeof window !== 'undefined') {
   supabase.channel('db-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'priority_requests' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'containers_cheios' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazio_ingesys' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_renault' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_tlog' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_armadores' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => syncFromSupabase())
     .subscribe();
 }
