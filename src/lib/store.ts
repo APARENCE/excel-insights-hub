@@ -78,16 +78,40 @@ function countArmadores(cheios: CheioRow[]) {
 }
 
 export async function saveDatasetToSupabase(dataset: AppDataset = state) {
-  const lastImport = dataset.imports[0];
-  if (!lastImport) {
-    console.log("[SUPABASE] Nenhuma importação encontrada para salvar.");
+  console.log("[DEBUG] === INICIANDO SALVAMENTO NO SUPABASE ===");
+  console.log("[DEBUG] Dataset recebido:", {
+    cheios: dataset.cheios?.length || 0,
+    vaziosLocados: dataset.vaziosLocados?.length || 0,
+    vazioIngesys: dataset.vazioIngesys?.length || 0,
+    vaziosLocadosRenault: dataset.vaziosLocadosRenault?.length || 0,
+    vaziosLocadosTlog: dataset.vaziosLocadosTlog?.length || 0,
+    vaziosArmadores: dataset.vaziosArmadores?.length || 0,
+  });
+
+  // Verifica sessão
+  const { data: { session } } = await supabase.auth.getSession();
+  console.log("[DEBUG] Sessão ativa:", !!session, session?.user?.email);
+  
+  if (!session) {
+    console.log("[DEBUG] Nenhuma sessão ativa. Salvamento abortado.");
+    toast.error("Você precisa estar logado para salvar no Supabase. Faça login primeiro.");
     return false;
   }
+
+  const lastImport = dataset.imports[0];
+  if (!lastImport) {
+    console.log("[DEBUG] Nenhuma importação encontrada para salvar.");
+    toast.error("Nenhuma importação para salvar.");
+    return false;
+  }
+
+  console.log("[DEBUG] Importação:", lastImport.id, lastImport.fileName, "itens:", lastImport.itemCount);
 
   const toastId = toast.loading("Salvando dados no Supabase...");
 
   try {
     // 1. Salva o histórico de importação
+    console.log("[DEBUG] Salvando import_history...");
     const { error: importError } = await supabase.from('import_history').upsert({
       id: lastImport.id,
       file_name: lastImport.fileName,
@@ -96,7 +120,11 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
       imported_at: lastImport.importedAt
     });
 
-    if (importError) throw importError;
+    if (importError) {
+      console.error("[DEBUG] Erro ao salvar import_history:", importError);
+      throw importError;
+    }
+    console.log("[DEBUG] import_history salvo com sucesso");
 
     const tables = [
       { name: 'containers_cheios', data: dataset.cheios, map: (c: CheioRow) => ({
@@ -129,33 +157,51 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
     ];
 
     for (const table of tables) {
-          console.log(`[SUPABASE] Limpando e salvando tabela: ${table.name}`);
-          
-          // Deleta registros existentes usando a chave primária id (UUID) para limpeza segura de todos os registros
-          const { error: delError } = await supabase.from(table.name).delete().neq('id', '00000000-0000-0000-0000-000000000000');
-          if (delError) {
-            console.error(`[SUPABASE] Erro ao limpar tabela ${table.name}:`, delError);
-            throw delError;
-          }
+      console.log(`[DEBUG] === Processando tabela: ${table.name} ===`);
+      console.log(`[DEBUG] Registros para salvar: ${table.data.length}`);
+      
+      if (table.data.length === 0) {
+        console.log(`[DEBUG] Tabela ${table.name}: 0 registros, pulando insert`);
+        continue;
+      }
+
+      // Deleta registros existentes
+      console.log(`[DEBUG] Limpando tabela ${table.name}...`);
+      const { error: delError } = await supabase.from(table.name).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (delError) {
+        console.error(`[ERRO] Erro ao limpar tabela ${table.name}:`, delError);
+        throw delError;
+      }
+      console.log("[DEBUG] Limpeza concluída");
 
       if (table.data.length > 0) {
         const mappedData = table.data.map(table.map as any);
+        console.log(`[DEBUG] Dados mapeados para ${table.name}: ${mappedData.length} registros`);
+        console.log(`[DEBUG] Primeiro registro:`, JSON.stringify(mappedData[0], null, 2));
+        
         const chunkSize = 100;
+        let totalInserted = 0;
         for (let i = 0; i < mappedData.length; i += chunkSize) {
           const chunk = mappedData.slice(i, i + chunkSize);
+          console.log(`[DEBUG] Inserindo lote ${i/chunkSize + 1}/${Math.ceil(mappedData.length/chunkSize)} na tabela ${table.name} (${chunk.length} registros)...`);
+          
           const { error: insError } = await supabase.from(table.name).insert(chunk);
           if (insError) {
-            console.error(`[SUPABASE] Erro ao inserir lote na tabela ${table.name}:`, insError);
+            console.error(`[ERRO] Erro ao inserir lote na tabela ${table.name}:`, insError);
             throw insError;
           }
+          totalInserted += chunk.length;
+          console.log(`[DEBUG] Lote inserido com sucesso. Total até agora: ${totalInserted}`);
         }
+        console.log(`[SUCESSO] Tabela ${table.name} salva com ${totalInserted} registros`);
       }
     }
 
     toast.success("Dados salvos com sucesso no Supabase!", { id: toastId });
+    console.log("[DEBUG] === SALVAMENTO CONCLUÍDO COM SUCESSO ===");
     return true;
   } catch (error: any) {
-    console.error("[SUPABASE] Erro crítico ao salvar dados:", error);
+    console.error("[ERRO CRÍTICO] Erro crítico ao salvar dados:", error);
     toast.error(`Erro ao salvar no banco de dados: ${error.message || error}`, { id: toastId });
     return false;
   }
