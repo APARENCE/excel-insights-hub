@@ -129,14 +129,14 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
     ];
 
     for (const table of tables) {
-      console.log(`[SUPABASE] Limpando e salvando tabela: ${table.name}`);
-      
-      // Deleta registros existentes
-      const { error: delError } = await supabase.from(table.name).delete().neq('conteiner', '_none_');
-      if (delError) {
-        console.error(`[SUPABASE] Erro ao limpar tabela ${table.name}:`, delError);
-        throw delError;
-      }
+          console.log(`[SUPABASE] Limpando e salvando tabela: ${table.name}`);
+          
+          // Deleta registros existentes usando a chave primária id (UUID) para limpeza segura de todos os registros
+          const { error: delError } = await supabase.from(table.name).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          if (delError) {
+            console.error(`[SUPABASE] Erro ao limpar tabela ${table.name}:`, delError);
+            throw delError;
+          }
 
       if (table.data.length > 0) {
         const mappedData = table.data.map(table.map as any);
@@ -438,26 +438,26 @@ export async function clearDataset() {
   emit();
 
   const tablesWithConteiner = [
-    'containers_cheios',
-    'vazios_locados',
-    'vazio_ingesys',
-    'vazios_locados_renault',
-    'vazios_locados_tlog',
-    'vazios_armadores'
-  ];
-
-  const tablesWithId = [
-    'import_history',
-    'priority_requests'
-  ];
-
-  try {
-    for (const table of tablesWithConteiner) {
-      await supabase.from(table).delete().neq('conteiner', '_none_');
-    }
-    for (const table of tablesWithId) {
-      await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    }
+      'containers_cheios',
+      'vazios_locados',
+      'vazio_ingesys',
+      'vazios_locados_renault',
+      'vazios_locados_tlog',
+      'vazios_armadores'
+    ];
+  
+    const tablesWithId = [
+      'import_history',
+      'priority_requests'
+    ];
+  
+    try {
+      for (const table of tablesWithConteiner) {
+        await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+      for (const table of tablesWithId) {
+        await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      }
     toast.success("Banco de dados e histórico limpos com sucesso!");
   } catch (e) {
     console.error("[SUPABASE] Erro ao limpar tabelas remota:", e);
