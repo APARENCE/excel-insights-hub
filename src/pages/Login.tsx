@@ -5,7 +5,11 @@ import { Container, ShieldCheck } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 
-const ALLOWED_EMAILS = ["patiotlog@outlook.com", "renaultdobrasil.com@outlook.com"];
+// ATENÇÃO: Lista temporária para testes. Remover após validar autenticação!
+const ALLOWED_EMAILS: string[] = [
+  "teste.tlog@gmail.com",
+  "tecnicocomputer.sistemas@gmail.com",
+];
 
 export default function Login() {
   const { session } = useAuth();
