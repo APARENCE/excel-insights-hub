@@ -185,11 +185,20 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
           const chunk = mappedData.slice(i, i + chunkSize);
           console.log(`[DEBUG] Inserindo lote ${i/chunkSize + 1}/${Math.ceil(mappedData.length/chunkSize)} na tabela ${table.name} (${chunk.length} registros)...`);
           
-          const { error: insError } = await supabase.from(table.name).insert(chunk);
-          if (insError) {
-            console.error(`[ERRO] Erro ao inserir lote na tabela ${table.name}:`, insError);
-            throw insError;
+          let retries = 0;
+          while (retries < 3) {
+            const { error: insError } = await supabase.from(table.name).insert(chunk);
+            if (!insError) break;
+            
+            retries++;
+            console.error(`[ERRO] Tentativa ${retries} falhou no lote ${i/chunkSize + 1}:`, insError);
+            if (retries === 3) {
+              console.error(`[ERRO CRÍTICO] Falha permanente no lote ${i/chunkSize + 1} após 3 tentativas`);
+              throw insError;
+            }
+            await new Promise(r => setTimeout(r, 1000 * retries));
           }
+          
           totalInserted += chunk.length;
           console.log(`[DEBUG] Lote inserido com sucesso. Total até agora: ${totalInserted}`);
         }
