@@ -26,6 +26,7 @@ export default function ImportarPage() {
   const [error, setError] = useState<string | null>(null);
   const [drag, setDrag] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [lastSaveResult, setLastSaveResult] = useState<string | null>(null);
 
   async function handleFiles(files: FileList | File[]) {
     setError(null);
@@ -68,19 +69,26 @@ export default function ImportarPage() {
         };
 
         // Atualiza o dataset global incluindo as novas abas de vazios e define como ativo
-        await setDataset((prev) => ({
-          ...prev,
-          cheios: parsed.cheios.length ? parsed.cheios : prev.cheios,
-          vaziosLocados: parsed.vaziosLocados.length ? parsed.vaziosLocados : prev.vaziosLocados,
-          vazioIngesys: parsed.vazioIngesys.length ? parsed.vazioIngesys : prev.vazioIngesys,
-          vaziosLocadosRenault: parsed.vaziosLocadosRenault.length ? parsed.vaziosLocadosRenault : prev.vaziosLocadosRenault,
-          vaziosLocadosTlog: parsed.vaziosLocadosTlog.length ? parsed.vaziosLocadosTlog : prev.vaziosLocadosTlog,
-          vaziosArmadores: parsed.vaziosArmadores.length ? parsed.vaziosArmadores : prev.vaziosArmadores,
-          imports: [record, ...prev.imports].slice(0, 50),
-          lastImportAt: record.importedAt,
-          activeImportId: importId,
-        }));
-      }
+                await setDataset((prev) => ({
+                  ...prev,
+                  cheios: parsed.cheios.length ? parsed.cheios : prev.cheios,
+                  vaziosLocados: parsed.vaziosLocados.length ? parsed.vaziosLocados : prev.vaziosLocados,
+                  vazioIngesys: parsed.vazioIngesys.length ? parsed.vazioIngesys : prev.vazioIngesys,
+                  vaziosLocadosRenault: parsed.vaziosLocadosRenault.length ? parsed.vaziosLocadosRenault : prev.vaziosLocadosRenault,
+                  vaziosLocadosTlog: parsed.vaziosLocadosTlog.length ? parsed.vaziosLocadosTlog : prev.vaziosLocadosTlog,
+                  vaziosArmadores: parsed.vaziosArmadores.length ? parsed.vaziosArmadores : prev.vaziosArmadores,
+                  imports: [record, ...prev.imports].slice(0, 50),
+                  lastImportAt: record.importedAt,
+                  activeImportId: importId,
+                }));
+        
+                // Salva explicitamente no Supabase com feedback de resultado
+                setLastSaveResult("Salvando upload no banco de dados...");
+                const saved = await saveDatasetToSupabase();
+                setLastSaveResult(saved
+                  ? `Upload "${file.name}" salvo com sucesso no Supabase.`
+                  : `Falha ao salvar "${file.name}" no Supabase. Verifique se está logado e o console.`);
+              }
     } catch (e) {
       console.error("Import error:", e);
       setError(e instanceof Error ? e.message : "Erro ao processar o arquivo.");
@@ -212,11 +220,22 @@ export default function ImportarPage() {
           </span>
 
           {error && (
-            <div className="mt-3 inline-flex items-center gap-2 text-sm text-destructive">
-              <AlertCircle className="h-4 w-4" />
-              {error}
-            </div>
-          )}
+                      <div className="mt-3 inline-flex items-center gap-2 text-sm text-destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        {error}
+                      </div>
+                    )}
+          
+                    {lastSaveResult && (
+                      <div className={`mt-2 inline-flex items-center gap-2 text-sm ${
+                        lastSaveResult.includes("sucesso") ? "text-success" : "text-amber-500"
+                      }`}>
+                        {lastSaveResult.includes("sucesso")
+                          ? <CheckCircle2 className="h-4 w-4" />
+                          : <AlertCircle className="h-4 w-4" />}
+                        {lastSaveResult}
+                      </div>
+                    )}
         </label>
       </div>
 

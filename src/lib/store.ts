@@ -406,12 +406,17 @@ export async function setDataset(updater: (prev: AppDataset & { userRole: UserRo
   }
 
   state = newState;
-  emit();
+    emit();
   
-  if (newState.lastImportAt !== oldLastImport) {
-    await saveDatasetToSupabase(newState);
+    // Persiste automaticamente no Supabase quando um novo upload é ativado
+    if (newState.lastImportAt !== oldLastImport) {
+      try {
+        await saveDatasetToSupabase(newState);
+      } catch (e) {
+        console.error("[STORE] Falha no salvamento automático:", e);
+      }
+    }
   }
-}
 
 export async function restoreImport(importId: string) {
   if (typeof window === 'undefined') return;
