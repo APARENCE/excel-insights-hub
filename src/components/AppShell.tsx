@@ -2,11 +2,7 @@
 
 import {
   LayoutGrid,
-  Boxes,
-  Clock,
-  PackageOpen,
   CloudUpload,
-  Zap,
   Container,
   UserCircle,
   Truck,
@@ -17,38 +13,30 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { NavLink, usePathname } from "@/components/NavLink";
-import { useDataset, setUserRole } from "@/lib/store";
+import { useDataset } from "@/lib/store";
 import { useAuth } from "@/components/AuthProvider";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutGrid },
-  { to: "/estoque", label: "Estoque do Pátio", icon: Boxes },
-  { to: "/prioridades", label: "Prioridades Fábrica", icon: Zap },
-  { to: "/demurrage", label: "Controle Demurrage", icon: Clock },
-  { to: "/vazios", label: "Vazios Locados", icon: PackageOpen },
+  { to: "/cliente", label: "Cliente Renault", icon: UserCircle },
+  { to: "/transportadora", label: "Transportadora", icon: Truck },
   { to: "/importar", label: "Importar Dados", icon: CloudUpload },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { userRole } = useDataset();
   const { signOut, user, session, loading } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const userEmail = user?.email?.toLowerCase() || "";
-  const isRestricted = userEmail === "renaultdobrasil.com@outlook.com";
 
   useEffect(() => {
-    if (!loading && !session && typeof window !== 'undefined' && window.location.pathname !== '/login') {
-      window.location.href = '/login';
+    if (!loading && !session && typeof window !== "undefined" && window.location.pathname !== "/login") {
+      window.location.href = "/login";
     }
-    
-    if (isRestricted && userRole !== "CLIENTE") {
-      setUserRole("CLIENTE");
-    }
-  }, [session, loading, isRestricted, userRole]);
+  }, [session, loading]);
 
   // Fecha o menu mobile quando a rota muda
   useEffect(() => {
@@ -63,13 +51,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!session && typeof window !== 'undefined' && window.location.pathname !== '/login') {
+  if (!session && typeof window !== "undefined" && window.location.pathname !== "/login") {
     return null;
   }
-
-  const filteredNav = isRestricted 
-    ? navItems.filter(item => ["/", "/prioridades", "/demurrage"].includes(item.to))
-    : navItems;
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -80,43 +64,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      {!isRestricted && (
-        <div className="px-3 py-4 border-b border-sidebar-border bg-sidebar-accent/30">
-          <label className="text-[10px] font-bold text-sidebar-foreground/40 uppercase tracking-widest block mb-2 px-1">Perfil Ativo</label>
-          <div className="flex flex-col gap-1">
-            <button 
-              onClick={() => setUserRole("CLIENTE")}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-all",
-                userRole === "CLIENTE" ? "bg-primary text-white font-bold" : "hover:bg-sidebar-accent text-sidebar-foreground/60"
-              )}
-            >
-              <UserCircle className="h-3.5 w-3.5" /> Cliente (Renault)
-            </button>
-            <button 
-              onClick={() => setUserRole("TRANSPORTADORA")}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-all",
-                userRole === "TRANSPORTADORA" ? "bg-info text-white font-bold" : "hover:bg-sidebar-accent text-sidebar-foreground/60"
-              )}
-            >
-              <Truck className="h-3.5 w-3.5" /> Transportadora
-            </button>
-          </div>
-        </div>
-      )}
-
-      {isRestricted && (
-        <div className="px-4 py-3 border-b border-sidebar-border bg-primary/10">
-          <div className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Perfil</div>
-          <div className="text-xs font-bold text-sidebar-foreground flex items-center gap-2">
-            <UserCircle className="h-3.5 w-3.5 text-primary" /> Cliente Renault
-          </div>
-        </div>
-      )}
-
       <nav className="flex-1 px-2 py-3 space-y-1">
-        {filteredNav.map((item) => {
+        {navItems.map((item) => {
           const active = pathname === item.to;
           const Icon = item.icon;
           return (
@@ -136,7 +85,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           );
         })}
       </nav>
-      
+
       <div className="px-4 py-4 border-t border-sidebar-border">
         <div className="flex items-center justify-between mb-3">
           <div className="min-w-0">
@@ -146,7 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               ONLINE
             </div>
           </div>
-          <button 
+          <button
             onClick={() => signOut()}
             className="p-1.5 rounded-md hover:bg-destructive/20 text-sidebar-foreground/60 hover:text-destructive transition-colors"
             title="Sair"

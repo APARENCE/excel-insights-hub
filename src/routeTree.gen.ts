@@ -9,22 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as VaziosRouteImport } from './routes/vazios'
-import { Route as PrioridadesRouteImport } from './routes/prioridades'
+import { Route as TransportadoraRouteImport } from './routes/transportadora'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ImportarRouteImport } from './routes/importar'
-import { Route as EstoqueRouteImport } from './routes/estoque'
-import { Route as DemurrageRouteImport } from './routes/demurrage'
+import { Route as ClienteRouteImport } from './routes/cliente'
 import { Route as IndexRouteImport } from './routes/index'
 
-const VaziosRoute = VaziosRouteImport.update({
-  id: '/vazios',
-  path: '/vazios',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrioridadesRoute = PrioridadesRouteImport.update({
-  id: '/prioridades',
-  path: '/prioridades',
+const TransportadoraRoute = TransportadoraRouteImport.update({
+  id: '/transportadora',
+  path: '/transportadora',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -37,14 +30,9 @@ const ImportarRoute = ImportarRouteImport.update({
   path: '/importar',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EstoqueRoute = EstoqueRouteImport.update({
-  id: '/estoque',
-  path: '/estoque',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemurrageRoute = DemurrageRouteImport.update({
-  id: '/demurrage',
-  path: '/demurrage',
+const ClienteRoute = ClienteRouteImport.update({
+  id: '/cliente',
+  path: '/cliente',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -55,86 +43,49 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/demurrage': typeof DemurrageRoute
-  '/estoque': typeof EstoqueRoute
+  '/cliente': typeof ClienteRoute
   '/importar': typeof ImportarRoute
   '/login': typeof LoginRoute
-  '/prioridades': typeof PrioridadesRoute
-  '/vazios': typeof VaziosRoute
+  '/transportadora': typeof TransportadoraRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/demurrage': typeof DemurrageRoute
-  '/estoque': typeof EstoqueRoute
+  '/cliente': typeof ClienteRoute
   '/importar': typeof ImportarRoute
   '/login': typeof LoginRoute
-  '/prioridades': typeof PrioridadesRoute
-  '/vazios': typeof VaziosRoute
+  '/transportadora': typeof TransportadoraRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/demurrage': typeof DemurrageRoute
-  '/estoque': typeof EstoqueRoute
+  '/cliente': typeof ClienteRoute
   '/importar': typeof ImportarRoute
   '/login': typeof LoginRoute
-  '/prioridades': typeof PrioridadesRoute
-  '/vazios': typeof VaziosRoute
+  '/transportadora': typeof TransportadoraRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/demurrage'
-    | '/estoque'
-    | '/importar'
-    | '/login'
-    | '/prioridades'
-    | '/vazios'
+  fullPaths: '/' | '/cliente' | '/importar' | '/login' | '/transportadora'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/demurrage'
-    | '/estoque'
-    | '/importar'
-    | '/login'
-    | '/prioridades'
-    | '/vazios'
-  id:
-    | '__root__'
-    | '/'
-    | '/demurrage'
-    | '/estoque'
-    | '/importar'
-    | '/login'
-    | '/prioridades'
-    | '/vazios'
+  to: '/' | '/cliente' | '/importar' | '/login' | '/transportadora'
+  id: '__root__' | '/' | '/cliente' | '/importar' | '/login' | '/transportadora'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DemurrageRoute: typeof DemurrageRoute
-  EstoqueRoute: typeof EstoqueRoute
+  ClienteRoute: typeof ClienteRoute
   ImportarRoute: typeof ImportarRoute
   LoginRoute: typeof LoginRoute
-  PrioridadesRoute: typeof PrioridadesRoute
-  VaziosRoute: typeof VaziosRoute
+  TransportadoraRoute: typeof TransportadoraRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/vazios': {
-      id: '/vazios'
-      path: '/vazios'
-      fullPath: '/vazios'
-      preLoaderRoute: typeof VaziosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/prioridades': {
-      id: '/prioridades'
-      path: '/prioridades'
-      fullPath: '/prioridades'
-      preLoaderRoute: typeof PrioridadesRouteImport
+    '/transportadora': {
+      id: '/transportadora'
+      path: '/transportadora'
+      fullPath: '/transportadora'
+      preLoaderRoute: typeof TransportadoraRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -151,18 +102,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ImportarRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/estoque': {
-      id: '/estoque'
-      path: '/estoque'
-      fullPath: '/estoque'
-      preLoaderRoute: typeof EstoqueRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demurrage': {
-      id: '/demurrage'
-      path: '/demurrage'
-      fullPath: '/demurrage'
-      preLoaderRoute: typeof DemurrageRouteImport
+    '/cliente': {
+      id: '/cliente'
+      path: '/cliente'
+      fullPath: '/cliente'
+      preLoaderRoute: typeof ClienteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -177,12 +121,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DemurrageRoute: DemurrageRoute,
-  EstoqueRoute: EstoqueRoute,
+  ClienteRoute: ClienteRoute,
   ImportarRoute: ImportarRoute,
   LoginRoute: LoginRoute,
-  PrioridadesRoute: PrioridadesRoute,
-  VaziosRoute: VaziosRoute,
+  TransportadoraRoute: TransportadoraRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
