@@ -73,7 +73,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           if (!hasAccess) return null;
 
           const active = pathname === item.to;
-          const Icon = item.icon;
           return (
             <NavLink
               key={item.to}
@@ -83,7 +82,13 @@ export function AppShell({ children }: { children: ReactNode }) {
                 active
                   ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                   : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
-              )}\n            >\n              <Icon className="h-4 w-4" />\n              {item.label}\n            </NavLink>\n          );
+              )}>
+              <span className="h-4 w-4">
+                {item.icon}
+              </span>
+              {item.label}
+            </NavLink>
+          );
         })}
       </nav>
 
