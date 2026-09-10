@@ -235,7 +235,7 @@ export async function syncFromSupabase() {
     // VERIFICAÇÃO DE SEGURANÇA: Só prossegue se houver uma sessão ativa no Supabase
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      console.log("[SUPABASE] Sem sessão ativa. Ignorando sincronização para evitar sobrescrever dados locais.");
+      console.log("[SUPABASE] Sem sessão ativa. Mantendo dados locais.");
       return;
     }
 
@@ -268,15 +268,9 @@ export async function syncFromSupabase() {
     const tlogData = getData(7);
     const armadoresData = getData(8);
 
-    // TRAVA DE SEGURANÇA: Se o Supabase retornar menos dados do que temos localmente,
-    // e o banco remoto estiver vazio ou incompleto, mantemos os dados locais para evitar perda de informação.
-    const localTotal = state.cheios.length + state.vaziosLocados.length;
-    const remoteTotal = (cheiosData?.length || 0) + (vaziosData?.length || 0);
-
-    if (localTotal > 0 && remoteTotal === 0) {
-      console.log("[SUPABASE] Banco remoto vazio ou incompleto. Mantendo dados locais intactos.");
-      return;
-    }
+    // Removida trava de segurança que impedia sincronização.
+    // Agora sempre sincroniza do Supabase quando há sessão ativa,
+    // garantindo que os dados persistem após recarregar a página.
 
     const localImports = state.imports;
     const supabaseImports = importsData ? importsData.map((i: any) => ({
