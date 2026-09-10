@@ -60,6 +60,18 @@ function getInitialState(): AppDataset & { userRole: UserRole } {
 let state: AppDataset & { userRole: UserRole } = getInitialState();
 const listeners = new Set<() => void>();
 
+// Sincronização automática ao montar o aplicativo - garante que os dados
+// reflitam o banco sempre que o app for recarregado
+;(async () => {
+  if (typeof window !== 'undefined') {
+    try {
+      await syncFromSupabase();
+    } catch (e) {
+      console.error("[STORE] Erro na sincronização automática inicial:", e);
+    }
+  }
+})();
+
 function emit() {
   for (const l of listeners) l();
 }
