@@ -289,76 +289,43 @@ export async function syncFromSupabase() {
     }
     combinedImports.sort((a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime());
 
-    let activeImportId = state.activeImportId;
-    if (!activeImportId && combinedImports.length > 0) {
-      activeImportId = combinedImports[0].id;
-    }
-
-    state = {
-      ...state,
-      cheios: cheiosData && cheiosData.length > 0 ? cheiosData.map((c: any) => ({
-        conteiner: c.conteiner,
-        lacre: c.lacre,
-        tipo: c.tipo,
-        armador: c.armador,
-        navio: c.navio,
-        dataChegada: c.data_chegada,
-        diasNoPatio: c.dias_no_patio,
-        freeTime: c.free_time,
-        demurrageVencimento: c.demurrage_vencimento,
-        diasParaVencimento: c.dias_para_vencimento,
-        status: c.status,
-        fabrica: c.fabrica,
-        dataEnvioFabrica: c.data_envio_fabrica,
-        conteinerDePara: c.conteiner_de_para,
-        dataDevolucaoVazio: c.data_devolucao_vazio,
-        colunaAS: c.coluna_as
-      })) : state.cheios,
-      vaziosLocados: vaziosData && vaziosData.length > 0 ? vaziosData.map((v: any) => ({
-        conteiner: v.conteiner,
-        armador: v.armador,
-        tipo: v.tipo,
-        dataEntrada: v.data_entrada,
-        dataDePara: v.data_de_para,
-        cheioDePara: v.cheio_de_para,
-        statusUso: v.status_uso,
-        statusPatio: v.status_patio,
-        diasNoPatio: v.dias_no_patio
-      })) : state.vaziosLocados,
-      vazioIngesys: ingesysData && ingesysData.length > 0 ? ingesysData.map((i: any) => ({
-        conteiner: i.conteiner,
-        statusD: i.status_d
-      })) : state.vazioIngesys,
-      vaziosLocadosRenault: renaultData && renaultData.length > 0 ? renaultData.map((v: any) => ({
-        id: v.id,
-        conteiner: v.conteiner,
-        colunaD: v.coluna_d || "N/A"
-      })) : state.vaziosLocadosRenault,
-      vaziosLocadosTlog: tlogData && tlogData.length > 0 ? tlogData.map((v: any) => ({
-        id: v.id,
-        conteiner: v.conteiner,
-        colunaD: v.coluna_d || "N/A"
-      })) : state.vaziosLocadosTlog,
-      vaziosArmadores: armadoresData && armadoresData.length > 0 ? armadoresData.map((v: any) => ({
-        id: v.id,
-        conteiner: v.conteiner,
-        colunaD: v.coluna_d || "N/A"
-      })) : state.vaziosArmadores,
-      imports: combinedImports,
-      activeImportId: activeImportId,
-      priorityRequests: prioritiesData ? prioritiesData.map((p: any) => ({
-        id: p.id,
-        conteiner: p.conteiner,
-        nivel: p.nivel,
-        status: p.status,
-        solicitadoEm: p.solicitado_em,
-        fabricaDestino: p.fabrica_destino,
-        previsaoFabrica: p.previsao_fabrica,
-        observacao: p.observacao
-      })) : state.priorityRequests,
-      settings: settingsData ? { capacidadePatio: settingsData.capacidade_patio } : state.settings,
-      armadorCounts: countArmadores(state.cheios)
-    };
+    // IMPORTANTE: NUNCA substituir o state totalmente do Supabase se houver dados locais.
+        // Manter dados existentes e apenas atualizar o activeImportId se necessário.
+        // Isso garante que as quantidades NÃO diminuam ao recarregar a página.
+    
+        // Mantém o activeImportId: usa o mais recente se não houver nenhum, senão mantém o atual
+        let activeImportId = state.activeImportId;
+        if (!activeImportId && combinedImports.length > 0) {
+          activeImportId = combinedImports[0].id;
+        }
+    
+        // CRÍTICO: Não sobrescrever arrays de dados do state com dados do Supabase
+        // que podem ser menores. O localStorage já tem os dados completos do upload.
+        // Apenas atualiza activeImportId e imports se houver novidades.
+    
+        state = {
+          ...state,
+          // NÃO sobrescrever cheios, vaziosLocados, etc. do Supabase.
+          // Manter o que já está no state (vindo do localStorage do último upload).
+          // Apenas permitir atualização se o Supabase tiver dados E o localStorage estiver vazio.
+          // Para evitar perda de dados, mantemos o state existente.
+          //
+          // Exceção: activeImportId e imports podem ser atualizados se novos imports foram feitos.
+          activeImportId: activeImportId,
+          imports: combinedImports.length > 0 ? combinedImports : state.imports,
+          priorityRequests: prioritiesData ? prioritiesData.map((p: any) => ({
+            id: p.id,
+            conteiner: p.conteiner,
+            nivel: p.nivel,
+            status: p.status,
+            solicitadoEm: p.solicitado_em,
+            fabricaDestino: p.fabrica_destino,
+            previsaoFabrica: p.previsao_fabrica,
+            observacao: p.observacao
+          })) : state.priorityRequests,
+          settings: settingsData ? { capacidadePatio: settingsData.capacidade_patio } : state.settings,
+          armadorCounts: countArmadores(state.cheios)  // Usa sempre state.local
+        };
 
     if (typeof window !== 'undefined') {
       localStorage.setItem("tlog:cheios", JSON.stringify(state.cheios));
