@@ -17,12 +17,13 @@ import { useDataset } from "@/lib/store";
 import { useAuth } from "@/components/AuthProvider";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { hasPermission, getAllowedPages, ROUTE_TO_PAGE } from "@/lib/permissions";
 
-const navItems = [
-  { to: "/", label: "Dashboard", icon: LayoutGrid },
-  { to: "/cliente", label: "Cliente Renault", icon: UserCircle },
-  { to: "/transportadora", label: "Transportadora", icon: Truck },
-  { to: "/importar", label: "Importar Dados", icon: CloudUpload },
+const allNavItems = [
+  { to: "/", label: "Dashboard", icon: LayoutGrid, pageKey: "dashboard" as const },
+  { to: "/cliente", label: "Cliente Renault", icon: UserCircle, pageKey: "cliente" as const },
+  { to: "/transportadora", label: "Transportadora", icon: Truck, pageKey: "transportadora" as const },
+  { to: "/importar", label: "Importar Dados", icon: CloudUpload, pageKey: "importar" as const },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -55,23 +56,28 @@ export function AppShell({ children }: { children: ReactNode }) {
     return null;
   }
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-2">
-          <Container className="h-5 w-5 text-primary" />
-          <div className="text-sm font-semibold truncate">Operação Spot Renault</div>
-        </div>
-      </div>
-
-      <nav className="flex-1 px-2 py-3 space-y-1">
-        {navItems.map((item) => {
-          const active = pathname === item.to;
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
+  const SidebarContent = () => {
+      const userEmail = user?.email?.toLowerCase() || "";
+      const allowedPages = getAllowedPages(userEmail);
+      const navItems = allNavItems.filter((item) => allowedPages.includes(item.pageKey));
+  
+      return (
+        <div className="flex flex-col h-full">
+          <div className="flex items-center justify-between px-4 py-4 border-b border-sidebar-border">
+            <div className="flex items-center gap-2">
+              <Container className="h-5 w-5 text-primary" />
+              <div className="text-sm font-semibold truncate">Operação Spot Renault</div>
+            </div>
+          </div>
+  
+          <nav className="flex-1 px-2 py-3 space-y-1">
+            {navItems.map((item) => {
+              const active = pathname === item.to;
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
                 active
