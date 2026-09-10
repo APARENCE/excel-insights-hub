@@ -19,16 +19,15 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/co
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { to: "/", label: "Dashboard", icon: LayoutGrid, roles: ["CLIENTE", "TRANSPORTADORA"] },
-  { to: "/cliente", label: "Cliente Renault", icon: UserCircle, roles: ["CLIENTE"] },
-  { to: "/transportadora", label: "Transportadora", icon: Truck, roles: ["TRANSPORTADORA"] },
-  { to: "/importar", label: "Importar Dados", icon: CloudUpload, roles: ["TRANSPORTADORA"] },
+  { to: "/", label: "Dashboard", icon: LayoutGrid },
+  { to: "/cliente", label: "Cliente Renault", icon: UserCircle },
+  { to: "/transportadora", label: "Transportadora", icon: Truck },
+  { to: "/importar", label: "Importar Dados", icon: CloudUpload },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { signOut, user, session, loading } = useAuth();
-  const ds = useDataset();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const userEmail = user?.email?.toLowerCase() || "";
@@ -67,12 +66,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <nav className="flex-1 px-2 py-3 space-y-1">
         {navItems.map((item) => {
-          // Verificar se o usuário tem acesso a esta navegação baseado no papel
-          const userRole = ds.userRole;
-          const hasAccess = item.roles ? item.roles.includes(userRole) : true;
-
-          if (!hasAccess) return null;
-
           const active = pathname === item.to;
           const Icon = item.icon;
           return (
