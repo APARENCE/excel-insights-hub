@@ -28,6 +28,7 @@ const navItems = [
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { signOut, user, session, loading } = useAuth();
+  const ds = useDataset();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const userEmail = user?.email?.toLowerCase() || "";
@@ -67,12 +68,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       <nav className="flex-1 px-2 py-3 space-y-1">
         {navItems.map((item) => {
           // Verificar se o usuário tem acesso a esta navegação baseado no papel
-          const userRole = state.userRole;
+          const userRole = ds.userRole;
           const hasAccess = item.roles ? item.roles.includes(userRole) : true;
 
           if (!hasAccess) return null;
 
           const active = pathname === item.to;
+          const Icon = item.icon;
           return (
             <NavLink
               key={item.to}
@@ -82,10 +84,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 active
                   ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                   : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
-              )}>
-              <span className="h-4 w-4">
-                {item.icon}
-              </span>
+              )}
+            >
+              <Icon className="h-4 w-4" />
               {item.label}
             </NavLink>
           );

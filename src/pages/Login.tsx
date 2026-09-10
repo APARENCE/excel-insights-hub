@@ -52,6 +52,9 @@ export default function Login() {
     window.location.href = "/";
   }
 
+  // Verifica se o email atual é patiotlog@outlook.com
+  const isPatiotlog = email.toLowerCase().trim() === "patiotlog@outlook.com";
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] relative overflow-hidden font-sans">
       <div className="absolute inset-0 z-0">
@@ -81,57 +84,81 @@ export default function Login() {
           </div>
 
           <div className="space-y-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label
-                  htmlFor="email"
-                  className="text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1 tracking-wider block"
-                >
-                  E-mail Corporativo
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  required
-                  autoComplete="email"
-                  autoFocus
-                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white outline-none transition-all placeholder:text-white/30 focus:border-blue-500/50"
-                  placeholder="seu.email@empresa.com"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="password"
-                  className="text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1 tracking-wider block"
-                >
-                  Senha de Acesso
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                  autoComplete="current-password"
-                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white outline-none transition-all placeholder:text-white/30 focus:border-blue-500/50"
-                  placeholder="Digite sua senha"
-                />
-              </div>
-              {message && (
-                <div className="rounded-lg border border-red-400/20 bg-red-400/10 p-3 text-xs text-red-400">
-                  {message}
+            {/* Se o email for patiotlog@outlook.com, mostrar botões diretos */}
+            {isPatiotlog ? (
+              <div className="space-y-4">
+                <div className="text-center mb-4">
+                  <p className="text-sm text-gray-400">Escolha o módulo de acesso:</p>
                 </div>
-              )}
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full rounded-xl bg-blue-600 py-4 text-[11px] font-bold uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {submitting ? "Verificando..." : "Acessar Sistema"}
-              </button>
-            </form>
+                <div className="space-y-3">
+                  <a
+                    href="/importar"
+                    className="block w-full rounded-xl bg-blue-600 py-4 text-[11px] font-bold uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700"
+                  >
+                    Módulo Importação
+                  </a>
+                  <a
+                    href="/transportadora"
+                    className="block w-full rounded-xl bg-cyan-600 py-4 text-[11px] font-bold uppercase tracking-widest text-white shadow-lg shadow-cyan-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-cyan-700"
+                  >
+                    Módulo Transportadora
+                  </a>
+                </div>
+              </div>
+            ) : (
+              /* Formulário de login normal */
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1 tracking-wider block"
+                  >
+                    E-mail Corporativo
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    required
+                    autoComplete="email"
+                    autoFocus
+                    className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white outline-none transition-all placeholder:text-white/30 focus:border-blue-500/50"
+                    placeholder="seu.email@empresa.com"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="password"
+                    className="text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1 tracking-wider block"
+                  >
+                    Senha de Acesso
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                    autoComplete="current-password"
+                    className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm text-white outline-none transition-all placeholder:text-white/30 focus:border-blue-500/50"
+                    placeholder="Digite sua senha"
+                  />
+                </div>
+                {message && (
+                  <div className="rounded-lg border border-red-400/20 bg-red-400/10 p-3 text-xs text-red-400">
+                    {message}
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full rounded-xl bg-blue-600 py-4 text-[11px] font-bold uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {submitting ? "Verificando..." : "Acessar Sistema"}
+                </button>
+              </form>
+            )}
           </div>
 
           <div className="mt-10 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
