@@ -355,21 +355,25 @@ export async function syncFromSupabase() {
           id: v.id, conteiner: v.conteiner, colunaD: v.coluna_d || "N/A"
         });
     
-        // Merge inteligente: se Supabase tem dados, usa eles (reflete última atualização).
-        // Se apenas localStorage tem dados, mantém localStorage (não perde dados).
-        // Se ambos têm dados, combina sem duplicatas.
-        const mergeData = (localData: any[], supabaseData: any[], mapFunc: any) => {
-          if (supabaseData && supabaseData.length > 0) {
-            // Supabase tem dados - reflete última atualização do banco
-            return supabaseData.map(mapFunc);
-          } else if (localData && localData.length > 0) {
-            // Apenas localStorage - mantém dados existentes
-            return localData.map(mapFunc);
-          } else {
-            // Nenhum dado
-            return [];
-          }
-        };
+        // Merge inteligente: preserva o MAIOR conjunto de dados entre Supabase e localStorage.
+                // Se Supabase tiver mais registros, usa ele (reflete última atualização no banco).
+                // Se localStorage tiver mais ou igual registros, mantém localStorage (não perde dados).
+                // Isso garante: números atualizados MAS dados preservados.
+                const mergeData = (localData: any[], supabaseData: any[], mapFunc: any) => {
+                  const localCount = localData ? localData.length : 0;
+                  const supaCount = supabaseData ? supabaseData.length : 0;
+                  
+                  // Se Supabase tem mais registros, usa ele (reflete última atualização no banco)
+                  if (supaCount > localCount) {
+                    return supabaseData.map(mapFunc);
+                  }
+                  // Se localStorage tem mais ou igual registros, mantém localStorage (não perde dados)
+                  else if (localCount >= supaCount) {
+                    return localData.map(mapFunc);
+                  }
+                  // Nenhum dado
+                  return [];
+                };
     
         state = {
           // Dados principais: merge inteligente
