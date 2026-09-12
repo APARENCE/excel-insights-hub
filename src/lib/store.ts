@@ -259,18 +259,14 @@ export async function syncFromSupabase() {
     };
 
     const cheiosData = getData(0);
-    const vaziosData = getData(1);
-    const ingesysData = getData(2);
-    const importsData = getData(3);
-    const prioritiesData = getData(4);
-    const settingsData = getData(5);
-    const renaultData = getData(6);
-    const tlogData = getData(7);
-    const armadoresData = getData(8);
-
-    // Removida trava de segurança que impedia sincronização.
-    // Agora sempre sincroniza do Supabase quando há sessão ativa,
-    // garantindo que os dados persistem após recarregar a página.
+        const vaziosData = getData(1);
+        const ingesysData = getData(2);
+        const importsData = getData(3);
+        const prioritiesData = getData(4);
+        const settingsData = getData(5);
+        const renaultData = getData(6);
+        const tlogData = getData(7);
+        const armadoresData = getData(8);
 
     const localImports = state.imports;
     const supabaseImports = importsData ? importsData.map((i: any) => ({
@@ -355,23 +351,22 @@ export async function syncFromSupabase() {
           id: v.id, conteiner: v.conteiner, colunaD: v.coluna_d || "N/A"
         });
     
-        // Merge inteligente: preserva o MAIOR conjunto de dados entre Supabase e localStorage.
-                // Se Supabase tiver mais registros, usa ele (reflete última atualização no banco).
-                // Se localStorage tiver mais ou igual registros, mantém localStorage (não perde dados).
-                // Isso garante: números atualizados MAS dados preservados.
+        // Merge prioritário: usa dados do Supabase quando disponível para refletir
+                // a última atualização do banco. Só cai back para localStorage se Supabase
+                // não tiver dados (null/undefined/vazio). Isso garante que os números sempre
+                // reflitam o banco, enquanto dados locais servem como backup.
                 const mergeData = (localData: any[], supabaseData: any[], mapFunc: any) => {
-                  const localCount = localData ? localData.length : 0;
-                  const supaCount = supabaseData ? supabaseData.length : 0;
-                  
-                  // Se Supabase tem mais registros, usa ele (reflete última atualização no banco)
-                  if (supaCount > localCount) {
+                  // Se Supabase tem dados (mesmo que 0 registros, mas array existe), usa ele
+                  if (supabaseData !== undefined && supabaseData !== null) {
+                    // Mesmo que Supabase tenha 0 registros, usamos o array do Supabase
+                    // para garantir que o estado seja atualizado/refreshed
                     return supabaseData.map(mapFunc);
                   }
-                  // Se localStorage tem mais ou igual registros, mantém localStorage (não perde dados)
-                  else if (localCount >= supaCount) {
+                  // Se Supabase não tem dados (null/undefined), cai para localStorage
+                  else if (localData && localData.length > 0) {
                     return localData.map(mapFunc);
                   }
-                  // Nenhum dado
+                  // Nenhum dado em lugar algum
                   return [];
                 };
     
