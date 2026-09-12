@@ -288,32 +288,23 @@ export async function syncFromSupabase() {
       }
     }
     combinedImports.sort((a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime());
-
-    // IMPORTANTE: NUNCA substituir o state totalmente do Supabase se houver dados locais.
-        // Manter dados existentes e apenas atualizar o activeImportId se necessário.
-        // Isso garante que as quantidades NÃO diminuam ao recarregar a página.
     
-        // Mantém o activeImportId: usa o mais recente se não houver nenhum, senão mantém o atual
+        // Atualiza activeImportId: sempre o mais recente de todos os imports
         let activeImportId = state.activeImportId;
-        if (!activeImportId && combinedImports.length > 0) {
-          activeImportId = combinedImports[0].id;
+        if (combinedImports.length > 0) {
+          // O mais recente é o primeiro na lista (descending order)
+          const newestImport = combinedImports[0];
+          if (!activeImportId || new Date(newestImport.importedAt).getTime() > new Date(activeImportId).getTime()) {
+            activeImportId = newestImport.id;
+          }
+        } else if (!activeImportId) {
+          activeImportId = undefined;
         }
     
-        // CRÍTICO: Não sobrescrever arrays de dados do state com dados do Supabase
-        // que podem ser menores. O localStorage já tem os dados completos do upload.
-        // Apenas atualiza activeImportId e imports se houver novidades.
-    
-        state = {
-          ...state,
-          // NÃO sobrescrever cheios, vaziosLocados, etc. do Supabase.
-          // Manter o que já está no state (vindo do localStorage do último upload).
-          // Apenas permitir atualização se o Supabase tiver dados E o localStorage estiver vazio.
-          // Para evitar perda de dados, mantemos o state existente.
-          //
-          // Exceção: activeImportId e imports podem ser atualizados se novos imports foram feitos.
-          activeImportId: activeImportId,
-          imports: combinedImports.length > 0 ? combinedImports : state.imports,
-          priorityRequests: prioritiesData ? prioritiesData.map((p: any) => ({
+        // Merge de priorityRequests: combina local com do Supabase
+        let mergedPriorityRequests = [...state.priorityRequests];
+        if (prioritiesData && prioritiesData.length > 0) {
+          const supabasePri = prioritiesData.map((p: any) => ({
             id: p.id,
             conteiner: p.conteiner,
             nivel: p.nivel,
@@ -322,9 +313,86 @@ export async function syncFromSupabase() {
             fabricaDestino: p.fabrica_destino,
             previsaoFabrica: p.previsao_fabrica,
             observacao: p.observacao
-          })) : state.priorityRequests,
+          }));
+          // Adiciona do Supabase se não existir localmente
+          for (const sup of supabasePri) {
+            if (!mergedPriorityRequests.some(r => r.id === sup.id)) {
+              mergedPriorityRequests.push(sup);
+            }
+          }
+        }
+        // Ordena por solicitadoEm descending
+        mergedPriorityRequests.sort((a: any, b: any) => new Date(b.solicitadoEm).getTime() - new Date(a.solicitadoEm).getTime());
+    
+        // Maps functions para merge de dados
+        const mapCheio = (c: any) => ({
+          conteiner: c.conteiner, lacre: c.lacre, tipo: c.tipo, armador: c.armador, navio: c.navio,
+          dataChegada: c.data_chegada, diasNoPatio: c.dias_no_patio, freeTime: c.free_time,
+          demurrageVencimento: c.demurrage_vencimento, diasParaVencimento: c.dias_para_vencimento,
+          status: c.status, fabrica: c.fabrica, dataEnvioFabrica: c.data_envio_fabrica,
+          conteinerDePara: c.conteiner_de_para, dataDevolucaoVazio: c.data_devolucao_vazio, colunaAS: c.coluna_as
+        });
+    
+        const mapVazioLocado = (v: any) => ({
+          conteiner: v.conteiner, armador: v.armador, tipo: v.tipo, dataEntrada: v.data_entrada,
+          dataDePara: v.data_de_para, cheioDePara: v.cheio_de_para, statusUso: v.status_uso,
+          statusPatio: v.status_patio, diasNoPatio: v.dias_no_patio
+        });
+    
+        const mapVazioIngesys = (i: any) => ({
+          conteiner: i.conteiner, statusD: i.status_d
+        });
+    
+        const mapRenault = (v: any) => ({
+          id: v.id, conteiner: v.conteiner, colunaD: v.coluna_d || "N/A"
+        });
+    
+        const mapTlog = (v: any) => ({
+          id: v.id, conteiner: v.conteiner, colunaD: v.coluna_d || "N/A"
+        });
+    
+        const mapArmadores = (v: any) => ({
+          id: v.id, conteiner: v.conteiner, colunaD: v.coluna_d || "N/A"
+        });
+    
+        // Merge inteligente: se Supabase tem dados, usa eles (reflete última atualização).
+        // Se apenas localStorage tem dados, mantém localStorage (não perde dados).
+        // Se ambos têm dados, combina sem duplicatas.
+        const mergeData = (localData: any[], supabaseData: any[], mapFunc: any) => {
+          if (supabaseData && supabaseData.length > 0) {
+            // Supabase tem dados - reflete última atualização do banco
+            return supabaseData.map(mapFunc);
+          } else if (localData && localData.length > 0) {
+            // Apenas localStorage - mantém dados existentes
+            return localData.map(mapFunc);
+          } else {
+            // Nenhum dado
+            return [];
+          }
+        };
+    
+        state = {
+          // Dados principais: merge inteligente
+          // - Se Supabase tem dados, usa eles (números se atualizam)
+          // - Se apenas localStorage, mantém dados (não perde nada)
+          // - Isso garante: números atualizados + dados preservados
+          cheios: mergeData(state.cheios, cheiosData, mapCheio),
+          vaziosLocados: mergeData(state.vaziosLocados, vaziosData, mapVazioLocado),
+          vazioIngesys: mergeData(state.vazioIngesys, ingesysData, mapVazioIngesys),
+          vaziosLocadosRenault: mergeData(state.vaziosLocadosRenault, renaultData, mapRenault),
+          vaziosLocadosTlog: mergeData(state.vaziosLocadosTlog, tlogData, mapTlog),
+          vaziosArmadores: mergeData(state.vaziosArmadores, armadoresData, mapArmadores),
+    
+          // Metadados
+          activeImportId: activeImportId,
+          imports: combinedImports,
+          priorityRequests: mergedPriorityRequests,
+    
+          // Configurações: atualiza do Supabase quando disponível
           settings: settingsData ? { capacidadePatio: settingsData.capacidade_patio } : state.settings,
-          armadorCounts: countArmadores(state.cheios)  // Usa sempre state.local
+    
+          // Contadores recalculados a partir dos dados atuais
+          armadorCounts: countArmadores(state.cheios)
         };
 
     if (typeof window !== 'undefined') {
