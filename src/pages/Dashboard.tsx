@@ -141,17 +141,23 @@ export default function Dashboard() {
 
       <section className="px-6 mt-6">
         <div className={cn(
-          "rounded-xl border p-5 transition-colors",
-          isCritical ? "border-destructive/50 bg-destructive/5" : "border-border bg-card"
+          "rounded-xl border p-5 transition-colors shadow-sm",
+          isCritical
+            ? "border-red-300 bg-white dark:bg-zinc-950"
+            : "border-zinc-200 bg-white text-zinc-900 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100"
         )}>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <div className={cn("font-semibold", isCritical ? "text-destructive" : "text-primary")}>Capacidade Operacional Total</div>
+              <div className={cn("font-bold text-base", isCritical ? "text-red-600 dark:text-red-400" : "text-zinc-950 dark:text-white")}>
+                Capacidade Operacional Total
+              </div>
               <div className="text-xs text-muted-foreground hidden">Soma de Cheios (AA) + Vazios (Renault, Tlog, Armadores)</div>
             </div>
             <span className={cn(
-              "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold",
-              isCritical ? "bg-destructive text-destructive-foreground animate-pulse" : "bg-success text-success-foreground"
+              "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide",
+              isCritical
+                ? "bg-red-600 text-white animate-pulse"
+                : "bg-emerald-800 text-white"
             )}>
               {isCritical ? "CRÍTICO" : "NORMAL"}
             </span>
@@ -161,21 +167,30 @@ export default function Dashboard() {
               <CapacityRing pct={ocupacaoPct} isCritical={isCritical} />
             </div>
             <div>
-              <div className="text-[11px] uppercase text-muted-foreground">Total Ocupado</div>
-              <div className={cn("text-3xl font-bold", isCritical ? "text-destructive" : "text-warning-foreground")}>{ocupacaoTotalReal}</div>
-              <div className="text-xs text-muted-foreground">de {s.capacidadeTotal}</div>
-            </div>
-            <div>
-              <div className="text-[11px] uppercase text-muted-foreground">Livres</div>
-              <div className={cn("text-3xl font-bold", isCritical ? "text-destructive" : "text-success")}>{livres}</div>
-              <div className="text-xs text-muted-foreground">agora</div>
-            </div>
-            <div>
-              <div className="text-[11px] uppercase text-muted-foreground">Taxa</div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden mt-2">
-                <div className={cn("h-full transition-all duration-500", isCritical ? "bg-destructive" : "bg-success")} style={{ width: `${Math.min(ocupacaoPct, 100)}%` }} />
+              <div className="text-[11px] uppercase font-bold text-zinc-500 dark:text-zinc-400">Total Ocupado</div>
+              <div className={cn("text-3xl font-black tracking-tight", isCritical ? "text-red-600 dark:text-red-400" : "text-black dark:text-white")}>
+                {ocupacaoTotalReal}
               </div>
-              <div className={cn("text-xs mt-1 font-bold", isCritical ? "text-destructive" : "text-muted-foreground")}>{ocupacaoPct}%</div>
+              <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">de {s.capacidadeTotal}</div>
+            </div>
+            <div>
+              <div className="text-[11px] uppercase font-bold text-zinc-500 dark:text-zinc-400">Livres</div>
+              <div className={cn("text-3xl font-black tracking-tight", isCritical ? "text-red-600 dark:text-red-400" : "text-emerald-800 dark:text-emerald-500")}>
+                {livres}
+              </div>
+              <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">agora</div>
+            </div>
+            <div>
+              <div className="text-[11px] uppercase font-bold text-zinc-500 dark:text-zinc-400">Taxa</div>
+              <div className="h-2.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden mt-2">
+                <div
+                  className={cn("h-full transition-all duration-500", isCritical ? "bg-red-600" : "bg-emerald-800")}
+                  style={{ width: `${Math.min(ocupacaoPct, 100)}%` }}
+                />
+              </div>
+              <div className={cn("text-xs mt-1.5 font-black", isCritical ? "text-red-600 dark:text-red-400" : "text-black dark:text-white")}>
+                {ocupacaoPct}%
+              </div>
             </div>
           </div>
         </div>
@@ -247,23 +262,23 @@ function CapacityRing({ pct, isCritical }: { pct: number; isCritical: boolean })
   return (
     <div className="relative h-28 w-28">
       <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-        <circle cx="50" cy="50" r={r} fill="none" stroke="var(--muted)" strokeWidth="10" />
-        <circle 
-          cx="50" 
-          cy="50" 
-          r={r} 
-          fill="none" 
-          stroke={isCritical ? "var(--destructive)" : "var(--info)"} 
-          strokeWidth="10" 
-          strokeDasharray={c} 
-          strokeDashoffset={off} 
-          strokeLinecap="round" 
+        <circle cx="50" cy="50" r={r} fill="none" stroke="#e4e4e7" strokeWidth="10" />
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          fill="none"
+          stroke={isCritical ? "#dc2626" : "#065f46"}
+          strokeWidth="10"
+          strokeDasharray={c}
+          strokeDashoffset={off}
+          strokeLinecap="round"
           className="transition-all duration-500"
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className={cn("text-xl font-bold", isCritical ? "text-destructive" : "text-info")}>{pct}%</div>
-        <div className="text-[10px] text-muted-foreground">Ocupado</div>
+        <div className={cn("text-xl font-black", isCritical ? "text-red-600 dark:text-red-400" : "text-black dark:text-white")}>{pct}%</div>
+        <div className="text-[10px] font-semibold text-zinc-500 uppercase">Ocupado</div>
       </div>
     </div>
   );
