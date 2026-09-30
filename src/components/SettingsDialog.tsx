@@ -21,6 +21,7 @@ export function SettingsDialog() {
   const ds = useDataset();
   const [open, setOpen] = useState(false);
   const [capacity, setCapacity] = useState(ds.settings.capacidadePatio);
+  const [onedriveUrl, setOnedriveUrl] = useState(ds.settings.onedriveSpreadsheetUrl || "");
 
   const handleSave = () => {
     const val = parseInt(String(capacity));
@@ -28,7 +29,7 @@ export function SettingsDialog() {
       toast.error("Capacidade deve ser um número positivo.");
       return;
     }
-    updateSettings({ capacidadePatio: val });
+    updateSettings({ capacidadePatio: val, onedriveSpreadsheetUrl: onedriveUrl });
     toast.success("Configurações atualizadas com sucesso.");
     setOpen(false);
   };
@@ -48,20 +49,33 @@ export function SettingsDialog() {
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="capacity" className="col-span-2">
-              Capacidade Total (Vagas)
-            </Label>
-            <Input
-              id="capacity"
-              type="number"
-              value={capacity}
-              onChange={(e) => setCapacity(Number(e.target.value))}
-              className="col-span-2"
-            />
-          </div>
-        </div>
-        <DialogFooter>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="capacity" className="col-span-2">
+                      Capacidade Total (Vagas)
+                    </Label>
+                    <Input
+                      id="capacity"
+                      type="number"
+                      value={capacity}
+                      onChange={(e) => setCapacity(Number(e.target.value))}
+                      className="col-span-2"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="onedrive-url" className="col-span-2">
+                      URL da Planilha OneDrive
+                    </Label>
+                    <Input
+                      id="onedrive-url"
+                      type="text"
+                      value={onedriveUrl}
+                      onChange={(e) => setOnedriveUrl(e.target.value)}
+                      placeholder="https://1drv.ms/x/s!..."
+                      className="col-span-2"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
           <Button type="button" onClick={handleSave} className="gap-2">
             <Save className="h-4 w-4" /> Salvar alterações
           </Button>

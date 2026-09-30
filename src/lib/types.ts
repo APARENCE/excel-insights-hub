@@ -78,6 +78,7 @@ export interface ImportRecord {
 
 export interface AppSettings {
   capacidadePatio: number;
+  onedriveSpreadsheetUrl?: string;
 }
 
 export interface AppDataset {

@@ -19,8 +19,9 @@ const initial: AppDataset & { userRole: UserRole } = {
   userRole: "CLIENTE",
   activeImportId: undefined,
   settings: {
-    capacidadePatio: 600,
-  },
+      capacidadePatio: 600,
+      onedriveSpreadsheetUrl: "",
+    },
   armadorCounts: { MSC: 0, CMA: 0, MAERSK: 0 },
 };
 
@@ -393,7 +394,10 @@ export async function syncFromSupabase() {
           priorityRequests: mergedPriorityRequests,
     
           // Configurações: atualiza do Supabase quando disponível
-          settings: settingsData ? { capacidadePatio: settingsData.capacidade_patio } : state.settings,
+                    settings: settingsData ? {
+                      capacidadePatio: settingsData.capacidade_patio,
+                      onedriveSpreadsheetUrl: settingsData.onedrive_spreadsheet_url || ""
+                    } : state.settings,
     
           // Contadores recalculados a partir dos dados atuais
           armadorCounts: countArmadores(state.cheios)
@@ -605,13 +609,14 @@ export async function deletePriorityRequest(id: string) {
 }
 
 export async function updateSettings(settings: Partial<AppDataset["settings"]>) {
-  if (settings.capacidadePatio === undefined) return;
+  if (settings.capacidadePatio === undefined && settings.onedriveSpreadsheetUrl === undefined) return;
 
   state = {
     ...state,
     settings: {
       ...state.settings,
-      capacidadePatio: settings.capacidadePatio
+      capacidadePatio: settings.capacidadePatio ?? state.settings.capacidadePatio,
+      onedriveSpreadsheetUrl: settings.onedriveSpreadsheetUrl ?? state.settings.onedriveSpreadsheetUrl
     }
   };
   
@@ -622,7 +627,8 @@ export async function updateSettings(settings: Partial<AppDataset["settings"]>) 
 
   const { error } = await supabase.from('app_settings').upsert({
     id: '00000000-0000-0000-0000-000000000000',
-    capacidade_patio: settings.capacidadePatio
+    capacidade_patio: state.settings.capacidadePatio,
+    onedrive_spreadsheet_url: state.settings.onedriveSpreadsheetUrl || null
   });
 
   if (error) {
