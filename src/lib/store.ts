@@ -172,7 +172,12 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
       console.log(`[DEBUG] === Processando tabela: ${table.name} ===`);
       console.log(`[DEBUG] Registros para salvar: ${table.data.length}`);
       
-      // Deleta registros existentes (sempre limpa antes de inserir)
+      if (table.data.length === 0) {
+        console.log(`[DEBUG] Tabela ${table.name}: 0 registros, pulando insert`);
+        continue;
+      }
+
+      // Deleta registros existentes
       console.log(`[DEBUG] Limpando tabela ${table.name}...`);
       const { error: delError } = await supabase.from(table.name).delete().neq('id', '00000000-0000-0000-0000-000000000000');
       if (delError) {
@@ -181,39 +186,36 @@ export async function saveDatasetToSupabase(dataset: AppDataset = state) {
       }
       console.log("[DEBUG] Limpeza concluída");
 
-      if (table.data.length === 0) {
-        console.log(`[DEBUG] Tabela ${table.name}: 0 registros, pulando insert`);
-        continue;
-      }
-
-      const mappedData = table.data.map(table.map as any);
-      console.log(`[DEBUG] Dados mapeados para ${table.name}: ${mappedData.length} registros`);
-      console.log(`[DEBUG] Primeiro registro:`, JSON.stringify(mappedData[0], null, 2));
-      
-      const chunkSize = 100;
-      let totalInserted = 0;
-      for (let i = 0; i < mappedData.length; i += chunkSize) {
-        const chunk = mappedData.slice(i, i + chunkSize);
-        console.log(`[DEBUG] Inserindo lote ${i/chunkSize + 1}/${Math.ceil(mappedData.length/chunkSize)} na tabela ${table.name} (${chunk.length} registros)...`);
+      if (table.data.length > 0) {
+        const mappedData = table.data.map(table.map as any);
+        console.log(`[DEBUG] Dados mapeados para ${table.name}: ${mappedData.length} registros`);
+        console.log(`[DEBUG] Primeiro registro:`, JSON.stringify(mappedData[0], null, 2));
         
-        let retries = 0;
-        while (retries < 3) {
-          const { error: insError } = await supabase.from(table.name).insert(chunk);
-          if (!insError) break;
+        const chunkSize = 100;
+        let totalInserted = 0;
+        for (let i = 0; i < mappedData.length; i += chunkSize) {
+          const chunk = mappedData.slice(i, i + chunkSize);
+          console.log(`[DEBUG] Inserindo lote ${i/chunkSize + 1}/${Math.ceil(mappedData.length/chunkSize)} na tabela ${table.name} (${chunk.length} registros)...`);
           
-          retries++;
-          console.error(`[ERRO] Tentativa ${retries} falhou no lote ${i/chunkSize + 1}:`, insError);
-          if (retries === 3) {
-            console.error(`[ERRO CRÍTICO] Falha permanente no lote ${i/chunkSize + 1} após 3 tentativas`);
-            throw insError;
+          let retries = 0;
+          while (retries < 3) {
+            const { error: insError } = await supabase.from(table.name).insert(chunk);
+            if (!insError) break;
+            
+            retries++;
+            console.error(`[ERRO] Tentativa ${retries} falhou no lote ${i/chunkSize + 1}:`, insError);
+            if (retries === 3) {
+              console.error(`[ERRO CRÍTICO] Falha permanente no lote ${i/chunkSize + 1} após 3 tentativas`);
+              throw insError;
+            }
+            await new Promise(r => setTimeout(r, 1000 * retries));
           }
-          await new Promise(r => setTimeout(r, 1000 * retries));
+          
+          totalInserted += chunk.length;
+          console.log(`[DEBUG] Lote inserido com sucesso. Total até agora: ${totalInserted}`);
         }
-        
-        totalInserted += chunk.length;
-        console.log(`[DEBUG] Lote inserido com sucesso. Total até agora: ${totalInserted}`);
+        console.log(`[SUCESSO] Tabela ${table.name} salva com ${totalInserted} registros`);
       }
-      console.log(`[SUCESSO] Tabela ${table.name} salva com ${totalInserted} registros`);
     }
 
     toast.success("Dados salvos com sucesso no Supabase!", { id: toastId });
@@ -286,8 +288,12 @@ export async function syncFromSupabase() {
         // Atualiza activeImportId: sempre o mais recente de todos os imports
         let activeImportId = state.activeImportId;
         if (combinedImports.length > 0) {
-          activeImportId = combinedImports[0].id;
-        } else {
+          // O mais recente é o primeiro na lista (descending order)
+          const newestImport = combinedImports[0];
+          if (!activeImportId || new Date(newestImport.importedAt).getTime() > new Date(activeImportId).getTime()) {
+            activeImportId = newestImport.id;
+          }
+        } else if (!activeImportId) {
           activeImportId = undefined;
         }
     
@@ -350,15 +356,17 @@ export async function syncFromSupabase() {
                 // não tiver dados (null/undefined/vazio). Isso garante que os números sempre
                 // reflitam o banco, enquanto dados locais servem como backup.
                 const mergeData = (localData: any[], supabaseData: any[], mapFunc: any) => {
-                  // Se a query do Supabase teve sucesso (array existe, mesmo vazio), usa ele.
-                  // Só cai para localStorage se a query falhou (null/undefined).
+                  // Se Supabase tem dados (mesmo que 0 registros, mas array existe), usa ele
                   if (supabaseData !== undefined && supabaseData !== null) {
+                    // Mesmo que Supabase tenha 0 registros, usamos o array do Supabase
+                    // para garantir que o estado seja atualizado/refreshed
                     return supabaseData.map(mapFunc);
                   }
-                  // Query falhou — mantém dados locais como backup
+                  // Se Supabase não tem dados (null/undefined), cai para localStorage
                   else if (localData && localData.length > 0) {
                     return localData.map(mapFunc);
                   }
+                  // Nenhum dado em lugar algum
                   return [];
                 };
     
@@ -408,64 +416,16 @@ export async function syncFromSupabase() {
   }
 }
 
-let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
-
-function cleanupRealtimeSubscriptions() {
-  if (realtimeChannel) {
-    try {
-      supabase.removeChannel(realtimeChannel);
-    } catch (e) {
-      console.warn('[REALTIME] Falha ao remover canal:', e);
-    }
-    realtimeChannel = null;
-  }
-}
-
-function setupRealtimeSubscriptions() {
-  if (typeof window === 'undefined') return;
-
-  cleanupRealtimeSubscriptions();
-
-  const tables = [
-    'priority_requests',
-    'containers_cheios',
-    'vazio_ingesys',
-    'vazios_locados_renault',
-    'vazios_locados_tlog',
-    'vazios_armadores',
-    'import_history',
-    'app_settings',
-  ];
-
-  const channel = supabase.channel(`db-changes-${Date.now()}`);
-  for (const table of tables) {
-    channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
-      syncFromSupabase();
-    });
-  }
-
-  channel.subscribe((status) => {
-    if (status === 'CHANNEL_ERROR') {
-      console.warn('[REALTIME] Erro no canal de alterações');
-    }
-  });
-
-  realtimeChannel = channel;
-}
-
 if (typeof window !== 'undefined') {
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session) setupRealtimeSubscriptions();
-  });
-
-  supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && session) {
-      setupRealtimeSubscriptions();
-      syncFromSupabase();
-    } else if (event === 'SIGNED_OUT') {
-      cleanupRealtimeSubscriptions();
-    }
-  });
+  supabase.channel('db-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'priority_requests' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'containers_cheios' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazio_ingesys' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_renault' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_locados_tlog' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vazios_armadores' }, () => syncFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => syncFromSupabase())
+    .subscribe();
 }
 
 export function setUserRole(role: UserRole) {
@@ -531,12 +491,7 @@ export async function restoreImport(importId: string) {
       lastImportAt: new Date().toISOString()
     }));
 
-    const saved = await saveDatasetToSupabase();
-    if (saved) {
-      toast.success("Dados do upload restaurados, ativados e sincronizados com o Supabase!");
-    } else {
-      toast.success("Dados do upload restaurados e ativados. Não foi possível sincronizar com o Supabase.");
-    }
+    toast.success("Dados do upload restaurados e ativados com sucesso!");
   } catch (e) {
     console.error(e);
     toast.error("Erro ao restaurar os dados do upload.");
@@ -545,34 +500,6 @@ export async function restoreImport(importId: string) {
 
 export async function clearDataset() {
   console.log("[STORE] Limpando todos os dados locais e remotos...");
-
-  const tablesWithConteiner = [
-      'containers_cheios',
-      'vazios_locados',
-      'vazio_ingesys',
-      'vazios_locados_renault',
-      'vazios_locados_tlog',
-      'vazios_armadores'
-    ];
-  
-    const tablesWithId = [
-      'import_history',
-      'priority_requests'
-    ];
-  
-    let remoteError = false;
-    try {
-      for (const table of tablesWithConteiner) {
-        await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      }
-      for (const table of tablesWithId) {
-        await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      }
-    } catch (e) {
-      remoteError = true;
-      console.error("[SUPABASE] Erro ao limpar tabelas remotas:", e);
-      toast.error("Erro ao limpar o Supabase. Dados locais mantidos.");
-    }
 
   if (typeof window !== 'undefined') {
     localStorage.removeItem("tlog:cheios");
@@ -609,7 +536,33 @@ export async function clearDataset() {
   };
 
   emit();
-  toast.success("Banco de dados e histórico limpos com sucesso!");
+
+  const tablesWithConteiner = [
+      'containers_cheios',
+      'vazios_locados',
+      'vazio_ingesys',
+      'vazios_locados_renault',
+      'vazios_locados_tlog',
+      'vazios_armadores'
+    ];
+  
+    const tablesWithId = [
+      'import_history',
+      'priority_requests'
+    ];
+  
+    try {
+      for (const table of tablesWithConteiner) {
+        await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+      for (const table of tablesWithId) {
+        await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+    toast.success("Banco de dados e histórico limpos com sucesso!");
+  } catch (e) {
+    console.error("[SUPABASE] Erro ao limpar tabelas remota:", e);
+    toast.error("Dados locais limpos, mas houve um erro ao limpar o Supabase.");
+  }
 }
 
 export async function addPriorityRequest(req: PriorityRequest) {

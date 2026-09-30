@@ -38,6 +38,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, [session, loading]);
 
+  // Fecha o menu mobile quando a rota muda
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
@@ -45,10 +46,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground animate-pulse">Carregando Sistema...</p>
-        </div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -58,18 +56,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
-      <div className="flex items-center gap-3 px-6 py-6 border-b border-sidebar-border">
-        <div className="h-10 w-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-sm">
-          <Container className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <div className="text-sm font-bold tracking-tight truncate">Operação Spot Renault</div>
-          <div className="text-[10px] text-muted-foreground truncate">Terminal TLOG</div>
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between px-4 py-4 border-b border-sidebar-border">
+        <div className="flex items-center gap-2">
+          <Container className="h-5 w-5 text-primary" />
+          <div className="text-sm font-semibold truncate">Operação Spot Renault</div>
         </div>
       </div>
 
-      <nav className="flex-1 px-4 py-6 space-y-1">
+      <nav className="flex-1 px-2 py-3 space-y-1">
         {navItems.map((item) => {
           const active = pathname === item.to;
           const Icon = item.icon;
@@ -78,13 +73,13 @@ export function AppShell({ children }: { children: ReactNode }) {
               key={item.to}
               to={item.to}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
                 active
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
               )}
             >
-              <Icon className={cn("h-4 w-4", active && "text-primary-foreground")} />
+              <Icon className="h-4 w-4" />
               {item.label}
             </NavLink>
           );
@@ -114,6 +109,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-background text-foreground">
+      {/* Mobile Header */}
       <header className="md:hidden flex items-center justify-between px-4 py-3 bg-sidebar text-sidebar-foreground border-b border-sidebar-border sticky top-0 z-50">
         <div className="flex items-center gap-2">
           <Container className="h-5 w-5 text-primary" />
@@ -134,13 +130,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Sheet>
       </header>
 
+      {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border sticky top-0 h-screen">
         <SidebarContent />
       </aside>
 
-      <main className="flex-1 min-w-0 overflow-x-hidden">
-        <div className="px-6 pt-5 pb-4">{children}</div>
-      </main>
+      {/* Main Content */}
+      <main className="flex-1 min-w-0 overflow-x-hidden">{children}</main>
     </div>
   );
 }
@@ -155,10 +151,10 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col sm:flex-row items-start justify-between gap-4 pb-6">
+    <div className="flex flex-col sm:flex-row items-start justify-between gap-4 px-6 pt-5 pb-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-        {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
+        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+        {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>

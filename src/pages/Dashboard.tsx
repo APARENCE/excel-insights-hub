@@ -22,7 +22,7 @@ import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import type { VazioGenericRow } from "@/lib/types";
 
-const STATUS_COLORS = ["#111111", "#a1a1aa", "#d4d4d8", "#71717a", "#52525b", "#3f3f3f", "#e4e4e7", "#27272a"];
+const STATUS_COLORS = ["#16a34a", "#94a3b8", "#64748b", "#a855f7", "#0ea5e9", "#f59e0b", "#ef4444", "#8b5cf6"];
 
 export default function Dashboard() {
   const ds = useDataset();
@@ -79,7 +79,7 @@ export default function Dashboard() {
         }
       />
       
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="px-6 grid grid-cols-2 md:grid-cols-5 gap-3">
         <StatCard 
           label="Ocupação Total (Pátio)" 
           value={ocupacaoTotalReal} 
@@ -94,7 +94,7 @@ export default function Dashboard() {
         <StatCard label="Em Pátio TLOG" value={s.emPatio} hint="No pátio TLOG-SJP" icon={MapPin} tone="primary" />
       </div>
 
-      <section className="mt-6">
+      <section className="px-6 mt-6">
         <div className="flex items-center gap-2 mb-4">
           <Boxes className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-bold tracking-tight">Gestão de Vazios</h2>
@@ -139,25 +139,19 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <section className="mt-6">
+      <section className="px-6 mt-6">
         <div className={cn(
-          "rounded-xl border p-5 transition-colors shadow-sm",
-          isCritical
-            ? "border-black bg-white text-black dark:bg-black dark:border-black dark:text-white"
-            : "border-black/10 bg-white text-black dark:bg-black dark:border-white/10 dark:text-white"
+          "rounded-xl border p-5 transition-colors",
+          isCritical ? "border-destructive/50 bg-destructive/5" : "border-border bg-card"
         )}>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <div className={cn("font-bold text-base", isCritical ? "text-black dark:text-white" : "text-black dark:text-white")}>
-                Capacidade Operacional Total
-              </div>
-              <div className="text-xs text-muted-foreground hidden">Soma de Cheios (AA) + Vazios (Renault, Tlog, Armadores)</div>
+              <div className={cn("font-semibold", isCritical ? "text-destructive" : "text-primary")}>Capacidade Operacional Total</div>
+              <div className="text-xs text-muted-foreground">Soma de Cheios (AA) + Vazios (Renault, Tlog, Armadores)</div>
             </div>
             <span className={cn(
-              "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide",
-              isCritical
-                ? "bg-black text-white animate-pulse"
-                : "bg-black text-white"
+              "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold",
+              isCritical ? "bg-destructive text-destructive-foreground animate-pulse" : "bg-success text-success-foreground"
             )}>
               {isCritical ? "CRÍTICO" : "NORMAL"}
             </span>
@@ -167,38 +161,29 @@ export default function Dashboard() {
               <CapacityRing pct={ocupacaoPct} isCritical={isCritical} />
             </div>
             <div>
-              <div className="text-[11px] uppercase font-bold text-muted-foreground">Total Ocupado</div>
-              <div className={cn("text-3xl font-black tracking-tight", isCritical ? "text-black dark:text-white" : "text-black dark:text-white")}>
-                {ocupacaoTotalReal}
-              </div>
-              <div className="text-xs font-semibold text-muted-foreground">de {s.capacidadeTotal}</div>
+              <div className="text-[11px] uppercase text-muted-foreground">Total Ocupado</div>
+              <div className={cn("text-3xl font-bold", isCritical ? "text-destructive" : "text-warning-foreground")}>{ocupacaoTotalReal}</div>
+              <div className="text-xs text-muted-foreground">de {s.capacidadeTotal}</div>
             </div>
             <div>
-              <div className="text-[11px] uppercase font-bold text-muted-foreground">Livres</div>
-              <div className={cn("text-3xl font-black tracking-tight", isCritical ? "text-black dark:text-white" : "text-black dark:text-white")}>
-                {livres}
-              </div>
-              <div className="text-xs font-semibold text-muted-foreground">agora</div>
+              <div className="text-[11px] uppercase text-muted-foreground">Livres</div>
+              <div className={cn("text-3xl font-bold", isCritical ? "text-destructive" : "text-success")}>{livres}</div>
+              <div className="text-xs text-muted-foreground">agora</div>
             </div>
             <div>
-              <div className="text-[11px] uppercase font-bold text-muted-foreground">Taxa</div>
-              <div className="h-2.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden mt-2">
-                <div
-                  className={cn("h-full transition-all duration-500", isCritical ? "bg-black" : "bg-black")}
-                  style={{ width: `${Math.min(ocupacaoPct, 100)}%` }}
-                />
+              <div className="text-[11px] uppercase text-muted-foreground">Taxa</div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden mt-2">
+                <div className={cn("h-full transition-all duration-500", isCritical ? "bg-destructive" : "bg-success")} style={{ width: `${Math.min(ocupacaoPct, 100)}%` }} />
               </div>
-              <div className={cn("text-xs mt-1.5 font-black", isCritical ? "text-black dark:text-white" : "text-black dark:text-white")}>
-                {ocupacaoPct}%
-              </div>
+              <div className={cn("text-xs mt-1 font-bold", isCritical ? "text-destructive" : "text-muted-foreground")}>{ocupacaoPct}%</div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 pb-8">
+      <section className="px-6 mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 pb-8">
         <div className="rounded-xl border border-border bg-card p-5">
-          <div className="text-primary font-semibold flex items-center gap-2">
+          <div className="text-info font-semibold flex items-center gap-2">
             <span>📈</span> Movimentações do Pátio
           </div>
           <p className="text-xs text-muted-foreground mb-3">Análise detalhada de entradas e saídas diárias</p>
@@ -210,10 +195,10 @@ export default function Dashboard() {
                 <YAxis fontSize={11} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="entradas" fill="#111111" name="Entradas (G)" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="entradas" fill="#0ea5e9" name="Entradas (G)" radius={[4, 4, 0, 0]}>
                   <LabelList dataKey="entradas" position="top" fontSize={10} />
                 </Bar>
-                <Bar dataKey="devolucoes" fill="#a1a1aa" name="Devoluções" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="devolucoes" fill="#16a34a" name="Devoluções" radius={[4, 4, 0, 0]}>
                   <LabelList dataKey="devolucoes" position="top" fontSize={10} />
                 </Bar>
               </BarChart>
@@ -262,13 +247,13 @@ function CapacityRing({ pct, isCritical }: { pct: number; isCritical: boolean })
   return (
     <div className="relative h-28 w-28">
       <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-        <circle cx="50" cy="50" r={r} fill="none" stroke="#e4e4e7" strokeWidth="10" />
+        <circle cx="50" cy="50" r={r} fill="none" stroke="var(--muted)" strokeWidth="10" />
         <circle 
           cx="50" 
           cy="50" 
           r={r} 
           fill="none" 
-          stroke="#111111" 
+          stroke={isCritical ? "var(--destructive)" : "var(--info)"} 
           strokeWidth="10" 
           strokeDasharray={c} 
           strokeDashoffset={off} 
@@ -277,8 +262,8 @@ function CapacityRing({ pct, isCritical }: { pct: number; isCritical: boolean })
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className={cn("text-xl font-black", isCritical ? "text-black dark:text-white" : "text-black dark:text-white")}>{pct}%</div>
-        <div className="text-[10px] font-semibold text-muted-foreground uppercase">Ocupado</div>
+        <div className={cn("text-xl font-bold", isCritical ? "text-destructive" : "text-info")}>{pct}%</div>
+        <div className="text-[10px] text-muted-foreground">Ocupado</div>
       </div>
     </div>
   );
