@@ -355,25 +355,25 @@ export async function syncFromSupabase() {
           id: v.id, conteiner: v.conteiner, colunaD: v.coluna_d || "N/A"
         });
     
-        // Merge inteligente: preserva o MAIOR conjunto de dados entre Supabase e localStorage.
-                // Se Supabase tiver mais registros, usa ele (reflete última atualização no banco).
-                // Se localStorage tiver mais ou igual registros, mantém localStorage (não perde dados).
-                // Isso garante: números atualizados MAS dados preservados.
-                const mergeData = (localData: any[], supabaseData: any[], mapFunc: any) => {
-                  const localCount = localData ? localData.length : 0;
-                  const supaCount = supabaseData ? supabaseData.length : 0;
-                  
-                  // Se Supabase tem mais registros, usa ele (reflete última atualização no banco)
-                  if (supaCount > localCount) {
-                    return supabaseData.map(mapFunc);
-                  }
-                  // Se localStorage tem mais ou igual registros, mantém localStorage (não perde dados)
-                  else if (localCount >= supaCount) {
-                    return localData.map(mapFunc);
-                  }
-                  // Nenhum dado
-                  return [];
-                };
+        // Merge inteligente: PRIORIZA o Supabase para reconhecer TODOS os dados do banco.
+        // Se Supabase tem dados (qualquer quantidade > 0), usa ele - reflete a última atualização real.
+        // Só usa localStorage como fallback se Supabase estiver VAZIO (0 registros).
+        // Isso garante: reconhece TODOS os dados do Supabase + protege contra perda se banco estiver vazio.
+                        const mergeData = (localData: any[], supabaseData: any[], mapFunc: any) => {
+                          const localCount = localData ? localData.length : 0;
+                          const supaCount = supabaseData ? supabaseData.length : 0;
+                          
+                          // Se Supabase tem dados válidos (> 0), USA O SUPABASE (reconhece todos os dados do banco)
+                          if (supaCount > 0) {
+                            return supabaseData.map(mapFunc);
+                          }
+                          // Se Supabase está vazio (0), mantém localStorage como fallback (não perde dados)
+                          else if (localCount > 0) {
+                            return localData.map(mapFunc);
+                          }
+                          // Nenhum dado em nenhum dos dois
+                          return [];
+                        };
     
         state = {
           // Dados principais: merge inteligente
