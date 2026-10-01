@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import type { AppDataset, PriorityRequest, CheioRow, VazioLocadoRow, VazioIngesysRow, ImportRecord, VazioGenericRow } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { fetchExcelFromOneDrive, isOneDriveLink } from "./onedrive-service";
 
 export type UserRole = "CLIENTE" | "TRANSPORTADORA";
 
