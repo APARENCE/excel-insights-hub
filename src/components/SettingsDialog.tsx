@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Settings, Save, Sync } from 'lucide-react';
+import { Settings, Save, RefreshCw } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -76,12 +76,12 @@ export function SettingsDialog() {
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Button
-                      type="button"
-                      onClick={() => syncFromOneDrive()}
-                      className="col-span-2 gap-1 bg-primary text-card hover:bg-primary/90"
-                    >
-                      <Sync className="h-4 w-4" /> Sincronizar OneDrive
-                    </Button>
+                                          type="button"
+                                          onClick={() => syncFromOneDrive()}
+                                          className="col-span-2 gap-1 bg-primary text-card hover:bg-primary/90"
+                                        >
+                                          <RefreshCw className="h-4 w-4" /> Sincronizar OneDrive
+                                        </Button>
                   </div>
                 </div>
                 <DialogFooter>
