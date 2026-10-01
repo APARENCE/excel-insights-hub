@@ -5,6 +5,7 @@ import type { AppDataset, PriorityRequest, CheioRow, VazioLocadoRow, VazioIngesy
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fetchExcelFromOneDrive, isOneDriveLink } from "./onedrive-service";
+import { parseExcelFile } from "./excel-parser";
 
 export type UserRole = "CLIENTE" | "TRANSPORTADORA";
 
@@ -420,13 +421,85 @@ export async function syncFromSupabase() {
     }
 
     emit();
-    console.log("[SUPABASE] Sincronização concluída com sucesso.");
-  } catch (error) {
-    console.error("[SUPABASE] Erro na sincronização:", error);
-  }
-}
-
-if (typeof window !== 'undefined') {
+            console.log("[SUPABASE] Sincronização concluída com sucesso.");
+          } catch (error) {
+            console.error("[SUPABASE] Erro na sincronização:", error);
+          }
+        }
+    
+    /**
+     * Sync data from OneDrive spreadsheet
+     * Fetches the Excel file from the configured OneDrive URL and imports the data
+     */
+    export async function syncFromOneDrive() {
+      if (typeof window === 'undefined') return;
+    
+      const onedriveUrl = state.settings.onedriveSpreadsheetUrl;
+      if (!onedriveUrl) {
+        toast.error("URL da planilha OneDrive não configurada. Acesse Configurações para definir.");
+        return false;
+      }
+    
+      if (!isOneDriveLink(onedriveUrl)) {
+        toast.error("URL inválida. Forneça um link válido do OneDrive.");
+        return false;
+      }
+    
+      const toastId = toast.loading("Buscando planilha do OneDrive...");
+    
+      try {
+        // Fetch the Excel file from OneDrive
+        const result = await fetchExcelFromOneDrive(onedriveUrl);
+    
+        if (!result.success || !result.file) {
+          toast.error(result.error || "Erro ao buscar arquivo do OneDrive.", { id: toastId });
+          return false;
+        }
+    
+        toast.loading("Processando planilha...", { id: toastId });
+    
+        // Parse the Excel file using existing parser
+        const parsed = await parseExcelFile(result.file);
+    
+        if (!parsed.cheios && !parsed.vaziosLocados && !parsed.vazioIngesys) {
+          toast.error("Nenhum dado encontrado na planilha.", { id: toastId });
+          return false;
+        }
+    
+        // Update state with parsed data
+        state = {
+          ...state,
+          cheios: parsed.cheios || [],
+          vaziosLocados: parsed.vaziosLocados || [],
+          vazioIngesys: parsed.vazioIngesys || [],
+          vaziosLocadosRenault: parsed.vaziosLocadosRenault || [],
+          vaziosLocadosTlog: parsed.vaziosLocadosTlog || [],
+          vaziosArmadores: parsed.vaziosArmadores || [],
+          armadorCounts: countArmadores(parsed.cheios || [])
+        };
+    
+        // Persist to localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem("tlog:cheios", JSON.stringify(state.cheios));
+          localStorage.setItem("tlog:vazios_locados", JSON.stringify(state.vaziosLocados));
+          localStorage.setItem("tlog:vazio_ingesys", JSON.stringify(state.vazioIngesys));
+          localStorage.setItem("tlog:vazios_locados_renault", JSON.stringify(state.vaziosLocadosRenault));
+          localStorage.setItem("tlog:vazios_locados_tlog", JSON.stringify(state.vaziosLocadosTlog));
+          localStorage.setItem("tlog:vazios_armadores", JSON.stringify(state.vaziosArmadores));
+        }
+    
+        emit();
+        toast.success("Dados sincronizados do OneDrive com sucesso!", { id: toastId });
+        console.log("[OneDrive] Sincronização concluída com sucesso.");
+        return true;
+      } catch (error: any) {
+        console.error("[OneDrive] Erro na sincronização:", error);
+        toast.error(`Erro ao sincronizar: ${error.message || 'Erro desconhecido'}`, { id: toastId });
+        return false;
+      }
+    }
+    
+    if (typeof window !== 'undefined') {
   supabase.channel('db-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'priority_requests' }, () => syncFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'containers_cheios' }, () => syncFromSupabase())

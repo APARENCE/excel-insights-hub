@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Settings, Save } from 'lucide-react';
+import { Settings, Save, Sync } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useDataset, updateSettings } from "@/lib/store";
+import { useDataset, updateSettings, syncFromOneDrive } from "@/lib/store";
 import { toast } from "sonner";
 
 export function SettingsDialog() {
@@ -73,6 +73,15 @@ export function SettingsDialog() {
                       placeholder="https://1drv.ms/x/s!..."
                       className="col-span-2"
                     />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Button
+                      type="button"
+                      onClick={() => syncFromOneDrive()}
+                      className="col-span-2 gap-1 bg-primary text-card hover:bg-primary/90"
+                    >
+                      <Sync className="h-4 w-4" /> Sincronizar OneDrive
+                    </Button>
                   </div>
                 </div>
                 <DialogFooter>
