@@ -48,6 +48,7 @@ import { useDataset, addPriorityRequest, updatePriorityStatus, deletePriorityReq
 import { toast } from "sonner";
 import { PriorityLevel, RequestStatus, PriorityRequest, CheioRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import BulkPriorityImport from "./BulkPriorityImport";
 
 function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) {
   const steps = [
@@ -100,13 +101,14 @@ function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) 
 export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTADORA" }) {
   const ds = useDataset();
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [selectedContainer, setSelectedContainer] = useState("");
-  const [fabricaSelect, setFabricaSelect] = useState<string>("CVU");
-  const [customFabrica, setCustomFabrica] = useState("");
-
-  const isCliente = role === "CLIENTE";
-  const isTransportadora = role === "TRANSPORTADORA";
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [selectedContainer, setSelectedContainer] = useState("");
+    const [fabricaSelect, setFabricaSelect] = useState<string>("CVU");
+    const [customFabrica, setCustomFabrica] = useState("");
+    const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  
+    const isCliente = role === "CLIENTE";
+    const isTransportadora = role === "TRANSPORTADORA";
 
   const availableContainers = useMemo(() => {
     const existingIds = new Set(ds.priorityRequests.filter((r: PriorityRequest) => r.status !== "FINALIZADO").map((r: PriorityRequest) => r.conteiner));
@@ -223,12 +225,17 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
         title={isCliente ? "Cliente Renault" : "Transportadora"}
         subtitle={isCliente ? "Solicitações de prioridade para a fábrica" : "Fluxo de saída em tempo real"}
         actions={
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setDataset((prev: any) => ({ ...prev, priorityRequests: prev.priorityRequests.filter((r: any) => r.status !== "FINALIZADO") }))} className="text-[10px] h-8">
-              <Eraser className="h-3 w-3 mr-1.5" /> Limpar OK
-            </Button>
-            {isCliente && (
-              <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setDataset((prev: any) => ({ ...prev, priorityRequests: prev.priorityRequests.filter((r: any) => r.status !== "FINALIZADO") }))} className="text-[10px] h-8">
+                      <Eraser className="h-3 w-3 mr-1.5" /> Limpar OK
+                    </Button>
+                    {isTransportadora && (
+                      <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="text-[10px] h-8">
+                        <PackageCheck className="h-3.5 w-3.5 mr-1" /> Importar Prioridades
+                      </Button>
+                    )}
+                    {isCliente && (
+                      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-primary hover:bg-primary/90 font-bold h-8 text-xs">
                     <Plus className="h-3.5 w-3.5 mr-1" /> SOLICITAR
@@ -334,13 +341,17 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
 
           <div className="divide-y divide-border">
             {sortedRequests.length === 0 ? (
-              <div className="py-10 text-center text-muted-foreground text-[10px] italic">Nenhuma solicitação ativa na fila.</div>
-            ) : (
-              sortedRequests.map((req: any) => <RequestRow key={req.id} req={req} />)
-            )}
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
+                          <div className="py-10 text-center text-muted-foreground text-[10px] italic">Nenhuma solicitação ativa na fila.</div>
+                        ) : (
+                          sortedRequests.map((req: any) => <RequestRow key={req.id} req={req} />)
+                        )}
+                      </div>
+                    </div>
+                  </div>
+            
+                  {isTransportadora && (
+                    <BulkPriorityImport open={isBulkImportOpen} onOpenChange={setIsBulkImportOpen} />
+                  )}
+                </>
+              );
+            }
