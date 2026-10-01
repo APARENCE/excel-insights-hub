@@ -70,7 +70,7 @@ export function SettingsDialog() {
                                   type="text"
                                   value={onedriveUrl}
                                   onChange={(e) => setOnedriveUrl(e.target.value)}
-                                  placeholder="https://1drv.ms/x/s!... ou https://docs.google.com/spreadsheets/d/..."
+                                  placeholder="https://1drv.ms/x/s!... ou https://docs.google.com/spreadsheets/d/e/2PACX.../pubhtml"
                                   className="col-span-2"
                                 />
                   </div>

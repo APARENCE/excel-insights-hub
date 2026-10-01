@@ -33,13 +33,19 @@ export function extractOneDriveFileId(url: string): string | null {
  * Extracts the spreadsheet ID from Google Sheets URL
  */
 export function extractGoogleSheetsId(url: string): string | null {
-  // Format: https://docs.google.com/spreadsheets/d/{id}/edit
-  const match1 = url.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-  if (match1) return match1[1];
+  // Format: https://docs.google.com/spreadsheets/d/e/{key}/pubhtml (published to web)
+  // Check this first to avoid matching the wrong part
+  const match3 = url.match(/docs\.google\.com\/spreadsheets\/d\/e\/([a-zA-Z0-9-_]+)\/pubhtml/);
+  if (match3) return match3[1];
 
   // Format: https://docs.google.com/spreadsheets/d/{id}/export?format=...
   const match2 = url.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9-_]+)\/export/);
   if (match2) return match2[1];
+
+  // Format: https://docs.google.com/spreadsheets/d/{id}/edit
+  // Use a more specific pattern to avoid matching /d/e/ format
+  const match1 = url.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9-_]+)(?:\/|$|\?)/);
+  if (match1 && match1[1] !== 'e') return match1[1];
 
   return null;
 }
@@ -62,7 +68,15 @@ export function getGoogleSheetsDownloadUrl(shareLink: string): string | null {
   const sheetId = extractGoogleSheetsId(shareLink);
   if (!sheetId) return null;
 
-  // Use Google Sheets export endpoint for Excel format
+  // Check if it's a published sheet (pubhtml format)
+  const isPublished = /docs\.google\.com\/spreadsheets\/d\/e\/[a-zA-Z0-9-_]+\/pubhtml/i.test(shareLink);
+  
+  if (isPublished) {
+    // For published sheets, use the key directly in the export URL
+    return `https://docs.google.com/spreadsheets/d/e/${sheetId}/pub?output=xlsx`;
+  }
+
+  // Use Google Sheets export endpoint for Excel format (standard sheets)
   return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=xlsx`;
 }
 
@@ -137,26 +151,63 @@ export async function fetchExcelFromOneDrive(shareLink: string): Promise<CloudSt
 
 /**
  * Fetches an Excel file from a Google Sheets URL
+ * Tries multiple download methods for better compatibility
  */
 export async function fetchExcelFromGoogleSheets(shareLink: string): Promise<CloudStorageFetchResult> {
   try {
-    const downloadUrl = getGoogleSheetsDownloadUrl(shareLink);
-    if (!downloadUrl) {
-      return { success: false, error: 'URL do Google Sheets inválida' };
+    const sheetId = extractGoogleSheetsId(shareLink);
+    if (!sheetId) {
+      return { success: false, error: 'URL do Google Sheets inválida - ID não encontrado' };
     }
 
-    const response = await fetch(downloadUrl, {
-      redirect: 'follow'
-    });
+    // Check if it's a published sheet (pubhtml format)
+    const isPublished = /docs\.google\.com\/spreadsheets\/d\/e\/[a-zA-Z0-9-_]+\/pubhtml/i.test(shareLink);
 
-    if (response.status === 200) {
-      const blob = await response.blob();
-      const fileName = getFileNameFromLink(shareLink) || 'google-sheets-file.xlsx';
-      const file = new File([blob], fileName, { type: blob.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      return { success: true, file };
+    // Build multiple candidate URLs to try
+    const candidateUrls: string[] = [];
+
+    if (isPublished) {
+      // For published sheets, try the pub endpoint with xlsx output
+      candidateUrls.push(`https://docs.google.com/spreadsheets/d/e/${sheetId}/pub?output=xlsx`);
+      // Also try the standard export endpoint with the key
+      candidateUrls.push(`https://docs.google.com/spreadsheets/d/e/${sheetId}/export?format=xlsx`);
     } else {
-      return { success: false, error: `Erro ao baixar do Google Sheets: ${response.status}` };
+      // For regular sheets, try the standard export endpoint
+      candidateUrls.push(`https://docs.google.com/spreadsheets/d/${sheetId}/export?format=xlsx`);
+      // Also try CSV as fallback (parser can handle CSV)
+      candidateUrls.push(`https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`);
     }
+
+    let lastError = '';
+    for (const downloadUrl of candidateUrls) {
+      try {
+        console.log(`[Google Sheets] Tentando download de: ${downloadUrl}`);
+        const response = await fetch(downloadUrl, {
+          redirect: 'follow',
+          mode: 'cors'
+        });
+
+        if (response.status === 200) {
+          const blob = await response.blob();
+          const fileName = getFileNameFromLink(shareLink) || 'google-sheets-file.xlsx';
+          
+          // Determine correct MIME type based on URL
+          const isCsv = downloadUrl.includes('format=csv');
+          const mimeType = isCsv ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+          
+          const file = new File([blob], fileName, { type: blob.type || mimeType });
+          return { success: true, file };
+        } else {
+          lastError = `HTTP ${response.status} para ${downloadUrl}`;
+          console.warn(`[Google Sheets] ${lastError}`);
+        }
+      } catch (e: any) {
+        lastError = e.message || 'Erro desconhecido';
+        console.warn(`[Google Sheets] Tentativa falhou para ${downloadUrl}:`, e);
+      }
+    }
+
+    return { success: false, error: `Não foi possível baixar a planilha. Último erro: ${lastError}` };
   } catch (error: any) {
     console.error('[Google Sheets] Error fetching file:', error);
     return { success: false, error: error.message || 'Erro desconhecido ao buscar arquivo do Google Sheets' };
