@@ -63,16 +63,16 @@ export function SettingsDialog() {
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="onedrive-url" className="col-span-2">
-                      URL da Planilha OneDrive
-                    </Label>
-                    <Input
-                      id="onedrive-url"
-                      type="text"
-                      value={onedriveUrl}
-                      onChange={(e) => setOnedriveUrl(e.target.value)}
-                      placeholder="https://1drv.ms/x/s!..."
-                      className="col-span-2"
-                    />
+                                  URL da Planilha (OneDrive ou Google Sheets)
+                                </Label>
+                                <Input
+                                  id="onedrive-url"
+                                  type="text"
+                                  value={onedriveUrl}
+                                  onChange={(e) => setOnedriveUrl(e.target.value)}
+                                  placeholder="https://1drv.ms/x/s!... ou https://docs.google.com/spreadsheets/d/..."
+                                  className="col-span-2"
+                                />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Button

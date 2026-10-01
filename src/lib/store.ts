@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import type { AppDataset, PriorityRequest, CheioRow, VazioLocadoRow, VazioIngesysRow, ImportRecord, VazioGenericRow } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { fetchExcelFromOneDrive, isOneDriveLink } from "./onedrive-service";
+import { fetchExcelFromCloudStorage, isOneDriveLink, isGoogleSheetsLink } from "./cloud-storage-service";
 import { parseExcelFile } from "./excel-parser";
 
 export type UserRole = "CLIENTE" | "TRANSPORTADORA";
@@ -428,31 +428,31 @@ export async function syncFromSupabase() {
         }
     
     /**
-     * Sync data from OneDrive spreadsheet
-     * Fetches the Excel file from the configured OneDrive URL and imports the data
+     * Sync data from cloud storage (OneDrive or Google Sheets)
+     * Fetches the Excel file from the configured URL and imports the data
      */
     export async function syncFromOneDrive() {
       if (typeof window === 'undefined') return;
     
-      const onedriveUrl = state.settings.onedriveSpreadsheetUrl;
-      if (!onedriveUrl) {
-        toast.error("URL da planilha OneDrive não configurada. Acesse Configurações para definir.");
+      const cloudUrl = state.settings.onedriveSpreadsheetUrl;
+      if (!cloudUrl) {
+        toast.error("URL da planilha não configurada. Acesse Configurações para definir.");
         return false;
       }
     
-      if (!isOneDriveLink(onedriveUrl)) {
-        toast.error("URL inválida. Forneça um link válido do OneDrive.");
+      if (!isOneDriveLink(cloudUrl) && !isGoogleSheetsLink(cloudUrl)) {
+        toast.error("URL inválida. Forneça um link válido do OneDrive ou Google Sheets.");
         return false;
       }
     
-      const toastId = toast.loading("Buscando planilha do OneDrive...");
+      const toastId = toast.loading("Buscando planilha na nuvem...");
     
       try {
-        // Fetch the Excel file from OneDrive
-        const result = await fetchExcelFromOneDrive(onedriveUrl);
+        // Fetch the Excel file from cloud storage
+        const result = await fetchExcelFromCloudStorage(cloudUrl);
     
         if (!result.success || !result.file) {
-          toast.error(result.error || "Erro ao buscar arquivo do OneDrive.", { id: toastId });
+          toast.error(result.error || "Erro ao buscar arquivo da nuvem.", { id: toastId });
           return false;
         }
     
@@ -489,11 +489,12 @@ export async function syncFromSupabase() {
         }
     
         emit();
-        toast.success("Dados sincronizados do OneDrive com sucesso!", { id: toastId });
-        console.log("[OneDrive] Sincronização concluída com sucesso.");
+        const serviceName = isOneDriveLink(cloudUrl) ? "OneDrive" : "Google Sheets";
+        toast.success(`Dados sincronizados do ${serviceName} com sucesso!`, { id: toastId });
+        console.log(`[${serviceName}] Sincronização concluída com sucesso.`);
         return true;
       } catch (error: any) {
-        console.error("[OneDrive] Erro na sincronização:", error);
+        console.error("[Cloud Storage] Erro na sincronização:", error);
         toast.error(`Erro ao sincronizar: ${error.message || 'Erro desconhecido'}`, { id: toastId });
         return false;
       }
