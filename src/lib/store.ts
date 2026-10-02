@@ -650,6 +650,17 @@ export async function clearDataset() {
 }
 
 export async function addPriorityRequest(req: PriorityRequest) {
+  // Optimistic update: immediately add to local state so UI reflects the change
+  state = {
+    ...state,
+    priorityRequests: [req, ...state.priorityRequests]
+  };
+  if (typeof window !== 'undefined') {
+    localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
+  }
+  emit();
+
+  // Then sync to Supabase
   const { error } = await supabase.from('priority_requests').insert({
     conteiner: req.conteiner,
     nivel: req.nivel,
@@ -658,14 +669,44 @@ export async function addPriorityRequest(req: PriorityRequest) {
     previsao_fabrica: req.previsaoFabrica,
     observacao: req.observacao
   });
-  if (error) toast.error("Erro ao salvar prioridade");
-  else syncFromSupabase();
+  if (error) {
+    toast.error("Erro ao salvar prioridade no banco");
+    // Rollback on error
+    state = {
+      ...state,
+      priorityRequests: state.priorityRequests.filter(r => r.id !== req.id)
+    };
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
+    }
+    emit();
+  } else {
+    // Sync from Supabase to get server-generated data (like timestamps)
+    syncFromSupabase();
+  }
 }
 
 export async function updatePriorityStatus(id: string, status: PriorityRequest["status"]) {
+  // Optimistic update
+  const previousRequests = state.priorityRequests;
+  state = {
+    ...state,
+    priorityRequests: state.priorityRequests.map(r => r.id === id ? { ...r, status } : r)
+  };
+  if (typeof window !== 'undefined') {
+    localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
+  }
+  emit();
+
   const { error } = await supabase.from('priority_requests').update({ status }).eq('id', id);
   if (error) {
     toast.error("Erro ao atualizar status");
+    // Rollback
+    state = { ...state, priorityRequests: previousRequests };
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
+    }
+    emit();
     return;
   }
   const request = state.priorityRequests.find(r => r.id === id);
@@ -678,9 +719,29 @@ export async function updatePriorityStatus(id: string, status: PriorityRequest["
 }
 
 export async function deletePriorityRequest(id: string) {
+  // Optimistic update
+  const previousRequests = state.priorityRequests;
+  state = {
+    ...state,
+    priorityRequests: state.priorityRequests.filter(r => r.id !== id)
+  };
+  if (typeof window !== 'undefined') {
+    localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
+  }
+  emit();
+
   const { error } = await supabase.from('priority_requests').delete().eq('id', id);
-  if (error) toast.error("Erro ao excluir");
-  else syncFromSupabase();
+  if (error) {
+    toast.error("Erro ao excluir");
+    // Rollback
+    state = { ...state, priorityRequests: previousRequests };
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
+    }
+    emit();
+  } else {
+    syncFromSupabase();
+  }
 }
 
 export async function updateSettings(settings: Partial<AppDataset["settings"]>) {
