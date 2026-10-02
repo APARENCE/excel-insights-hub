@@ -124,17 +124,16 @@ function parseProgramacaoSheet(ws: XLSX.WorkSheet, factory: "CVP" | "CVU"): Bulk
   };
   
   const colContainer = findCol(["CONTAINER", "CONTEINER", "CONTÊINER", "NÚMERO", "NUMERO", "ID"]);
-  const colDepara = findCol(["DEPARA", "DE-PARA", "DÊ-PARA", "DE PARA", "CONTEINER DEPARA", "CONTAINER DEPARA"]);
-  const colPriority = findCol(["PRIORIDADE", "NIVEL", "NÍVEL", "URGENCIA", "URGÊNCIA", "CRITICIDADE"]);
-  const colFactory = findCol(["FABRICA", "FÁBRICA", "DESTINO", "FÁBRICA DESTINO"]);
-  const colDate = findCol(["PREVISAO", "PREVISÃO", "DATA", "ENTREGA", "PRAZO"]);
-  const colObs = findCol(["OBS", "OBSERVAÇÃO", "OBSERVACAO", "NOTA", "COMENTARIO"]);
+    const colDepara = findCol(["DEPARA", "DE-PARA", "DÊ-PARA", "DE PARA", "CONTEINER DEPARA", "CONTAINER DEPARA"]);
+    const colPriority = findCol(["PRIORIDADE", "NIVEL", "NÍVEL", "URGENCIA", "URGÊNCIA", "CRITICIDADE"]);
+    const colDate = findCol(["PREVISAO", "PREVISÃO", "DATA", "ENTREGA", "PRAZO"]);
+    const colObs = findCol(["OBS", "OBSERVAÇÃO", "OBSERVACAO", "NOTA", "COMENTARIO"]);
   
   // Fallback: column A (index 0) for container, column B (index 1) for depara
   const containerColIndex = colContainer >= 0 ? colContainer : 0;
   const deparaColIndex = colDepara >= 0 ? colDepara : 1; // Column B by default
   
-  console.log(`[BulkImport] ${factory} column indices: container=${containerColIndex}(${colContainer>=0?'header':'fallback A'}), depara=${deparaColIndex}(${colDepara>=0?'header':'fallback B'}), priority=${colPriority}, factory=${colFactory}, date=${colDate}, obs=${colObs}`);
+  console.log(`[BulkImport] ${factory} column indices: container=${containerColIndex}(${colContainer>=0?'header':'fallback A'}), depara=${deparaColIndex}(${colDepara>=0?'header':'fallback B'}), priority=${colPriority}, date=${colDate}, obs=${colObs} | Factory forced to: ${factory}`);
   
   const results: BulkPriorityItem[] = [];
   let skippedEmpty = 0;
@@ -183,13 +182,8 @@ function parseProgramacaoSheet(ws: XLSX.WorkSheet, factory: "CVP" | "CVU"): Bulk
       else if (val.includes("NORMAL") || val === "1") nivel = "NORMAL";
     }
     
-    let fabricaDestino = factory;
-    if (colFactory >= 0) {
-      const val = String(row[colFactory] ?? "").toUpperCase();
-      if (val.includes("CVP")) fabricaDestino = "CVP";
-      else if (val.includes("CVU")) fabricaDestino = "CVU";
-      else if (val) fabricaDestino = val;
-    }
+    // Always use the sheet name (CVP/CVU) as the factory - sheet tab is source of truth
+        const fabricaDestino = factory;
     
     const previsao = colDate >= 0 && row[colDate] ? String(row[colDate]) : undefined;
     const observacao = colObs >= 0 && row[colObs] ? String(row[colObs]) : undefined;
