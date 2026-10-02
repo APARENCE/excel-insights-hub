@@ -124,18 +124,16 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
   };
 
   const sortedRequests = useMemo(() => {
-    const weight: Record<string, number> = { CRITICA: 3, ALTA: 2, NORMAL: 1 };
-    return ds.priorityRequests
-      .map((req: PriorityRequest) => ({ ...req, details: ds.cheios.find((c: CheioRow) => c.conteiner === req.conteiner) }))
-      .sort((a: any, b: any) => {
-        const statusWeight: Record<RequestStatus, number> = { PENDENTE: 4, CARREGANDO: 3, DESPACHADO: 2, FINALIZADO: 1 };
-        if (statusWeight[a.status as RequestStatus] !== statusWeight[b.status as RequestStatus]) {
-          return statusWeight[b.status as RequestStatus] - statusWeight[a.status as RequestStatus];
-        }
-        if (weight[a.nivel] !== weight[b.nivel]) return weight[b.nivel] - weight[a.nivel];
-        return new Date(b.solicitadoEm).getTime() - new Date(a.solicitadoEm).getTime();
-      });
-  }, [ds.priorityRequests, ds.cheios]);
+      const weight: Record<string, number> = { CRITICA: 3, ALTA: 2, NORMAL: 1 };
+      return ds.priorityRequests
+        .map((req: PriorityRequest) => ({ ...req, details: ds.cheios.find((c: CheioRow) => c.conteiner === req.conteiner) }))
+        .sort((a: any, b: any) => {
+          // Sort by priority level first (CRITICA > ALTA > NORMAL)
+          if (weight[a.nivel] !== weight[b.nivel]) return weight[b.nivel] - weight[a.nivel];
+          // Then by creation time (oldest first)
+          return new Date(a.solicitadoEm).getTime() - new Date(b.solicitadoEm).getTime();
+        });
+    }, [ds.priorityRequests, ds.cheios]);
 
   const handleCreateRequest = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
