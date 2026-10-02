@@ -661,16 +661,19 @@ export async function addPriorityRequest(req: PriorityRequest) {
   emit();
 
   // Then sync to Supabase
-  const { error } = await supabase.from('priority_requests').insert({
+  const insertData = {
     conteiner: req.conteiner,
     nivel: req.nivel,
     status: req.status,
     fabrica_destino: req.fabricaDestino,
-    previsao_fabrica: req.previsaoFabrica,
+    previsao_fabrica: req.previsaoFabrica ? new Date(req.previsaoFabrica).toISOString() : null,
     observacao: req.observacao
-  });
+  };
+  console.log("[addPriorityRequest] Inserting:", insertData);
+  const { error } = await supabase.from('priority_requests').insert(insertData);
   if (error) {
-    toast.error("Erro ao salvar prioridade no banco");
+    console.error("[addPriorityRequest] Supabase error:", error);
+    toast.error(`Erro ao salvar prioridade no banco: ${error.message}`);
     // Rollback on error
     state = {
       ...state,
@@ -681,6 +684,7 @@ export async function addPriorityRequest(req: PriorityRequest) {
     }
     emit();
   } else {
+    console.log("[addPriorityRequest] Successfully inserted to Supabase");
     // Sync from Supabase to get server-generated data (like timestamps)
     syncFromSupabase();
   }

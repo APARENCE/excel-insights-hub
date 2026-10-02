@@ -276,44 +276,47 @@ export default function BulkPriorityImport({
   }, [ds.cheios, ds.priorityRequests]);
 
   const handleImport = async () => {
-    const toImport = matchedData.filter(
-      m => m.matchStatus === "matched" || m.matchStatus === "not_found"
-    );
-    
-    if (toImport.length === 0) {
-      toast.error("Nenhum item válido para importar");
-      return;
-    }
-    
-    setProcessing(true);
-    toast.loading(`Importando ${toImport.length} prioridades...`, { id: "bulk-import" });
-    
-    let success = 0;
-    for (const item of toImport) {
-      try {
-        await addPriorityRequest({
-          id: crypto.randomUUID(),
-          conteiner: item.conteiner,
-          nivel: item.nivel,
-          status: "PENDENTE",
-          solicitadoEm: new Date().toISOString(),
-          fabricaDestino: item.fabricaDestino,
-          previsaoFabrica: item.previsaoFabrica,
-          observacao: item.observacao,
-        });
-        success++;
-      } catch (e) {
-        console.error(e);
+      const toImport = matchedData.filter(
+        m => m.matchStatus === "matched" || m.matchStatus === "not_found"
+      );
+      
+      if (toImport.length === 0) {
+        toast.error("Nenhum item válido para importar");
+        return;
       }
-    }
-    
-    toast.success(`${success} prioridades importadas com sucesso!`, { id: "bulk-import" });
-    setFile(null);
-    setParsedData(null);
-    setMatchedData([]);
-    onOpenChange(false);
-    setProcessing(false);
-  };
+      
+      setProcessing(true);
+      toast.loading(`Importando ${toImport.length} prioridades...`, { id: "bulk-import" });
+      
+      let success = 0;
+      for (const item of toImport) {
+        try {
+          await addPriorityRequest({
+            id: crypto.randomUUID(),
+            conteiner: item.conteiner,
+            nivel: item.nivel,
+            status: "PENDENTE",
+            solicitadoEm: new Date().toISOString(),
+            fabricaDestino: item.fabricaDestino,
+            previsaoFabrica: item.previsaoFabrica,
+            observacao: item.observacao,
+          });
+          success++;
+        } catch (e) {
+          console.error("[BulkImport] Error adding priority:", e);
+          toast.error(`Erro ao importar ${item.conteiner}: ${e instanceof Error ? e.message : 'Erro desconhecido'}`);
+        }
+      }
+      
+      if (success > 0) {
+        toast.success(`${success} prioridades importadas com sucesso!`, { id: "bulk-import" });
+        setFile(null);
+        setParsedData(null);
+        setMatchedData([]);
+        onOpenChange(false);
+      }
+      setProcessing(false);
+    };
 
   const filteredItems = matchedData.filter(item => {
     if (activeTab !== "ALL" && item.fabricaDestino !== activeTab) return false;
