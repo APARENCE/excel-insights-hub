@@ -145,10 +145,9 @@ export default function Dashboard() {
           isCritical ? "border-destructive/50 bg-destructive/5" : "border-border bg-card"
         )}>
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <div className={cn("font-semibold", isCritical ? "text-destructive" : "text-primary")}>Capacidade Operacional Total</div>
-              <div className="text-xs text-muted-foreground">Soma de Cheios (AA) + Vazios (Renault, Tlog, Armadores)</div>
-            </div>
+                      <div>
+                        <div className={cn("font-semibold", isCritical ? "text-destructive" : "text-primary")}>Capacidade Operacional Total</div>
+                      </div>
             <span className={cn(
               "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold",
               isCritical ? "bg-destructive text-destructive-foreground animate-pulse" : "bg-success text-success-foreground"
