@@ -115,28 +115,31 @@ function parseProgramacaoSheet(ws: XLSX.WorkSheet, factory: "CVP" | "CVU"): Bulk
   const headers = aoa[0] as string[];
   console.log(`[BulkImport] ${factory} headers:`, headers);
   
-  // Try to find column indices for common fields
+  // Column A (index 0) is always the container number
+  const COL_CONTAINER = 0;
+  
+  // Try to find other columns by header (optional)
   const findCol = (patterns: string[]) => {
-    return headers.findIndex(h => 
+    return headers.findIndex(h =>
       patterns.some(p => h && h.toString().toUpperCase().includes(p.toUpperCase()))
     );
   };
   
-  const colContainer = findCol(["CONTAINER", "CONTEINER", "CONTÊINER", "NÚMERO", "NUMERO", "ID"]);
-    const colPriority = findCol(["PRIORIDADE", "NIVEL", "NÍVEL", "URGENCIA", "URGÊNCIA", "CRITICIDADE"]);
-    const colFactory = findCol(["FABRICA", "FÁBRICA", "DESTINO", "FÁBRICA DESTINO"]);
-    const colDate = findCol(["PREVISAO", "PREVISÃO", "DATA", "ENTREGA", "PRAZO"]);
-    const colObs = findCol(["OBS", "OBSERVAÇÃO", "OBSERVACAO", "NOTA", "COMENTARIO"]);
-    
-    console.log(`[BulkImport] ${factory} column indices:`, { colContainer, colPriority, colFactory, colDate, colObs });
-    
-    const results: BulkPriorityItem[] = [];
+  const colPriority = findCol(["PRIORIDADE", "NIVEL", "NÍVEL", "URGENCIA", "URGÊNCIA", "CRITICIDADE"]);
+  const colFactory = findCol(["FABRICA", "FÁBRICA", "DESTINO", "FÁBRICA DESTINO"]);
+  const colDate = findCol(["PREVISAO", "PREVISÃO", "DATA", "ENTREGA", "PRAZO"]);
+  const colObs = findCol(["OBS", "OBSERVAÇÃO", "OBSERVACAO", "NOTA", "COMENTARIO"]);
   
+  console.log(`[BulkImport] ${factory} column indices: container=A(0), priority=${colPriority}, factory=${colFactory}, date=${colDate}, obs=${colObs}`);
+  
+  const results: BulkPriorityItem[] = [];
+
   for (let i = 1; i < aoa.length; i++) {
     const row = aoa[i];
     if (!row || row.length === 0) continue;
     
-    const container = colContainer >= 0 ? String(row[colContainer] ?? "").trim() : "";
+    // Container is always in column A (index 0)
+    const container = String(row[COL_CONTAINER] ?? "").trim();
     if (!container) continue;
     
     let nivel: PriorityLevel = "NORMAL";
@@ -159,18 +162,18 @@ function parseProgramacaoSheet(ws: XLSX.WorkSheet, factory: "CVP" | "CVU"): Bulk
     const observacao = colObs >= 0 && row[colObs] ? String(row[colObs]) : undefined;
     
     results.push({
-          conteiner: container,
-          nivel,
-          fabricaDestino,
-          previsaoFabrica: previsao,
-          observacao,
-          matchStatus: "not_found",
-          matchMessage: "Aguardando verificação",
-        });
-      }
-      
-      console.log(`[BulkImport] ${factory} parsed ${results.length} items`);
-      return results;
+      conteiner: container,
+      nivel,
+      fabricaDestino,
+      previsaoFabrica: previsao,
+      observacao,
+      matchStatus: "not_found",
+      matchMessage: "Aguardando verificação",
+    });
+  }
+  
+  console.log(`[BulkImport] ${factory} parsed ${results.length} items`);
+  return results;
 }
 
 function matchContainers(items: BulkPriorityItem[], cheios: CheioRow[], existingRequests: any[]) {
