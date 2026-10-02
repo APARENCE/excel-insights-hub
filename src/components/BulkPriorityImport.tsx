@@ -56,32 +56,64 @@ function normalizeSheetName(name: string): string {
 }
 
 function findProgramacaoSheet(wb: XLSX.WorkBook, factory: "CVP" | "CVU"): string | undefined {
+  const names = wb.SheetNames;
+  const factoryUpper = factory.toUpperCase();
+  
+  console.log(`[BulkImport] Looking for ${factory} sheet. Available sheets:`, names);
+  
+  // Strategy 1: Exact match after normalization (handles accents, case, extra spaces)
   const candidates = [
-    `PROGRAMACAO ${factory}`,
-    `PROGRAMAÇÃO ${factory}`,
-    `PROGRAMACAO ${factory} `,
-    `PROGRAMAÇÃO ${factory} `,
+    `PROGRAMACAO ${factoryUpper}`,
+    `PROGRAMACAO ${factoryUpper} `,
+    `PROGRAMA ${factoryUpper}`,
+    `PROGRAMA ${factoryUpper} `,
   ];
   
-  const names = wb.SheetNames;
   const normalize = (value: string) => normalizeSheetName(value);
   
   for (const c of candidates) {
-    const found = names.find((n) => normalize(n) === normalize(c));
-    if (found) return found;
+    const normalizedCandidate = normalize(c);
+    const found = names.find((n) => normalize(n) === normalizedCandidate);
+    if (found) {
+      console.log(`[BulkImport] Found exact match for ${factory}: "${found}"`);
+      return found;
+    }
   }
-  for (const c of candidates) {
-    const found = names.find((n) => normalize(n).includes(normalize(c)));
-    if (found) return found;
+  
+  // Strategy 2: Contains both "PROGRAMACAO"/"PROGRAMA" AND factory code
+  for (const n of names) {
+    const normalized = normalize(n);
+    const hasProgramacao = normalized.includes("PROGRAMACAO") || normalized.includes("PROGRAMA");
+    const hasFactory = normalized.includes(factoryUpper);
+    if (hasProgramacao && hasFactory) {
+      console.log(`[BulkImport] Found contains match for ${factory}: "${n}" (normalized: "${normalized}")`);
+      return n;
+    }
   }
+  
+  // Strategy 3: Just contains factory code (fallback)
+  for (const n of names) {
+    const normalized = normalize(n);
+    if (normalized.includes(factoryUpper)) {
+      console.log(`[BulkImport] Found factory-only match for ${factory}: "${n}" (normalized: "${normalized}")`);
+      return n;
+    }
+  }
+  
+  console.log(`[BulkImport] No sheet found for ${factory}`);
   return undefined;
 }
 
 function parseProgramacaoSheet(ws: XLSX.WorkSheet, factory: "CVP" | "CVU"): BulkPriorityItem[] {
   const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: true, defval: null });
-  if (aoa.length < 2) return [];
+  console.log(`[BulkImport] Parsing ${factory} sheet. Rows: ${aoa.length}`);
+  if (aoa.length < 2) {
+    console.log(`[BulkImport] ${factory} sheet has insufficient rows`);
+    return [];
+  }
   
   const headers = aoa[0] as string[];
+  console.log(`[BulkImport] ${factory} headers:`, headers);
   
   // Try to find column indices for common fields
   const findCol = (patterns: string[]) => {
@@ -91,12 +123,14 @@ function parseProgramacaoSheet(ws: XLSX.WorkSheet, factory: "CVP" | "CVU"): Bulk
   };
   
   const colContainer = findCol(["CONTAINER", "CONTEINER", "CONTÊINER", "NÚMERO", "NUMERO", "ID"]);
-  const colPriority = findCol(["PRIORIDADE", "NIVEL", "NÍVEL", "URGENCIA", "URGÊNCIA", "CRITICIDADE"]);
-  const colFactory = findCol(["FABRICA", "FÁBRICA", "DESTINO", "FÁBRICA DESTINO"]);
-  const colDate = findCol(["PREVISAO", "PREVISÃO", "DATA", "ENTREGA", "PRAZO"]);
-  const colObs = findCol(["OBS", "OBSERVAÇÃO", "OBSERVACAO", "NOTA", "COMENTARIO"]);
-  
-  const results: BulkPriorityItem[] = [];
+    const colPriority = findCol(["PRIORIDADE", "NIVEL", "NÍVEL", "URGENCIA", "URGÊNCIA", "CRITICIDADE"]);
+    const colFactory = findCol(["FABRICA", "FÁBRICA", "DESTINO", "FÁBRICA DESTINO"]);
+    const colDate = findCol(["PREVISAO", "PREVISÃO", "DATA", "ENTREGA", "PRAZO"]);
+    const colObs = findCol(["OBS", "OBSERVAÇÃO", "OBSERVACAO", "NOTA", "COMENTARIO"]);
+    
+    console.log(`[BulkImport] ${factory} column indices:`, { colContainer, colPriority, colFactory, colDate, colObs });
+    
+    const results: BulkPriorityItem[] = [];
   
   for (let i = 1; i < aoa.length; i++) {
     const row = aoa[i];
@@ -125,17 +159,18 @@ function parseProgramacaoSheet(ws: XLSX.WorkSheet, factory: "CVP" | "CVU"): Bulk
     const observacao = colObs >= 0 && row[colObs] ? String(row[colObs]) : undefined;
     
     results.push({
-      conteiner: container,
-      nivel,
-      fabricaDestino,
-      previsaoFabrica: previsao,
-      observacao,
-      matchStatus: "not_found",
-      matchMessage: "Aguardando verificação",
-    });
-  }
-  
-  return results;
+          conteiner: container,
+          nivel,
+          fabricaDestino,
+          previsaoFabrica: previsao,
+          observacao,
+          matchStatus: "not_found",
+          matchMessage: "Aguardando verificação",
+        });
+      }
+      
+      console.log(`[BulkImport] ${factory} parsed ${results.length} items`);
+      return results;
 }
 
 function matchContainers(items: BulkPriorityItem[], cheios: CheioRow[], existingRequests: any[]) {
