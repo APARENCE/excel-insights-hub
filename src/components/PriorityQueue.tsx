@@ -70,8 +70,8 @@ function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) 
             <div
               key={step.id}
               className={cn(
-                "h-1.5 flex-1 rounded-full transition-all duration-500",
-                isPast ? step.color : isCurrent ? `${step.color} animate-pulse ring-1 ring-offset-1 ring-foreground/20` : "bg-muted",
+                "h-1.5 flex-1 rounded-full transition-all duration-300",
+                isPast ? step.color : isCurrent ? `${step.color} ring-1 ring-offset-1 ring-foreground/20` : "bg-muted",
               )}
             />
           );
@@ -86,7 +86,7 @@ function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) 
               key={step.id}
               className={cn(
                 "text-[7px] font-bold tracking-tighter",
-                isCurrent ? "text-foreground scale-110 transition-transform" : isPast ? "text-muted-foreground/70" : "text-muted-foreground/40",
+                isCurrent ? "text-foreground" : isPast ? "text-muted-foreground/70" : "text-muted-foreground/40",
               )}
             >
               {step.label}
