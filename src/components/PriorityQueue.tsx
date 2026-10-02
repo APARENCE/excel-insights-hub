@@ -306,8 +306,8 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                          <Label className="text-xs">Destino</Label>
-                          <Select value={fabricaSelect} onValueChange={setFabricaSelect}>
+                                                  <Label className="text-xs">Fábrica (CVP/CVU)</Label>
+                                                  <Select value={fabricaSelect} onValueChange={setFabricaSelect}>
                             <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                             <SelectContent><SelectItem value="CVU">CVU</SelectItem><SelectItem value="CVP">CVP</SelectItem><SelectItem value="OUTROS">Outra...</SelectItem></SelectContent>
                           </Select>
@@ -358,14 +358,14 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
       <div className="px-6 pb-10">
         <div className="rounded-lg border border-border bg-card overflow-hidden">
           <div className="flex items-center gap-4 px-4 py-1.5 bg-muted/50 border-b border-border text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
-            <div className="w-5 shrink-0">Prio</div>
-            <div className="w-36 shrink-0">Container / Dê-para</div>
-            <div className="w-20 shrink-0">Destino</div>
-            <div className="w-24 shrink-0">Previsão</div>
-            <div className="w-16 shrink-0">Hora</div>
-            <div className="flex-1 text-center">Status Operacional</div>
-            <div className="w-32 shrink-0 text-right">Ações</div>
-          </div>
+                      <div className="w-5 shrink-0">Prio</div>
+                      <div className="w-36 shrink-0">Container / Dê-para</div>
+                      <div className="w-20 shrink-0">CVP / CVU</div>
+                      <div className="w-24 shrink-0">Previsão</div>
+                      <div className="w-16 shrink-0">Hora</div>
+                      <div className="flex-1 text-center">Status Operacional</div>
+                      <div className="w-32 shrink-0 text-right">Ações</div>
+                    </div>
 
           <div className="divide-y divide-border">
             {sortedRequests.length === 0 ? (
