@@ -690,6 +690,52 @@ export async function addPriorityRequest(req: PriorityRequest) {
   }
 }
 
+export async function addPriorityRequestsBatch(requests: PriorityRequest[]) {
+  if (requests.length === 0) return;
+  
+  // Optimistic update: add all to local state at once
+  const newRequests = [...requests, ...state.priorityRequests];
+  state = {
+    ...state,
+    priorityRequests: newRequests
+  };
+  if (typeof window !== 'undefined') {
+    localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
+  }
+  emit();
+
+  // Batch insert to Supabase (single request)
+  const insertData = requests.map(req => ({
+    conteiner: req.conteiner,
+    nivel: req.nivel,
+    status: req.status,
+    fabrica_destino: req.fabricaDestino,
+    previsao_fabrica: req.previsaoFabrica ? new Date(req.previsaoFabrica).toISOString() : null,
+    observacao: req.observacao
+  }));
+  
+  console.log(`[addPriorityRequestsBatch] Inserting ${insertData.length} items in batch`);
+  const { error } = await supabase.from('priority_requests').insert(insertData);
+  
+  if (error) {
+    console.error("[addPriorityRequestsBatch] Supabase error:", error);
+    toast.error(`Erro ao salvar prioridades no banco: ${error.message}`);
+    // Rollback on error
+    state = {
+      ...state,
+      priorityRequests: state.priorityRequests.filter(r => !requests.some(req => req.id === r.id))
+    };
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
+    }
+    emit();
+  } else {
+    console.log(`[addPriorityRequestsBatch] Successfully inserted ${requests.length} items to Supabase`);
+    // Single sync at the end
+    syncFromSupabase();
+  }
+}
+
 export async function updatePriorityStatus(id: string, status: PriorityRequest["status"]) {
   // Optimistic update
   const previousRequests = state.priorityRequests;
