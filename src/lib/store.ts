@@ -658,6 +658,7 @@ export async function addPriorityRequest(req: PriorityRequest) {
   if (typeof window !== 'undefined') {
     localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
   }
+  console.log("[addPriorityRequest] Optimistic update: added to local state");
   emit();
 
   // Then sync to Supabase
@@ -669,7 +670,7 @@ export async function addPriorityRequest(req: PriorityRequest) {
     previsao_fabrica: req.previsaoFabrica ? new Date(req.previsaoFabrica).toISOString() : null,
     observacao: req.observacao
   };
-  console.log("[addPriorityRequest] Inserting:", insertData);
+  console.log("[addPriorityRequest] Inserting to Supabase:", insertData);
   const { error } = await supabase.from('priority_requests').insert(insertData);
   if (error) {
     console.error("[addPriorityRequest] Supabase error:", error);
@@ -685,8 +686,10 @@ export async function addPriorityRequest(req: PriorityRequest) {
     emit();
   } else {
     console.log("[addPriorityRequest] Successfully inserted to Supabase");
-    // Sync from Supabase to get server-generated data (like timestamps)
-    syncFromSupabase();
+    // Don't call syncFromSupabase here - realtime subscription handles sync
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
+    }
   }
 }
 
@@ -702,6 +705,7 @@ export async function addPriorityRequestsBatch(requests: PriorityRequest[]) {
   if (typeof window !== 'undefined') {
     localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
   }
+  console.log(`[addPriorityRequestsBatch] Optimistic update: ${requests.length} items added to local state`);
   emit();
 
   // Batch insert to Supabase (single request)
@@ -714,7 +718,7 @@ export async function addPriorityRequestsBatch(requests: PriorityRequest[]) {
     observacao: req.observacao
   }));
   
-  console.log(`[addPriorityRequestsBatch] Inserting ${insertData.length} items in batch`);
+  console.log(`[addPriorityRequestsBatch] Inserting ${insertData.length} items in batch to Supabase`);
   const { error } = await supabase.from('priority_requests').insert(insertData);
   
   if (error) {
@@ -731,8 +735,12 @@ export async function addPriorityRequestsBatch(requests: PriorityRequest[]) {
     emit();
   } else {
     console.log(`[addPriorityRequestsBatch] Successfully inserted ${requests.length} items to Supabase`);
-    // Single sync at the end
-    syncFromSupabase();
+    // Don't call syncFromSupabase here - it may overwrite optimistic state
+    // The realtime subscription will handle sync when data arrives
+    // Just update localStorage to persist
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
+    }
   }
 }
 
