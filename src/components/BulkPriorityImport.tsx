@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 
 interface BulkPriorityItem {
   conteiner: string;
+  depara?: string; // Column B - container depara
   nivel: PriorityLevel;
   fabricaDestino: "CVP" | "CVU" | string;
   previsaoFabrica?: string;
@@ -123,15 +124,17 @@ function parseProgramacaoSheet(ws: XLSX.WorkSheet, factory: "CVP" | "CVU"): Bulk
   };
   
   const colContainer = findCol(["CONTAINER", "CONTEINER", "CONTÊINER", "NÚMERO", "NUMERO", "ID"]);
+  const colDepara = findCol(["DEPARA", "DE-PARA", "DÊ-PARA", "DE PARA", "CONTEINER DEPARA", "CONTAINER DEPARA"]);
   const colPriority = findCol(["PRIORIDADE", "NIVEL", "NÍVEL", "URGENCIA", "URGÊNCIA", "CRITICIDADE"]);
   const colFactory = findCol(["FABRICA", "FÁBRICA", "DESTINO", "FÁBRICA DESTINO"]);
   const colDate = findCol(["PREVISAO", "PREVISÃO", "DATA", "ENTREGA", "PRAZO"]);
   const colObs = findCol(["OBS", "OBSERVAÇÃO", "OBSERVACAO", "NOTA", "COMENTARIO"]);
   
-  // Fallback: column A (index 0) if no header match
+  // Fallback: column A (index 0) for container, column B (index 1) for depara
   const containerColIndex = colContainer >= 0 ? colContainer : 0;
+  const deparaColIndex = colDepara >= 0 ? colDepara : 1; // Column B by default
   
-  console.log(`[BulkImport] ${factory} column indices: container=${containerColIndex}(${colContainer>=0?'header':'fallback A'}), priority=${colPriority}, factory=${colFactory}, date=${colDate}, obs=${colObs}`);
+  console.log(`[BulkImport] ${factory} column indices: container=${containerColIndex}(${colContainer>=0?'header':'fallback A'}), depara=${deparaColIndex}(${colDepara>=0?'header':'fallback B'}), priority=${colPriority}, factory=${colFactory}, date=${colDate}, obs=${colObs}`);
   
   const results: BulkPriorityItem[] = [];
   let skippedEmpty = 0;
@@ -166,6 +169,12 @@ function parseProgramacaoSheet(ws: XLSX.WorkSheet, factory: "CVP" | "CVU"): Bulk
       continue;
     }
     
+    // Get depara from column B (or detected column)
+    let depara = "";
+    if (row.length > deparaColIndex) {
+      depara = String(row[deparaColIndex] ?? "").trim();
+    }
+    
     let nivel: PriorityLevel = "NORMAL";
     if (colPriority >= 0) {
       const val = String(row[colPriority] ?? "").toUpperCase();
@@ -187,6 +196,7 @@ function parseProgramacaoSheet(ws: XLSX.WorkSheet, factory: "CVP" | "CVU"): Bulk
     
     results.push({
       conteiner: container,
+      depara,
       nivel,
       fabricaDestino,
       previsaoFabrica: previsao,
@@ -469,20 +479,21 @@ export default function BulkPriorityImport({
             <ScrollArea className="max-h-[50vh]">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border text-muted-foreground">
-                    <th className="text-left p-2 w-8">#</th>
-                    <th className="text-left p-2">Container</th>
-                    <th className="text-left p-2 w-24">Fábrica</th>
-                    <th className="text-left p-2 w-24">Prioridade</th>
-                    <th className="text-left p-2 w-32">Previsão</th>
-                    <th className="text-left p-2">Status</th>
-                    <th className="text-left p-2 w-48">Ação</th>
-                  </tr>
-                </thead>
+                                  <tr className="border-b border-border text-muted-foreground">
+                                    <th className="text-left p-2 w-8">#</th>
+                                    <th className="text-left p-2">Container</th>
+                                    <th className="text-left p-2 w-32">Dê-para</th>
+                                    <th className="text-left p-2 w-24">Fábrica</th>
+                                    <th className="text-left p-2 w-24">Prioridade</th>
+                                    <th className="text-left p-2 w-32">Previsão</th>
+                                    <th className="text-left p-2">Status</th>
+                                    <th className="text-left p-2 w-48">Ação</th>
+                                  </tr>
+                                </thead>
                 <tbody>
                   {filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-8 text-muted-foreground text-xs">
+                      <td colSpan={8} className="text-center py-8 text-muted-foreground text-xs">
                         Nenhum item encontrado
                       </td>
                     </tr>
@@ -497,8 +508,11 @@ export default function BulkPriorityImport({
                       )}>
                         <td className="p-2 text-xs text-muted-foreground">{idx + 1}</td>
                         <td className="p-2 font-mono font-medium">{item.conteiner}</td>
-                        <td className="p-2">
-                          <Badge variant={item.fabricaDestino === "CVP" ? "default" : "secondary"}>
+                                                <td className="p-2 text-[10px] text-muted-foreground font-mono">
+                                                  {item.depara || "—"}
+                                                </td>
+                                                <td className="p-2">
+                                                  <Badge variant={item.fabricaDestino === "CVP" ? "default" : "secondary"}>
                             {item.fabricaDestino}
                           </Badge>
                         </td>
