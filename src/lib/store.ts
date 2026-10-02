@@ -754,10 +754,12 @@ export async function updatePriorityStatus(id: string, status: PriorityRequest["
   if (typeof window !== 'undefined') {
     localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
   }
+  console.log("[updatePriorityStatus] Optimistic update:", id, "->", status);
   emit();
 
   const { error } = await supabase.from('priority_requests').update({ status }).eq('id', id);
   if (error) {
+    console.error("[updatePriorityStatus] Supabase error:", error);
     toast.error("Erro ao atualizar status");
     // Rollback
     state = { ...state, priorityRequests: previousRequests };
@@ -773,7 +775,11 @@ export async function updatePriorityStatus(id: string, status: PriorityRequest["
       .update({ status: "ENVIADO PARA FABRICA", data_envio_fabrica: new Date().toISOString() })
       .eq('conteiner', request.conteiner);
   }
-  syncFromSupabase();
+  // Don't call syncFromSupabase() - realtime subscription handles sync
+  console.log("[updatePriorityStatus] Successfully updated in Supabase");
+  if (typeof window !== 'undefined') {
+    localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
+  }
 }
 
 export async function deletePriorityRequest(id: string) {
