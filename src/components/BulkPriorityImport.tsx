@@ -361,12 +361,13 @@ export default function BulkPriorityImport({
   });
 
   const stats = {
-    total: matchedData.length,
-    matched: matchedData.filter(m => m.matchStatus === "matched").length,
-    notFound: matchedData.filter(m => m.matchStatus === "not_found").length,
-    alreadyPending: matchedData.filter(m => m.matchStatus === "already_pending").length,
-    finalized: matchedData.filter(m => m.matchStatus === "finalized").length,
-  };
+      total: matchedData.length,
+      matched: matchedData.filter(m => m.matchStatus === "matched").length,
+      notFound: matchedData.filter(m => m.matchStatus === "not_found").length,
+      alreadyPending: matchedData.filter(m => m.matchStatus === "already_pending").length,
+      finalized: matchedData.filter(m => m.matchStatus === "finalized").length,
+      importable: matchedData.filter(m => m.matchStatus === "matched" || m.matchStatus === "not_found").length,
+    };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -451,9 +452,9 @@ export default function BulkPriorityImport({
                   {stats.alreadyPending} já pendentes • {stats.finalized} finalizados
                 </p>
               </div>
-              <Badge variant={stats.matched > 0 ? "default" : "secondary"}>
-                <CheckCircle className="h-3 w-3 mr-1" /> {stats.matched} Importáveis
-              </Badge>
+              <Badge variant={stats.importable > 0 ? "default" : "secondary"}>
+                              <CheckCircle className="h-3 w-3 mr-1" /> {stats.importable} Importáveis ({stats.matched} no pátio + {stats.notFound} fora)
+                            </Badge>
             </div>
 
             <div className="flex gap-2 border-b pb-2">
@@ -563,23 +564,23 @@ export default function BulkPriorityImport({
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={processing}>
                 Cancelar
               </Button>
-              <Button 
-                onClick={handleImport} 
-                disabled={processing || stats.matched === 0}
-                className="w-[200px]"
-              >
-                {processing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Importando...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Importar {stats.matched} Prioridades
-                  </>
-                )}
-              </Button>
+              <Button
+                              onClick={handleImport}
+                              disabled={processing || stats.importable === 0}
+                              className="w-[200px]"
+                            >
+                              {processing ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                  Importando...
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Importar {stats.importable} Prioridades
+                                </>
+                              )}
+                            </Button>
             </DialogFooter>
           </div>
         )}
