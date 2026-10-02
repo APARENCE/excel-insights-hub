@@ -106,7 +106,7 @@ function findProgramacaoSheet(wb: XLSX.WorkBook, factory: "CVP" | "CVU"): string
 
 function parseProgramacaoSheet(ws: XLSX.WorkSheet, factory: "CVP" | "CVU"): BulkPriorityItem[] {
   const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: true, defval: null });
-  console.log(`[BulkImport] Parsing ${factory} sheet. Rows: ${aoa.length}`);
+  console.log(`[BulkImport] Parsing ${factory} sheet. Total rows: ${aoa.length}`);
   if (aoa.length < 2) {
     console.log(`[BulkImport] ${factory} sheet has insufficient rows`);
     return [];
@@ -115,32 +115,56 @@ function parseProgramacaoSheet(ws: XLSX.WorkSheet, factory: "CVP" | "CVU"): Bulk
   const headers = aoa[0] as string[];
   console.log(`[BulkImport] ${factory} headers:`, headers);
   
-  // Column A (index 0) is always the container number
-  const COL_CONTAINER = 0;
-  
-  // Try to find other columns by header (optional)
+  // Try to find container column by header name first
   const findCol = (patterns: string[]) => {
     return headers.findIndex(h =>
       patterns.some(p => h && h.toString().toUpperCase().includes(p.toUpperCase()))
     );
   };
   
+  const colContainer = findCol(["CONTAINER", "CONTEINER", "CONTÊINER", "NÚMERO", "NUMERO", "ID"]);
   const colPriority = findCol(["PRIORIDADE", "NIVEL", "NÍVEL", "URGENCIA", "URGÊNCIA", "CRITICIDADE"]);
   const colFactory = findCol(["FABRICA", "FÁBRICA", "DESTINO", "FÁBRICA DESTINO"]);
   const colDate = findCol(["PREVISAO", "PREVISÃO", "DATA", "ENTREGA", "PRAZO"]);
   const colObs = findCol(["OBS", "OBSERVAÇÃO", "OBSERVACAO", "NOTA", "COMENTARIO"]);
   
-  console.log(`[BulkImport] ${factory} column indices: container=A(0), priority=${colPriority}, factory=${colFactory}, date=${colDate}, obs=${colObs}`);
+  // Fallback: column A (index 0) if no header match
+  const containerColIndex = colContainer >= 0 ? colContainer : 0;
+  
+  console.log(`[BulkImport] ${factory} column indices: container=${containerColIndex}(${colContainer>=0?'header':'fallback A'}), priority=${colPriority}, factory=${colFactory}, date=${colDate}, obs=${colObs}`);
   
   const results: BulkPriorityItem[] = [];
+  let skippedEmpty = 0;
+  let skippedNoContainer = 0;
 
   for (let i = 1; i < aoa.length; i++) {
     const row = aoa[i];
-    if (!row || row.length === 0) continue;
+    if (!row || row.length === 0) { skippedEmpty++; continue; }
     
-    // Container is always in column A (index 0)
-    const container = String(row[COL_CONTAINER] ?? "").trim();
-    if (!container) continue;
+    // Try primary container column
+    let container = String(row[containerColIndex] ?? "").trim();
+    
+    // If empty, try other common columns (B, C, D, E)
+    if (!container) {
+      for (let fallbackCol = 0; fallbackCol < Math.min(5, row.length); fallbackCol++) {
+        if (fallbackCol === containerColIndex) continue;
+        const val = String(row[fallbackCol] ?? "").trim();
+        if (val && val.length >= 5) { // Container codes are usually 11+ chars
+          container = val;
+          console.log(`[BulkImport] ${factory} row ${i+1}: Found container in fallback column ${fallbackCol}: ${container}`);
+          break;
+        }
+      }
+    }
+    
+    if (!container) {
+      skippedNoContainer++;
+      // Log first few empty rows for debugging
+      if (skippedNoContainer <= 5) {
+        console.log(`[BulkImport] ${factory} row ${i+1}: No container found. Row data:`, row.slice(0, 10));
+      }
+      continue;
+    }
     
     let nivel: PriorityLevel = "NORMAL";
     if (colPriority >= 0) {
@@ -172,7 +196,7 @@ function parseProgramacaoSheet(ws: XLSX.WorkSheet, factory: "CVP" | "CVU"): Bulk
     });
   }
   
-  console.log(`[BulkImport] ${factory} parsed ${results.length} items`);
+  console.log(`[BulkImport] ${factory} parsed: ${results.length} items, skipped empty: ${skippedEmpty}, skipped no container: ${skippedNoContainer}`);
   return results;
 }
 
