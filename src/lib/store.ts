@@ -748,6 +748,35 @@ export async function deletePriorityRequest(id: string) {
   }
 }
 
+export async function clearAllPriorityRequests() {
+  // Optimistic update
+  const previousRequests = state.priorityRequests;
+  state = {
+    ...state,
+    priorityRequests: []
+  };
+  if (typeof window !== 'undefined') {
+    localStorage.setItem("tlog:priority_requests", JSON.stringify([]));
+  }
+  emit();
+
+  // Delete all from Supabase
+  const { error } = await supabase.from('priority_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) {
+    console.error("[clearAllPriorityRequests] Supabase error:", error);
+    toast.error(`Erro ao limpar no banco: ${error.message}`);
+    // Rollback
+    state = { ...state, priorityRequests: previousRequests };
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
+    }
+    emit();
+  } else {
+    console.log("[clearAllPriorityRequests] Successfully cleared from Supabase");
+    syncFromSupabase();
+  }
+}
+
 export async function updateSettings(settings: Partial<AppDataset["settings"]>) {
   if (settings.capacidadePatio === undefined && settings.onedriveSpreadsheetUrl === undefined) return;
 

@@ -44,7 +44,14 @@ import {
 } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { useDataset, addPriorityRequest, updatePriorityStatus, deletePriorityRequest, setDataset } from "@/lib/store";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { useDataset, addPriorityRequest, updatePriorityStatus, deletePriorityRequest, setDataset, clearAllPriorityRequests } from "@/lib/store";
 import { toast } from "sonner";
 import { PriorityLevel, RequestStatus, PriorityRequest, CheioRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -106,8 +113,9 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
     const [fabricaSelect, setFabricaSelect] = useState<string>("CVU");
     const [customFabrica, setCustomFabrica] = useState("");
     const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
-  
-    const isCliente = role === "CLIENTE";
+      const [isClearAllOpen, setIsClearAllOpen] = useState(false);
+     
+      const isCliente = role === "CLIENTE";
     const isTransportadora = role === "TRANSPORTADORA";
 
   const availableContainers = useMemo(() => {
@@ -225,15 +233,20 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
         title={isCliente ? "Cliente Renault" : "Transportadora"}
         subtitle={isCliente ? "Solicitações de prioridade para a fábrica" : "Fluxo de saída em tempo real"}
         actions={
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setDataset((prev: any) => ({ ...prev, priorityRequests: prev.priorityRequests.filter((r: any) => r.status !== "FINALIZADO") }))} className="text-[10px] h-8">
-                      <Eraser className="h-3 w-3 mr-1.5" /> Limpar OK
-                    </Button>
-                    {isTransportadora && (
-                      <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="text-[10px] h-8">
-                        <PackageCheck className="h-3.5 w-3.5 mr-1" /> Importar Prioridades
-                      </Button>
-                    )}
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => setDataset((prev: any) => ({ ...prev, priorityRequests: prev.priorityRequests.filter((r: any) => r.status !== "FINALIZADO") }))} className="text-[10px] h-8">
+                              <Eraser className="h-3 w-3 mr-1.5" /> Limpar OK
+                            </Button>
+                            {ds.priorityRequests.length > 0 && (
+                              <Button variant="outline" size="sm" onClick={() => setIsClearAllOpen(true)} className="text-[10px] h-8 text-destructive hover:text-destructive hover:border-destructive/50">
+                                <Trash2 className="h-3.5 w-3.5 mr-1" /> Limpar Tudo
+                              </Button>
+                            )}
+                            {isTransportadora && (
+                              <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="text-[10px] h-8">
+                                <PackageCheck className="h-3.5 w-3.5 mr-1" /> Importar Prioridades
+                              </Button>
+                            )}
                     {isCliente && (
                       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DialogTrigger asChild>
@@ -350,8 +363,34 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
                   </div>
             
                   {isTransportadora && (
-                    <BulkPriorityImport open={isBulkImportOpen} onOpenChange={setIsBulkImportOpen} />
-                  )}
-                </>
-              );
-            }
+                                      <BulkPriorityImport open={isBulkImportOpen} onOpenChange={setIsBulkImportOpen} />
+                                    )}
+                  
+                                    <Dialog open={isClearAllOpen} onOpenChange={setIsClearAllOpen}>
+                                      <DialogContent className="max-w-md">
+                                        <DialogHeader>
+                                          <DialogTitle>Limpar todas as prioridades?</DialogTitle>
+                                        </DialogHeader>
+                                        <div className="py-4 text-sm text-muted-foreground">
+                                          Esta ação removerá <strong>{ds.priorityRequests.length}</strong> solicitação(ões) da fila permanentemente.
+                                          <br />
+                                          <span className="text-destructive">Esta ação não pode ser desfeita.</span>
+                                        </div>
+                                        <DialogFooter className="gap-2">
+                                          <Button variant="outline" onClick={() => setIsClearAllOpen(false)}>
+                                            Cancelar
+                                          </Button>
+                                          <Button variant="destructive" onClick={async () => {
+                                            await clearAllPriorityRequests();
+                                            setIsClearAllOpen(false);
+                                            toast.success("Todas as prioridades foram removidas");
+                                          }}>
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Confirmar limpeza
+                                          </Button>
+                                        </DialogFooter>
+                                      </DialogContent>
+                                    </Dialog>
+                                  </>
+                                );
+                              }
