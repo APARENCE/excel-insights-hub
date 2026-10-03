@@ -46,7 +46,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useDataset, addPriorityRequest, updatePriorityStatus, deletePriorityRequest, setDataset, clearAllPriorityRequests } from "@/lib/store";
 import { toast } from "sonner";
-import { PriorityLevel, RequestStatus, PriorityRequest, CheioRow } from "@/lib/types";
+import { PriorityLevel, RequestStatus, PriorityRequest, CheioRow, calculateProcessTimes, formatMinutes } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import BulkPriorityImport from "./BulkPriorityImport";
 
@@ -185,41 +185,64 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
         deletePriorityRequest(containerId);
       };
   
-      return (
-      <div className={cn("flex items-center gap-4 px-4 py-2 border-b border-border hover:bg-muted/30 transition-colors", req.status === "FINALIZADO" && "opacity-50 bg-muted/10")}>
-        <div className={cn("h-5 w-5 rounded flex items-center justify-center shrink-0", req.nivel === "CRITICA" ? "bg-destructive text-white" : req.nivel === "ALTA" ? "bg-warning text-warning-foreground" : "bg-primary text-white")}>
-          <Zap className="h-3 w-3" />
-        </div>
-  
-        <div className="w-36 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold">{req.conteiner}</span>
-            {req.details?.conteinerDePara && (
-              <span className="text-[8px] bg-info/10 text-info px-1 rounded font-bold border border-info/20">{req.details.conteinerDePara}</span>
-            )}
-          </div>
-        </div>
-  
-        <div className="w-20 shrink-0 flex items-center gap-1 text-[10px] font-medium">
-          <Factory className="h-3 w-3 text-muted-foreground" />
-          {req.fabricaDestino}
-        </div>
-  
-        <div className="w-24 shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground">
-          <Calendar className="h-3 w-3 text-primary/60" />
-          {req.previsaoFabrica ? new Date(req.previsaoFabrica).toLocaleDateString("pt-BR") : "—"}
-        </div>
-  
-        <div className="w-16 shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground">
-          <Clock className="h-3 w-3" />
-          {new Date(req.solicitadoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-        </div>
-  
-        <div className="flex-1 flex items-center justify-center">
-          <StatusStepperLine currentStatus={req.status} />
-        </div>
-  
-        <div className="flex items-center gap-2 shrink-0">
+      const times = calculateProcessTimes(req);
+            
+            return (
+            <div className={cn("flex items-center gap-4 px-4 py-2 border-b border-border hover:bg-muted/30 transition-colors", req.status === "FINALIZADO" && "opacity-50 bg-muted/10")}>
+              <div className={cn("h-5 w-5 rounded flex items-center justify-center shrink-0", req.nivel === "CRITICA" ? "bg-destructive text-white" : req.nivel === "ALTA" ? "bg-warning text-warning-foreground" : "bg-primary text-white")}>
+                <Zap className="h-3 w-3" />
+              </div>
+      
+              <div className="w-36 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold">{req.conteiner}</span>
+                  {req.details?.conteinerDePara && (
+                    <span className="text-[8px] bg-info/10 text-info px-1 rounded font-bold border border-info/20">{req.details.conteinerDePara}</span>
+                  )}
+                </div>
+              </div>
+      
+              <div className="w-20 shrink-0 flex items-center gap-1 text-[10px] font-medium">
+                <Factory className="h-3 w-3 text-muted-foreground" />
+                {req.fabricaDestino}
+              </div>
+      
+              <div className="w-24 shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground">
+                <Calendar className="h-3 w-3 text-primary/60" />
+                {req.previsaoFabrica ? new Date(req.previsaoFabrica).toLocaleDateString("pt-BR") : "—"}
+              </div>
+      
+              <div className="w-16 shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                {new Date(req.solicitadoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              </div>
+      
+              <div className="w-36 shrink-0 flex items-center justify-center text-[9px] font-mono">
+                {times.totalMinutes !== null ? (
+                  <>
+                    <span className="font-bold text-primary">{formatMinutes(times.totalMinutes)}</span>
+                    {times.isComplete && <span className="text-success ml-1">✓</span>}
+                  </>
+                ) : (
+                  <>
+                    {times.carregandoMinutes !== null && (
+                      <span className="text-warning">C:{formatMinutes(times.carregandoMinutes)}</span>
+                    )}
+                    {times.despachandoMinutes !== null && (
+                      <span className="text-info ml-1">D:{formatMinutes(times.despachandoMinutes)}</span>
+                    )}
+                    {times.finalizandoMinutes !== null && (
+                      <span className="text-success ml-1">F:{formatMinutes(times.finalizandoMinutes)}</span>
+                    )}
+                  </>
+                )}
+              </div>
+      
+              <div className="flex-1 flex items-center justify-center">
+                <StatusStepperLine currentStatus={req.status} />
+              </div>
+      
+              <div className="flex items-center gap-2 shrink-0">
           {isTransportadora && req.status === "PENDENTE" && (
             <Button size="sm" onClick={handleCarregar} className="h-6 px-2 text-[9px] bg-destructive hover:bg-destructive/90 text-white font-bold">CARREGAR</Button>
           )}
@@ -358,14 +381,15 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
       <div className="px-6 pb-10">
         <div className="rounded-lg border border-border bg-card overflow-hidden">
           <div className="flex items-center gap-4 px-4 py-1.5 bg-muted/50 border-b border-border text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
-                      <div className="w-5 shrink-0">Prio</div>
-                      <div className="w-36 shrink-0">Container / Dê-para</div>
-                      <div className="w-20 shrink-0">CVP / CVU</div>
-                      <div className="w-24 shrink-0">Previsão</div>
-                      <div className="w-16 shrink-0">Hora</div>
-                      <div className="flex-1 text-center">Status Operacional</div>
-                      <div className="w-32 shrink-0 text-right">Ações</div>
-                    </div>
+                                <div className="w-5 shrink-0">Prio</div>
+                                <div className="w-36 shrink-0">Container / Dê-para</div>
+                                <div className="w-20 shrink-0">CVP / CVU</div>
+                                <div className="w-24 shrink-0">Previsão</div>
+                                <div className="w-16 shrink-0">Hora</div>
+                                <div className="w-36 shrink-0 text-center">Tempos (min)</div>
+                                <div className="flex-1 text-center">Status Operacional</div>
+                                <div className="w-32 shrink-0 text-right">Ações</div>
+                              </div>
 
           <div className="divide-y divide-border">
             {sortedRequests.length === 0 ? (

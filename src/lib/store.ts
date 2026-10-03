@@ -308,15 +308,18 @@ export async function syncFromSupabase() {
         let mergedPriorityRequests = [...state.priorityRequests];
         if (prioritiesData && prioritiesData.length > 0) {
           const supabasePri = prioritiesData.map((p: any) => ({
-            id: p.id,
-            conteiner: p.conteiner,
-            nivel: p.nivel,
-            status: p.status,
-            solicitadoEm: p.solicitado_em,
-            fabricaDestino: p.fabrica_destino,
-            previsaoFabrica: p.previsao_fabrica,
-            observacao: p.observacao
-          }));
+                      id: p.id,
+                      conteiner: p.conteiner,
+                      nivel: p.nivel,
+                      status: p.status,
+                      solicitadoEm: p.solicitado_em,
+                      carregandoEm: p.carregando_em,
+                      despachadoEm: p.despachado_em,
+                      finalizadoEm: p.finalizado_em,
+                      fabricaDestino: p.fabrica_destino,
+                      previsaoFabrica: p.previsao_fabrica,
+                      observacao: p.observacao
+                    }));
           // Adiciona do Supabase se não existir localmente
           for (const sup of supabasePri) {
             if (!mergedPriorityRequests.some(r => r.id === sup.id)) {
@@ -747,9 +750,19 @@ export async function addPriorityRequestsBatch(requests: PriorityRequest[]) {
 export async function updatePriorityStatus(id: string, status: PriorityRequest["status"]) {
   // Optimistic update
   const previousRequests = state.priorityRequests;
+  const now = new Date().toISOString();
+  
   state = {
     ...state,
-    priorityRequests: state.priorityRequests.map(r => r.id === id ? { ...r, status } : r)
+    priorityRequests: state.priorityRequests.map(r => {
+      if (r.id !== id) return r;
+      const updated: any = { ...r, status };
+      // Set timestamp for each transition
+      if (status === "CARREGANDO" && !r.carregandoEm) updated.carregandoEm = now;
+      if (status === "DESPACHADO" && !r.despachadoEm) updated.despachadoEm = now;
+      if (status === "FINALIZADO" && !r.finalizadoEm) updated.finalizadoEm = now;
+      return updated;
+    })
   };
   if (typeof window !== 'undefined') {
     localStorage.setItem("tlog:priority_requests", JSON.stringify(state.priorityRequests));
@@ -757,7 +770,13 @@ export async function updatePriorityStatus(id: string, status: PriorityRequest["
   console.log("[updatePriorityStatus] Optimistic update:", id, "->", status);
   emit();
 
-  const { error } = await supabase.from('priority_requests').update({ status }).eq('id', id);
+  const { error } = await supabase.from('priority_requests').update({
+    status,
+    carregando_em: status === "CARREGANDO" ? now : undefined,
+    despachado_em: status === "DESPACHADO" ? now : undefined,
+    finalizado_em: status === "FINALIZADO" ? now : undefined,
+  }).eq('id', id);
+  
   if (error) {
     console.error("[updatePriorityStatus] Supabase error:", error);
     toast.error("Erro ao atualizar status");
