@@ -87,7 +87,7 @@ function findProgramacaoSheet(wb: XLSX.WorkBook, factory: "CVP" | "CVU"): string
     const hasProgramacao = normalized.includes("PROGRAMACAO") || normalized.includes("PROGRAMA");
     const hasFactory = normalized.includes(factoryUpper);
     if (hasProgramacao && hasFactory) {
-      console.log(`[BulkImport] Found contains match for ${factory}: "${n}" (normalized: "${normalized}")`);
+      console.log(`[BulkImport] Found contains match for ${factory}: "${n}" (normalized: ${normalized})`);
       return n;
     }
   }
@@ -96,7 +96,7 @@ function findProgramacaoSheet(wb: XLSX.WorkBook, factory: "CVP" | "CVU"): string
   for (const n of names) {
     const normalized = normalize(n);
     if (normalized.includes(factoryUpper)) {
-      console.log(`[BulkImport] Found factory-only match for ${factory}: "${n}" (normalized: "${normalized}")`);
+      console.log(`[BulkImport] Found factory-only match for ${factory}: "${n}" (normalized: ${normalized})`);
       return n;
     }
   }
@@ -323,6 +323,7 @@ export default function BulkPriorityImport({
         const requests = toImport.map(item => ({
           id: crypto.randomUUID(),
           conteiner: item.conteiner,
+          conteinerDePara: item.depara || undefined,
           nivel: item.nivel,
           status: "PENDENTE" as const,
           solicitadoEm: new Date().toISOString(),
@@ -474,44 +475,44 @@ export default function BulkPriorityImport({
             <ScrollArea className="max-h-[50vh]">
               <table className="w-full text-sm">
                 <thead>
-                                  <tr className="border-b border-border text-muted-foreground">
-                                    <th className="text-left p-2 w-8">#</th>
-                                    <th className="text-left p-2">Container</th>
-                                    <th className="text-left p-2 w-32">Dê-para</th>
-                                    <th className="text-left p-2 w-24">Fábrica</th>
-                                    <th className="text-left p-2 w-24">Prioridade</th>
-                                    <th className="text-left p-2 w-32">Previsão</th>
-                                    <th className="text-left p-2">Status</th>
-                                    <th className="text-left p-2 w-48">Ação</th>
-                                  </tr>
-                                </thead>
+                  <tr className="border-b-2 border-border bg-muted/50 text-muted-foreground">
+                    <th className="text-left p-2.5 w-8 font-bold text-[11px] uppercase tracking-wider">#</th>
+                    <th className="text-left p-2.5 font-bold text-[11px] uppercase tracking-wider min-w-[140px]">Container</th>
+                    <th className="text-left p-2.5 font-bold text-[11px] uppercase tracking-wider min-w-[140px]">Dê-para</th>
+                    <th className="text-left p-2.5 font-bold text-[11px] uppercase tracking-wider w-24">Fábrica</th>
+                    <th className="text-left p-2.5 font-bold text-[11px] uppercase tracking-wider w-24">Prioridade</th>
+                    <th className="text-left p-2.5 font-bold text-[11px] uppercase tracking-wider w-28">Previsão</th>
+                    <th className="text-left p-2.5 font-bold text-[11px] uppercase tracking-wider">Status</th>
+                    <th className="text-left p-2.5 font-bold text-[11px] uppercase tracking-wider w-48">Ação</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center py-8 text-muted-foreground text-xs">
+                      <td colSpan={8} className="text-center py-8 text-muted-foreground text-sm">
                         Nenhum item encontrado
                       </td>
                     </tr>
                   ) : (
                     filteredItems.map((item, idx) => (
                       <tr key={item.conteiner} className={cn(
-                        "border-b border-border/50",
+                        "border-b border-border/50 hover:bg-muted/20 transition-colors",
                         item.matchStatus === "matched" && "bg-success/5",
                         item.matchStatus === "not_found" && "bg-warning/5",
                         item.matchStatus === "already_pending" && "bg-muted/10 opacity-60",
                         item.matchStatus === "finalized" && "bg-destructive/5 opacity-40",
                       )}>
-                        <td className="p-2 text-xs text-muted-foreground">{idx + 1}</td>
-                        <td className="p-2 font-mono font-medium">{item.conteiner}</td>
-                                                <td className="p-2 text-[10px] text-muted-foreground font-mono">
-                                                  {item.depara || "—"}
-                                                </td>
-                                                <td className="p-2">
-                                                  <Badge variant={item.fabricaDestino === "CVP" ? "default" : "secondary"}>
+                        <td className="p-2.5 text-xs text-muted-foreground font-medium">{idx + 1}</td>
+                        <td className="p-2.5 font-mono font-bold text-base text-foreground">{item.conteiner}</td>
+                        <td className="p-2.5 font-mono text-sm text-primary font-medium">
+                          {item.depara || "—"}
+                        </td>
+                        <td className="p-2.5">
+                          <Badge variant={item.fabricaDestino === "CVP" ? "default" : "secondary"}>
                             {item.fabricaDestino}
                           </Badge>
                         </td>
-                        <td className="p-2">
+                        <td className="p-2.5">
                           <Badge variant={
                             item.nivel === "CRITICA" ? "destructive" :
                             item.nivel === "ALTA" ? "warning" : "secondary"
@@ -519,27 +520,27 @@ export default function BulkPriorityImport({
                             {item.nivel}
                           </Badge>
                         </td>
-                        <td className="p-2 text-xs text-muted-foreground">
+                        <td className="p-2.5 text-sm text-muted-foreground">
                           {item.previsaoFabrica ? new Date(item.previsaoFabrica).toLocaleDateString("pt-BR") : "—"}
                         </td>
-                        <td className="p-2">
+                        <td className="p-2.5">
                           <Badge variant={
                             item.matchStatus === "matched" ? "default" :
                             item.matchStatus === "not_found" ? "warning" :
                             item.matchStatus === "already_pending" ? "secondary" : "destructive"
-                          } className="text-[9px]">
+                          } className="text-[10px]">
                             {item.matchStatus === "matched" && "✓ Importar"}
                             {item.matchStatus === "not_found" && "⚠ Não no pátio"}
                             {item.matchStatus === "already_pending" && "⏭ Já pendente"}
                             {item.matchStatus === "finalized" && "✗ Finalizado"}
                           </Badge>
                         </td>
-                        <td className="p-2">
+                        <td className="p-2.5">
                           {item.matchedContainer && (
-                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <span>{item.matchedContainer.status}</span>
                               {item.matchedContainer.conteinerDePara && (
-                                <Badge variant="outline" className="text-[8px] h-4 px-1.5">
+                                <Badge variant="outline" className="text-[10px] h-5 px-2">
                                   Dê-para: {item.matchedContainer.conteinerDePara}
                                 </Badge>
                               )}

@@ -194,12 +194,15 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
         </div>
 
         <div className="w-40 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-base font-bold">{req.conteiner}</span>
-            {req.details?.conteinerDePara && (
-              <span className="text-[11px] bg-info/10 text-info px-1.5 rounded font-bold border border-info/20">{req.details.conteinerDePara}</span>
-            )}
-          </div>
+          <span className="text-base font-bold font-mono">{req.conteiner}</span>
+        </div>
+
+        <div className="w-40 shrink-0">
+          {req.details?.conteinerDePara ? (
+            <span className="text-sm font-mono font-medium text-primary">{req.details.conteinerDePara}</span>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
         </div>
 
         <div className="w-24 shrink-0 flex items-center gap-1.5 text-[13px] font-medium">
@@ -400,15 +403,16 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
       <div className="px-6 pb-10">
         <div className="rounded-lg border border-border bg-card overflow-hidden">
           <div className="flex items-center gap-4 px-4 py-2 bg-muted/50 border-b border-border text-[12px] font-bold text-muted-foreground uppercase tracking-wider">
-            <div className="w-5 shrink-0">Prio</div>
-            <div className="w-40 shrink-0">Container / Dê-para</div>
-            <div className="w-24 shrink-0">CVP / CVU</div>
-            <div className="w-28 shrink-0">Previsão</div>
-            <div className="w-20 shrink-0">Início</div>
-            <div className="w-96 shrink-0">Análise de Tempo</div>
-            <div className="flex-1 text-center">Status Operacional</div>
-            <div className="w-32 shrink-0 text-right">Ações</div>
-          </div>
+                      <div className="w-5 shrink-0">Prio</div>
+                      <div className="w-40 shrink-0">Container</div>
+                      <div className="w-40 shrink-0">Dê-para</div>
+                      <div className="w-24 shrink-0">CVP / CVU</div>
+                      <div className="w-28 shrink-0">Previsão</div>
+                      <div className="w-20 shrink-0">Início</div>
+                      <div className="w-96 shrink-0">Análise de Tempo</div>
+                      <div className="flex-1 text-center">Status Operacional</div>
+                      <div className="w-32 shrink-0 text-right">Ações</div>
+                    </div>
 
           <div className="divide-y divide-border">
             {sortedRequests.length === 0 ? (

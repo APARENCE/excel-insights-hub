@@ -16,6 +16,7 @@ export type RequestStatus = "PENDENTE" | "CARREGANDO" | "DESPACHADO" | "FINALIZA
 export interface PriorityRequest {
   id: string;
   conteiner: string;
+  conteinerDePara?: string; // container dê-para (da planilha ou do pátio)
   nivel: PriorityLevel;
   status: RequestStatus;
   solicitadoEm: string;
