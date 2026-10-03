@@ -61,7 +61,7 @@ function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) 
   const currentIndex = steps.findIndex((s) => s.id === currentStatus);
 
   return (
-    <div className="flex flex-col gap-1 w-48">
+    <div className="flex flex-col gap-1 w-64">
       <div className="flex items-center gap-1">
         {steps.map((step, idx) => {
           const isPast = idx < currentIndex;
@@ -85,7 +85,7 @@ function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) 
             <span
               key={step.id}
               className={cn(
-                "text-[7px] font-bold tracking-tighter",
+                "text-[10px] font-bold tracking-tighter",
                 isCurrent ? "text-foreground" : isPast ? "text-muted-foreground/70" : "text-muted-foreground/40",
               )}
             >
@@ -101,15 +101,15 @@ function StatusStepperLine({ currentStatus }: { currentStatus: RequestStatus }) 
 export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTADORA" }) {
   const ds = useDataset();
   const [isAddOpen, setIsAddOpen] = useState(false);
-    const [searchOpen, setSearchOpen] = useState(false);
-    const [selectedContainer, setSelectedContainer] = useState("");
-    const [fabricaSelect, setFabricaSelect] = useState<string>("CVU");
-    const [customFabrica, setCustomFabrica] = useState("");
-    const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
-      const [isClearAllOpen, setIsClearAllOpen] = useState(false);
-     
-      const isCliente = role === "CLIENTE";
-    const isTransportadora = role === "TRANSPORTADORA";
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [selectedContainer, setSelectedContainer] = useState("");
+  const [fabricaSelect, setFabricaSelect] = useState<string>("CVU");
+  const [customFabrica, setCustomFabrica] = useState("");
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isClearAllOpen, setIsClearAllOpen] = useState(false);
+
+  const isCliente = role === "CLIENTE";
+  const isTransportadora = role === "TRANSPORTADORA";
 
   const availableContainers = useMemo(() => {
     const existingIds = new Set(ds.priorityRequests.filter((r: PriorityRequest) => r.status !== "FINALIZADO").map((r: PriorityRequest) => r.conteiner));
@@ -124,16 +124,16 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
   };
 
   const sortedRequests = useMemo(() => {
-      const weight: Record<string, number> = { CRITICA: 3, ALTA: 2, NORMAL: 1 };
-      return ds.priorityRequests
-        .map((req: PriorityRequest) => ({ ...req, details: ds.cheios.find((c: CheioRow) => c.conteiner === req.conteiner) }))
-        .sort((a: any, b: any) => {
-          // Sort by priority level first (CRITICA > ALTA > NORMAL)
-          if (weight[a.nivel] !== weight[b.nivel]) return weight[b.nivel] - weight[a.nivel];
-          // Then by creation time (oldest first)
-          return new Date(a.solicitadoEm).getTime() - new Date(b.solicitadoEm).getTime();
-        });
-    }, [ds.priorityRequests, ds.cheios]);
+    const weight: Record<string, number> = { CRITICA: 3, ALTA: 2, NORMAL: 1 };
+    return ds.priorityRequests
+      .map((req: PriorityRequest) => ({ ...req, details: ds.cheios.find((c: CheioRow) => c.conteiner === req.conteiner) }))
+      .sort((a: any, b: any) => {
+        // Sort by priority level first (CRITICA > ALTA > NORMAL)
+        if (weight[a.nivel] !== weight[b.nivel]) return weight[b.nivel] - weight[a.nivel];
+        // Then by creation time (oldest first)
+        return new Date(a.solicitadoEm).getTime() - new Date(b.solicitadoEm).getTime();
+      });
+  }, [ds.priorityRequests, ds.cheios]);
 
   const handleCreateRequest = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -163,121 +163,121 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
   };
 
   const RequestRow = ({ req }: { req: any }) => {
-      const containerId = req.id; // Capture ID at render time
-      
-      const handleCarregar = () => {
-        console.log("[RequestRow] CARREGAR clicked for:", containerId, req.conteiner);
-        updatePriorityStatus(containerId, "CARREGANDO");
-      };
-      
-      const handleSaidaPatio = () => {
-        console.log("[RequestRow] SAÍDA PÁTIO clicked for:", containerId, req.conteiner);
-        updatePriorityStatus(containerId, "DESPACHADO");
-      };
-      
-      const handleFinalizar = () => {
-        console.log("[RequestRow] FINALIZAR clicked for:", containerId, req.conteiner);
-        updatePriorityStatus(containerId, "FINALIZADO");
-      };
-      
-      const handleDelete = () => {
-              console.log("[RequestRow] DELETE clicked for:", containerId, req.conteiner);
-              deletePriorityRequest(containerId);
-            };
-       
-            const analysis = analyzeTime(req);
-                 
-                  return (
-                  <div className={cn("flex items-center gap-4 px-4 py-2 border-b border-border hover:bg-muted/30 transition-colors", req.status === "FINALIZADO" && "opacity-50 bg-muted/10")}>
-                    <div className={cn("h-5 w-5 rounded flex items-center justify-center shrink-0", req.nivel === "CRITICA" ? "bg-destructive text-white" : req.nivel === "ALTA" ? "bg-warning text-warning-foreground" : "bg-primary text-white")}>
-                      <Zap className="h-3 w-3" />
-                    </div>
-       
-                    <div className="w-36 shrink-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold">{req.conteiner}</span>
-                        {req.details?.conteinerDePara && (
-                          <span className="text-[8px] bg-info/10 text-info px-1 rounded font-bold border border-info/20">{req.details.conteinerDePara}</span>
-                        )}
-                      </div>
-                    </div>
-       
-                    <div className="w-20 shrink-0 flex items-center gap-1 text-[10px] font-medium">
-                      <Factory className="h-3 w-3 text-muted-foreground" />
-                      {req.fabricaDestino}
-                    </div>
-       
-                    <div className="w-24 shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground">
-                      <Calendar className="h-3 w-3 text-primary/60" />
-                      {req.previsaoFabrica ? new Date(req.previsaoFabrica).toLocaleDateString("pt-BR") : "—"}
-                    </div>
-       
-                    <div className="w-16 shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      {analysis.inicio}
-                    </div>
-       
-                    {/* Análise de Tempo Detalhada */}
-                    <div className="w-72 shrink-0">
-                      <div className="flex items-center gap-1 text-[9px] font-mono">
-                        {/* Timeline visual */}
-                        <div className="flex items-center gap-1">
-                          <span className="text-muted-foreground">🕐</span>
-                          <span className="font-medium text-primary">{analysis.inicio}</span>
-                          {analysis.carregando && (
-                            <>
-                              <span className="text-muted-foreground">→</span>
-                              <span className="font-medium text-warning">{analysis.carregando}</span>
-                              <span className="text-warning bg-warning/10 px-1 rounded">+{analysis.ateCarregandoFmt}</span>
-                            </>
-                          )}
-                          {analysis.saidaPatio && (
-                            <>
-                              <span className="text-muted-foreground">→</span>
-                              <span className="font-medium text-info">{analysis.saidaPatio}</span>
-                              <span className="text-info bg-info/10 px-1 rounded">+{analysis.carregandoASaidaFmt}</span>
-                            </>
-                          )}
-                          {analysis.finalizado && (
-                            <>
-                              <span className="text-muted-foreground">→</span>
-                              <span className="font-medium text-success">{analysis.finalizado}</span>
-                              <span className="text-success bg-success/10 px-1 rounded">+{analysis.saidaAFinalizadoFmt}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      {/* Total */}
-                      <div className="flex items-center justify-between mt-1 px-2">
-                        <span className="text-[8px] text-muted-foreground">Fase: {analysis.currentPhase}</span>
-                        <span className={cn("font-bold text-[10px]", analysis.isComplete ? "text-success" : "text-primary")}>
-                          Total: {analysis.totalFmt}
-                          {analysis.isComplete && " ✓"}
-                        </span>
-                      </div>
-                    </div>
-       
-                    <div className="flex-1 flex items-center justify-center">
-                      <StatusStepperLine currentStatus={req.status} />
-                    </div>
-       
-                    <div className="flex items-center gap-2 shrink-0">
+    const containerId = req.id; // Capture ID at render time
+
+    const handleCarregar = () => {
+      console.log("[RequestRow] CARREGAR clicked for:", containerId, req.conteiner);
+      updatePriorityStatus(containerId, "CARREGANDO");
+    };
+
+    const handleSaidaPatio = () => {
+      console.log("[RequestRow] SAÍDA PÁTIO clicked for:", containerId, req.conteiner);
+      updatePriorityStatus(containerId, "DESPACHADO");
+    };
+
+    const handleFinalizar = () => {
+      console.log("[RequestRow] FINALIZAR clicked for:", containerId, req.conteiner);
+      updatePriorityStatus(containerId, "FINALIZADO");
+    };
+
+    const handleDelete = () => {
+      console.log("[RequestRow] DELETE clicked for:", containerId, req.conteiner);
+      deletePriorityRequest(containerId);
+    };
+
+    const analysis = analyzeTime(req);
+
+    return (
+      <div className={cn("flex items-center gap-4 px-4 py-2.5 border-b border-border hover:bg-muted/30 transition-colors", req.status === "FINALIZADO" && "opacity-50 bg-muted/10")}>
+        <div className={cn("h-6 w-6 rounded flex items-center justify-center shrink-0", req.nivel === "CRITICA" ? "bg-destructive text-white" : req.nivel === "ALTA" ? "bg-warning text-warning-foreground" : "bg-primary text-white")}>
+          <Zap className="h-3.5 w-3.5" />
+        </div>
+
+        <div className="w-40 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-base font-bold">{req.conteiner}</span>
+            {req.details?.conteinerDePara && (
+              <span className="text-[11px] bg-info/10 text-info px-1.5 rounded font-bold border border-info/20">{req.details.conteinerDePara}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="w-24 shrink-0 flex items-center gap-1.5 text-[13px] font-medium">
+          <Factory className="h-4 w-4 text-muted-foreground" />
+          {req.fabricaDestino}
+        </div>
+
+        <div className="w-28 shrink-0 flex items-center gap-1.5 text-[12px] text-muted-foreground">
+          <Calendar className="h-4 w-4 text-primary/60" />
+          {req.previsaoFabrica ? new Date(req.previsaoFabrica).toLocaleDateString("pt-BR") : "—"}
+        </div>
+
+        <div className="w-20 shrink-0 flex items-center gap-1.5 text-[12px] text-muted-foreground">
+          <Clock className="h-4 w-4" />
+          {analysis.inicio}
+        </div>
+
+        {/* Análise de Tempo Detalhada */}
+        <div className="w-96 shrink-0">
+          <div className="flex items-center gap-1.5 text-[12px] font-mono">
+            {/* Timeline visual */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted-foreground">🕐</span>
+              <span className="font-medium text-primary">{analysis.inicio}</span>
+              {analysis.carregando && (
+                <>
+                  <span className="text-muted-foreground">→</span>
+                  <span className="font-medium text-warning">{analysis.carregando}</span>
+                  <span className="text-warning bg-warning/10 px-1.5 rounded font-medium">+{analysis.ateCarregandoFmt}</span>
+                </>
+              )}
+              {analysis.saidaPatio && (
+                <>
+                  <span className="text-muted-foreground">→</span>
+                  <span className="font-medium text-info">{analysis.saidaPatio}</span>
+                  <span className="text-info bg-info/10 px-1.5 rounded font-medium">+{analysis.carregandoASaidaFmt}</span>
+                </>
+              )}
+              {analysis.finalizado && (
+                <>
+                  <span className="text-muted-foreground">→</span>
+                  <span className="font-medium text-success">{analysis.finalizado}</span>
+                  <span className="text-success bg-success/10 px-1.5 rounded font-medium">+{analysis.saidaAFinalizadoFmt}</span>
+                </>
+              )}
+            </div>
+          </div>
+          {/* Total */}
+          <div className="flex items-center justify-between mt-1.5 px-2">
+            <span className="text-[11px] text-muted-foreground">Fase: {analysis.currentPhase}</span>
+            <span className={cn("font-bold text-[13px]", analysis.isComplete ? "text-success" : "text-primary")}>
+              Total: {analysis.totalFmt}
+              {analysis.isComplete && " ✓"}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex-1 flex items-center justify-center">
+          <StatusStepperLine currentStatus={req.status} />
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
           {isTransportadora && req.status === "PENDENTE" && (
-            <Button size="sm" onClick={handleCarregar} className="h-6 px-2 text-[9px] bg-destructive hover:bg-destructive/90 text-white font-bold">CARREGAR</Button>
+            <Button size="sm" onClick={handleCarregar} className="h-9 px-3 text-[11px] bg-destructive hover:bg-destructive/90 text-white font-bold uppercase">CARREGAR</Button>
           )}
           {isTransportadora && req.status === "CARREGANDO" && (
-            <Button size="sm" onClick={handleSaidaPatio} className="h-6 px-2 text-[9px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold">SAÍDA PÁTIO</Button>
+            <Button size="sm" onClick={handleSaidaPatio} className="h-9 px-3 text-[11px] bg-warning hover:bg-warning/90 text-warning-foreground font-bold uppercase">SAÍDA PÁTIO</Button>
           )}
           {isTransportadora && req.status === "DESPACHADO" && (
-            <Button size="sm" onClick={handleFinalizar} className="h-6 px-2 text-[9px] bg-success hover:bg-success/90 text-white font-bold">FINALIZAR</Button>
+            <Button size="sm" onClick={handleFinalizar} className="h-9 px-3 text-[11px] bg-success hover:bg-success/90 text-white font-bold uppercase">FINALIZAR</Button>
           )}
           {req.status === "FINALIZADO" && (
-            <div className="text-success flex items-center gap-1 text-[9px] font-bold px-1">
-              <PackageCheck className="h-3 w-3" /> OK
+            <div className="text-success flex items-center gap-1.5 text-[11px] font-bold px-1.5">
+              <PackageCheck className="h-4 w-4" /> OK
             </div>
           )}
-          <Button variant="ghost" size="icon" onClick={handleDelete} className="h-6 w-6 text-muted-foreground hover:text-destructive">
-            <Trash2 className="h-3 w-3" />
+          <Button variant="ghost" size="icon" onClick={handleDelete} className="h-8 w-8 text-muted-foreground hover:text-destructive">
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -290,25 +290,25 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
         title={isCliente ? "Cliente Renault" : "Transportadora"}
         subtitle={isCliente ? "Solicitações de prioridade para a fábrica" : "Fluxo de saída em tempo real"}
         actions={
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={() => setDataset((prev: any) => ({ ...prev, priorityRequests: prev.priorityRequests.filter((r: any) => r.status !== "FINALIZADO") }))} className="text-[10px] h-8">
-                              <Eraser className="h-3 w-3 mr-1.5" /> Limpar OK
-                            </Button>
-                            {ds.priorityRequests.length > 0 && (
-                              <Button variant="outline" size="sm" onClick={() => setIsClearAllOpen(true)} className="text-[10px] h-8 text-destructive hover:text-destructive hover:border-destructive/50">
-                                <Trash2 className="h-3.5 w-3.5 mr-1" /> Limpar Tudo
-                              </Button>
-                            )}
-                            {isTransportadora && (
-                              <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="text-[10px] h-8">
-                                <PackageCheck className="h-3.5 w-3.5 mr-1" /> Importar Prioridades
-                              </Button>
-                            )}
-                    {isCliente && (
-                      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setDataset((prev: any) => ({ ...prev, priorityRequests: prev.priorityRequests.filter((r: any) => r.status !== "FINALIZADO") }))} className="text-[11px] h-9">
+              <Eraser className="h-4 w-4 mr-1.5" /> Limpar OK
+            </Button>
+            {ds.priorityRequests.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => setIsClearAllOpen(true)} className="text-[11px] h-9 text-destructive hover:text-destructive hover:border-destructive/50">
+                <Trash2 className="h-4 w-4 mr-1" /> Limpar Tudo
+              </Button>
+            )}
+            {isTransportadora && (
+              <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="text-[11px] h-9">
+                <PackageCheck className="h-4 w-4 mr-1" /> Importar Prioridades
+              </Button>
+            )}
+            {isCliente && (
+              <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-primary hover:bg-primary/90 font-bold h-8 text-xs">
-                    <Plus className="h-3.5 w-3.5 mr-1" /> SOLICITAR
+                  <Button className="bg-primary hover:bg-primary/90 font-bold h-9 text-base">
+                    <Plus className="h-4 w-4 mr-1" /> SOLICITAR
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-md">
@@ -318,10 +318,10 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs">Container no Pátio</Label>
+                        <Label className="text-sm">Container no Pátio</Label>
                         <Popover open={searchOpen} onOpenChange={setSearchOpen}>
                           <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full justify-between font-normal h-9 text-sm">
+                            <Button variant="outline" className="w-full justify-between font-normal h-10 text-base">
                               {selectedContainer || "Selecione..."}
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
@@ -335,8 +335,8 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
                                   {availableContainers.map((c: CheioRow) => (
                                     <CommandItem key={c.conteiner} value={`${c.conteiner} ${c.conteinerDePara}`} onSelect={() => { setSelectedContainer(c.conteiner); setSearchOpen(false); }} className="cursor-pointer">
                                       <div className="flex flex-col">
-                                        <span className="font-bold text-sm">{c.conteiner}</span>
-                                        {c.conteinerDePara && <span className="text-[10px] text-primary">Dê-para: {c.conteinerDePara}</span>}
+                                        <span className="font-bold text-base">{c.conteiner}</span>
+                                        {c.conteinerDePara && <span className="text-[12px] text-primary">Dê-para: {c.conteinerDePara}</span>}
                                       </div>
                                     </CommandItem>
                                   ))}
@@ -348,28 +348,28 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                                                  <Label className="text-xs">Fábrica (CVP/CVU)</Label>
-                                                  <Select value={fabricaSelect} onValueChange={setFabricaSelect}>
-                            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                          <Label className="text-sm">Fábrica (CVP/CVU)</Label>
+                          <Select value={fabricaSelect} onValueChange={setFabricaSelect}>
+                            <SelectTrigger className="h-10 text-base"><SelectValue /></SelectTrigger>
                             <SelectContent><SelectItem value="CVU">CVU</SelectItem><SelectItem value="CVP">CVP</SelectItem><SelectItem value="OUTROS">Outra...</SelectItem></SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-xs">Urgência</Label>
+                          <Label className="text-sm">Urgência</Label>
                           <Select name="nivel" defaultValue="NORMAL">
-                            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-10 text-base"><SelectValue /></SelectTrigger>
                             <SelectContent><SelectItem value="NORMAL">Normal</SelectItem><SelectItem value="ALTA">Alta</SelectItem><SelectItem value="CRITICA">Crítica</SelectItem></SelectContent>
                           </Select>
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs">Previsão de Entrega</Label>
-                        <Input type="date" name="previsao" className="h-9 text-sm" />
+                        <Label className="text-sm">Previsão de Entrega</Label>
+                        <Input type="date" name="previsao" className="h-10 text-base" />
                       </div>
-                      {fabricaSelect === "OUTROS" && <Input placeholder="Nome da fábrica" value={customFabrica} onChange={(e) => setCustomFabrica(e.target.value)} className="h-9" />}
-                      <Input name="observacao" placeholder="Obs (opcional)" className="h-9" />
+                      {fabricaSelect === "OUTROS" && <Input placeholder="Nome da fábrica" value={customFabrica} onChange={(e) => setCustomFabrica(e.target.value)} className="h-10 text-base" />}
+                      <Input name="observacao" placeholder="Obs (opcional)" className="h-10 text-base" />
                     </div>
-                    <DialogFooter><Button type="submit" className="w-full font-bold">ENVIAR PRIORIDADE</Button></DialogFooter>
+                    <DialogFooter><Button type="submit" className="w-full font-bold text-base">ENVIAR PRIORIDADE</Button></DialogFooter>
                   </form>
                 </DialogContent>
               </Dialog>
@@ -378,77 +378,77 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
         }
       />
 
-      <div className="px-6 grid grid-cols-4 gap-2 mb-4">
-        <div className="bg-destructive/5 border border-destructive/20 px-3 py-1.5 rounded flex items-center justify-between">
-          <span className="text-[9px] font-bold text-destructive uppercase tracking-wider">Fila</span>
-          <span className="text-base font-black">{stats.pendentes}</span>
+      <div className="px-6 grid grid-cols-4 gap-3 mb-6">
+        <div className="bg-destructive/5 border border-destructive/20 px-3 py-2.5 rounded flex items-center justify-between">
+          <span className="text-[11px] font-bold text-destructive uppercase tracking-wider">Fila</span>
+          <span className="text-2xl font-black">{stats.pendentes}</span>
         </div>
-        <div className="bg-warning/5 border border-warning/20 px-3 py-1.5 rounded flex items-center justify-between">
-          <span className="text-[9px] font-bold text-warning-foreground uppercase tracking-wider">Carregado</span>
-          <span className="text-base font-black">{stats.carregando}</span>
+        <div className="bg-warning/5 border border-warning/20 px-3 py-2.5 rounded flex items-center justify-between">
+          <span className="text-[11px] font-bold text-warning-foreground uppercase tracking-wider">Carregado</span>
+          <span className="text-2xl font-black">{stats.carregando}</span>
         </div>
-        <div className="bg-success/5 border border-success/20 px-3 py-1.5 rounded flex items-center justify-between">
-          <span className="text-[9px] font-bold text-success uppercase tracking-wider">Saída Pátio</span>
-          <span className="text-base font-black">{stats.despachados}</span>
+        <div className="bg-success/5 border border-success/20 px-3 py-2.5 rounded flex items-center justify-between">
+          <span className="text-[11px] font-bold text-success uppercase tracking-wider">Saída Pátio</span>
+          <span className="text-2xl font-black">{stats.despachados}</span>
         </div>
-        <div className="bg-info/5 border border-info/20 px-3 py-1.5 rounded flex items-center justify-between">
-          <span className="text-[9px] font-bold text-info uppercase tracking-wider">Finalizado</span>
-          <span className="text-base font-black">{stats.finalizados}</span>
+        <div className="bg-info/5 border border-info/20 px-3 py-2.5 rounded flex items-center justify-between">
+          <span className="text-[11px] font-bold text-info uppercase tracking-wider">Finalizado</span>
+          <span className="text-2xl font-black">{stats.finalizados}</span>
         </div>
       </div>
 
       <div className="px-6 pb-10">
         <div className="rounded-lg border border-border bg-card overflow-hidden">
-          <div className="flex items-center gap-4 px-4 py-1.5 bg-muted/50 border-b border-border text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
-                                <div className="w-5 shrink-0">Prio</div>
-                                <div className="w-36 shrink-0">Container / Dê-para</div>
-                                <div className="w-20 shrink-0">CVP / CVU</div>
-                                <div className="w-24 shrink-0">Previsão</div>
-                                <div className="w-16 shrink-0">Início</div>
-                                <div className="w-72 shrink-0">Análise de Tempo</div>
-                                <div className="flex-1 text-center">Status Operacional</div>
-                                <div className="w-32 shrink-0 text-right">Ações</div>
-                              </div>
+          <div className="flex items-center gap-4 px-4 py-2 bg-muted/50 border-b border-border text-[12px] font-bold text-muted-foreground uppercase tracking-wider">
+            <div className="w-5 shrink-0">Prio</div>
+            <div className="w-40 shrink-0">Container / Dê-para</div>
+            <div className="w-24 shrink-0">CVP / CVU</div>
+            <div className="w-28 shrink-0">Previsão</div>
+            <div className="w-20 shrink-0">Início</div>
+            <div className="w-96 shrink-0">Análise de Tempo</div>
+            <div className="flex-1 text-center">Status Operacional</div>
+            <div className="w-32 shrink-0 text-right">Ações</div>
+          </div>
 
           <div className="divide-y divide-border">
             {sortedRequests.length === 0 ? (
-                          <div className="py-10 text-center text-muted-foreground text-[10px] italic">Nenhuma solicitação ativa na fila.</div>
-                        ) : (
-                          sortedRequests.map((req: any) => <RequestRow key={req.id} req={req} />)
-                        )}
-                      </div>
-                    </div>
-                  </div>
-            
-                  {isTransportadora && (
-                                      <BulkPriorityImport open={isBulkImportOpen} onOpenChange={setIsBulkImportOpen} />
-                                    )}
-                  
-                                    <Dialog open={isClearAllOpen} onOpenChange={setIsClearAllOpen}>
-                                      <DialogContent className="max-w-md">
-                                        <DialogHeader>
-                                          <DialogTitle>Limpar todas as prioridades?</DialogTitle>
-                                        </DialogHeader>
-                                        <div className="py-4 text-sm text-muted-foreground">
-                                          Esta ação removerá <strong>{ds.priorityRequests.length}</strong> solicitação(ões) da fila permanentemente.
-                                          <br />
-                                          <span className="text-destructive">Esta ação não pode ser desfeita.</span>
-                                        </div>
-                                        <DialogFooter className="gap-2">
-                                          <Button variant="outline" onClick={() => setIsClearAllOpen(false)}>
-                                            Cancelar
-                                          </Button>
-                                          <Button variant="destructive" onClick={async () => {
-                                            await clearAllPriorityRequests();
-                                            setIsClearAllOpen(false);
-                                            toast.success("Todas as prioridades foram removidas");
-                                          }}>
-                                            <Trash2 className="h-4 w-4 mr-2" />
-                                            Confirmar limpeza
-                                          </Button>
-                                        </DialogFooter>
-                                      </DialogContent>
-                                    </Dialog>
-                                  </>
-                                );
-                              }
+              <div className="py-10 text-center text-muted-foreground text-[13px] italic">Nenhuma solicitação ativa na fila.</div>
+            ) : (
+              sortedRequests.map((req: any) => <RequestRow key={req.id} req={req} />)
+            )}
+          </div>
+        </div>
+      </div>
+
+      {isTransportadora && (
+        <BulkPriorityImport open={isBulkImportOpen} onOpenChange={setIsBulkImportOpen} />
+      )}
+
+      <Dialog open={isClearAllOpen} onOpenChange={setIsClearAllOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Limpar todas as prioridades?</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-base text-muted-foreground">
+            Esta ação removerá <strong>{ds.priorityRequests.length}</strong> solicitação(ões) da fila permanentemente.
+            <br />
+            <span className="text-destructive">Esta ação não pode ser desfeita.</span>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsClearAllOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={async () => {
+              await clearAllPriorityRequests();
+              setIsClearAllOpen(false);
+              toast.success("Todas as prioridades foram removidas");
+            }}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Confirmar limpeza
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
