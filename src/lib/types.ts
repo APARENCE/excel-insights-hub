@@ -67,6 +67,87 @@ export function formatMinutes(min: number | null): string {
   return m > 0 ? `${h}h${m}min` : `${h}h`;
 }
 
+export function formatTime(isoString?: string): string {
+  if (!isoString) return "—";
+  return new Date(isoString).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+export function formatDateTime(isoString?: string): string {
+  if (!isoString) return "—";
+  return new Date(isoString).toLocaleString("pt-BR", {
+    day: "2-digit", month: "2-digit",
+    hour: "2-digit", minute: "2-digit"
+  });
+}
+
+export interface TimeAnalysis {
+  // Timestamps
+  inicio: string | null;        // solicitadoEm
+  carregando: string | null;    // carregandoEm
+  saidaPatio: string | null;    // despachadoEm
+  finalizado: string | null;    // finalizadoEm
+  
+  // Intervals in minutes
+  ateCarregando: number | null;   // inicio -> carregando
+  carregandoASaida: number | null; // carregando -> saidaPatio
+  saidaAFinalizado: number | null; // saidaPatio -> finalizado
+  total: number | null;            // inicio -> finalizado
+  
+  // Formatted intervals
+  ateCarregandoFmt: string;
+  carregandoASaidaFmt: string;
+  saidaAFinalizadoFmt: string;
+  totalFmt: string;
+  
+  isComplete: boolean;
+  currentPhase: "AGUARDANDO" | "CARREGANDO" | "NO PÁTIO" | "FINALIZADO";
+}
+
+export function analyzeTime(req: PriorityRequest): TimeAnalysis {
+  const inicio = req.solicitadoEm;
+  const carregando = req.carregandoEm;
+  const saidaPatio = req.despachadoEm;
+  const finalizado = req.finalizadoEm;
+  
+  const toMs = (s?: string) => s ? new Date(s).getTime() : null;
+  const i = toMs(inicio);
+  const c = toMs(carregando);
+  const s = toMs(saidaPatio);
+  const f = toMs(finalizado);
+  
+  const diff = (a: number | null, b: number | null) =>
+    (a && b) ? Math.round((b - a) / 60000) : null;
+  
+  const ateCarregando = diff(i, c);
+  const carregandoASaida = diff(c, s);
+  const saidaAFinalizado = diff(s, f);
+  const total = diff(i, f);
+  
+  const fmt = (m: number | null) => m === null ? "—" : formatMinutes(m);
+  
+  let currentPhase: TimeAnalysis["currentPhase"] = "AGUARDANDO";
+  if (f) currentPhase = "FINALIZADO";
+  else if (s) currentPhase = "NO PÁTIO";
+  else if (c) currentPhase = "CARREGANDO";
+  
+  return {
+    inicio: inicio ? formatTime(inicio) : null,
+    carregando: carregando ? formatTime(carregando) : null,
+    saidaPatio: saidaPatio ? formatTime(saidaPatio) : null,
+    finalizado: finalizado ? formatTime(finalizado) : null,
+    ateCarregando,
+    carregandoASaida,
+    saidaAFinalizado,
+    total,
+    ateCarregandoFmt: fmt(ateCarregando),
+    carregandoASaidaFmt: fmt(carregandoASaida),
+    saidaAFinalizadoFmt: fmt(saidaAFinalizado),
+    totalFmt: fmt(total),
+    isComplete: !!f,
+    currentPhase
+  };
+}
+
 export interface CheioRow {
   conteiner: string;
   lacre?: string;
