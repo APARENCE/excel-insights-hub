@@ -198,7 +198,9 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
         </div>
 
         <div className="w-40 shrink-0">
-          {req.details?.conteinerDePara ? (
+          {req.conteinerDePara ? (
+            <span className="text-sm font-mono font-medium text-primary">{req.conteinerDePara}</span>
+          ) : req.details?.conteinerDePara ? (
             <span className="text-sm font-mono font-medium text-primary">{req.details.conteinerDePara}</span>
           ) : (
             <span className="text-sm text-muted-foreground">—</span>
