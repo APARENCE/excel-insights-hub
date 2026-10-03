@@ -70,14 +70,26 @@ export function formatMinutes(min: number | null): string {
 
 export function formatTime(isoString?: string): string {
   if (!isoString) return "—";
-  return new Date(isoString).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return new Date(isoString).toLocaleTimeString("pt-BR", {
+    hour: "2-digit", minute: "2-digit",
+    timeZone: "America/Sao_Paulo"
+  });
 }
 
 export function formatDateTime(isoString?: string): string {
   if (!isoString) return "—";
   return new Date(isoString).toLocaleString("pt-BR", {
     day: "2-digit", month: "2-digit",
-    hour: "2-digit", minute: "2-digit"
+    hour: "2-digit", minute: "2-digit",
+    timeZone: "America/Sao_Paulo"
+  });
+}
+
+export function formatDateBR(isoString?: string): string {
+  if (!isoString) return "—";
+  return new Date(isoString).toLocaleDateString("pt-BR", {
+    day: "2-digit", month: "2-digit",
+    timeZone: "America/Sao_Paulo"
   });
 }
 

@@ -308,18 +308,19 @@ export async function syncFromSupabase() {
         let mergedPriorityRequests = [...state.priorityRequests];
         if (prioritiesData && prioritiesData.length > 0) {
           const supabasePri = prioritiesData.map((p: any) => ({
-                      id: p.id,
-                      conteiner: p.conteiner,
-                      nivel: p.nivel,
-                      status: p.status,
-                      solicitadoEm: p.solicitado_em,
-                      carregandoEm: p.carregando_em,
-                      despachadoEm: p.despachado_em,
-                      finalizadoEm: p.finalizado_em,
-                      fabricaDestino: p.fabrica_destino,
-                      previsaoFabrica: p.previsao_fabrica,
-                      observacao: p.observacao
-                    }));
+                                id: p.id,
+                                conteiner: p.conteiner,
+                                conteinerDePara: p.conteiner_de_para,
+                                nivel: p.nivel,
+                                status: p.status,
+                                solicitadoEm: p.solicitado_em,
+                                carregandoEm: p.carregando_em,
+                                despachadoEm: p.despachado_em,
+                                finalizadoEm: p.finalizado_em,
+                                fabricaDestino: p.fabrica_destino,
+                                previsaoFabrica: p.previsao_fabrica,
+                                observacao: p.observacao
+                              }));
           // Adiciona do Supabase se não existir localmente
           for (const sup of supabasePri) {
             if (!mergedPriorityRequests.some(r => r.id === sup.id)) {
@@ -666,14 +667,15 @@ export async function addPriorityRequest(req: PriorityRequest) {
 
   // Then sync to Supabase
   const insertData = {
-    conteiner: req.conteiner,
-    nivel: req.nivel,
-    status: req.status,
-    fabrica_destino: req.fabricaDestino,
-    previsao_fabrica: req.previsaoFabrica ? new Date(req.previsaoFabrica).toISOString() : null,
-    observacao: req.observacao
-  };
-  console.log("[addPriorityRequest] Inserting to Supabase:", insertData);
+      conteiner: req.conteiner,
+      conteiner_de_para: req.conteinerDePara || null,
+      nivel: req.nivel,
+      status: req.status,
+      fabrica_destino: req.fabricaDestino,
+      previsao_fabrica: req.previsaoFabrica ? new Date(req.previsaoFabrica).toISOString() : null,
+      observacao: req.observacao
+    };
+    console.log("[addPriorityRequest] Inserting to Supabase:", insertData);
   const { error } = await supabase.from('priority_requests').insert(insertData);
   if (error) {
     console.error("[addPriorityRequest] Supabase error:", error);
@@ -713,13 +715,14 @@ export async function addPriorityRequestsBatch(requests: PriorityRequest[]) {
 
   // Batch insert to Supabase (single request)
   const insertData = requests.map(req => ({
-    conteiner: req.conteiner,
-    nivel: req.nivel,
-    status: req.status,
-    fabrica_destino: req.fabricaDestino,
-    previsao_fabrica: req.previsaoFabrica ? new Date(req.previsaoFabrica).toISOString() : null,
-    observacao: req.observacao
-  }));
+      conteiner: req.conteiner,
+      conteiner_de_para: req.conteinerDePara || null,
+      nivel: req.nivel,
+      status: req.status,
+      fabrica_destino: req.fabricaDestino,
+      previsao_fabrica: req.previsaoFabrica ? new Date(req.previsaoFabrica).toISOString() : null,
+      observacao: req.observacao
+    }));
   
   console.log(`[addPriorityRequestsBatch] Inserting ${insertData.length} items in batch to Supabase`);
   const { error } = await supabase.from('priority_requests').insert(insertData);

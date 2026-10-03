@@ -46,7 +46,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useDataset, addPriorityRequest, updatePriorityStatus, deletePriorityRequest, setDataset, clearAllPriorityRequests } from "@/lib/store";
 import { toast } from "sonner";
-import { PriorityLevel, RequestStatus, PriorityRequest, CheioRow, analyzeTime, formatMinutes } from "@/lib/types";
+import { PriorityLevel, RequestStatus, PriorityRequest, CheioRow, analyzeTime, formatMinutes, formatDateBR } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import BulkPriorityImport from "./BulkPriorityImport";
 
