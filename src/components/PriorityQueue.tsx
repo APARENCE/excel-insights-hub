@@ -193,14 +193,14 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
           <Zap className="h-3.5 w-3.5" />
         </div>
 
-        <div className="w-40 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-base font-bold">{req.conteiner}</span>
-            {req.details?.conteinerDePara && (
-              <span className="text-[11px] bg-info/10 text-info px-1.5 rounded font-bold border border-info/20">{req.details.conteinerDePara}</span>
-            )}
-          </div>
-        </div>
+        <div className="w-44 shrink-0">
+                  <div className="flex items-center gap-2 whitespace-nowrap">
+                    <span className="text-base font-bold truncate">{req.conteiner}</span>
+                    {req.details?.conteinerDePara && (
+                      <span className="text-[11px] bg-info/10 text-info px-1.5 rounded font-bold border border-info/20 shrink-0">{req.details.conteinerDePara}</span>
+                    )}
+                  </div>
+                </div>
 
         <div className="w-24 shrink-0 flex items-center gap-1.5 text-[13px] font-medium">
           <Factory className="h-4 w-4 text-muted-foreground" />
@@ -401,7 +401,7 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
         <div className="rounded-lg border border-border bg-card overflow-hidden">
           <div className="flex items-center gap-4 px-4 py-2 bg-muted/50 border-b border-border text-[12px] font-bold text-muted-foreground uppercase tracking-wider">
             <div className="w-5 shrink-0">Prio</div>
-            <div className="w-40 shrink-0">Container / Dê-para</div>
+                        <div className="w-44 shrink-0">Container / Dê-para</div>
             <div className="w-24 shrink-0">CVP / CVU</div>
             <div className="w-28 shrink-0">Previsão</div>
             <div className="w-20 shrink-0">Início</div>
