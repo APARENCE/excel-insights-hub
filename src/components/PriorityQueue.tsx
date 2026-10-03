@@ -195,9 +195,15 @@ export default function PriorityQueue({ role }: { role: "CLIENTE" | "TRANSPORTAD
 
         <div className="w-40 shrink-0">
           <div className="flex items-center gap-2">
-            <span className="text-base font-bold">{req.conteiner}</span>
-            {req.details?.conteinerDePara && (
-              <span className="text-[11px] bg-info/10 text-info px-1.5 rounded font-bold border border-info/20">{req.details.conteinerDePara}</span>
+            {req.details?.conteinerDePara && req.details.conteinerDePara !== req.conteiner ? (
+              <>
+                <span className="text-base font-bold">{req.details.conteinerDePara}</span>
+                {req.conteiner && (
+                  <span className="text-[11px] bg-muted/10 text-muted-foreground px-1.5 rounded font-bold border border-muted/20">{req.conteiner}</span>
+                )}
+              </>
+            ) : (
+              <span className="text-base font-bold">{req.conteiner}</span>
             )}
           </div>
         </div>
